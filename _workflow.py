@@ -1,8 +1,5 @@
 import numpy
 
-from borepy.gmodel._items import Slot
-from borepy.gmodel._wellstock import Stock
-
 class WorkFlow():
     """
     1. for resolving time conflicts between production and completion
