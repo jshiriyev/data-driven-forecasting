@@ -5,10 +5,21 @@ class IPR():
     def __init__(self,**kwargs):
         """oil field units"""
 
-        for key,value in kwargs.items():
-            setattr(self,key,value)
+        self.poro   = kwargs.get("poro")
+        self.perm   = kwargs.get("perm")
+        self.height = kwargs.get("height")
+        self.Bo     = kwargs.get("Bo")
+        self.muo    = kwargs.get("muo")
+        self.ct     = kwargs.get("ct")
+        self.re     = kwargs.get("re")
+        self.rw     = kwargs.get("rw")
+        self.skin   = kwargs.get("skin")
 
-    def PItransient(self,time=1):
+    def PI(self,regime="pseudo",**kwargs):
+
+        return getattr(self,f"PI_{regime}")(**kwargs)
+
+    def PI_transient(self,time=1):
         """time in days"""
 
         upper = (self.perm*self.height)
@@ -19,7 +30,7 @@ class IPR():
 
         return upper/lower
 
-    def PIsteady(self):
+    def PI_steady(self):
 
         upper = (self.perm*self.height)
 
@@ -27,7 +38,7 @@ class IPR():
 
         return upper/lower
 
-    def PIpseudo(self):
+    def PI_pseudo(self):
 
         upper = (self.perm*self.height)
 
@@ -37,16 +48,16 @@ class IPR():
 
     def undersaturated(self,pres,rate=None,pwf=None,regime="pseudo",**kwargs):
         
-        productivity = getattr(self,f"PI{regime}")(**kwargs)
+        PI = getattr(self,f"PI{regime}")(**kwargs)
 
         if rate is None:
-            return productivity*(pres-pwf)
+            return PI*(pres-pwf)
         
-        return pres-rate/productivity
+        return pres-rate/PI
 
-    def vogel(self,pres,rate=None,pwf=None,regime="pseudo",**kwargs):
+    def vogel(self,PI,pres,rate=None,pwf=None):
 
-        qmax = getattr(self,f"PI{regime}")(**kwargs)*pres/1.8
+        qmax = PI*pres/1.8
 
         if rate is None:
             return qmax*(1-0.2*(pwf/pres)-0.8*(pwf/pres)**2)
@@ -57,9 +68,9 @@ class IPR():
         
         return 0.125*pres*(numpy.sqrt(values)-1)
 
-    def fetkovich(self,pres,rate=None,pwf=None,n=None,regime="pseudo",**kwargs):
+    def fetkovich(self,PI,pres,rate=None,pwf=None,n=None):
 
-        qmax = getattr(self,f"PI{regime}")(**kwargs)*pres/1.8
+        qmax = PI*pres/1.8
 
         if rate is None:
             return qmax*(1-(pwf/pres)**2)**n
@@ -72,23 +83,39 @@ class IPR():
 
     def saturated(self,pres,rate=None,pwf=None,model="vogel",n=None,regime="pseudo",**kwargs):
 
-        return
+        PI = getattr(self,f"PI{regime}")(**kwargs)
 
-    def partial(self,pres,pbubble,rate=None,pwf=None,model="vogel",n=None,regime="pseudo",**kwargs):
+        if model == "vogel":
+            return self.vogel(PI,pres,rate,pwf)
+        elif model == "fetkovich":
+            return self.fetkovich(PI,pres,rate,pwf,n)
+        
+    def partial(self,pb,pres,pwf,model="vogel",n=None,regime="pseudo",**kwargs):
 
         rate = numpy.zeros(pwf.shape)
 
-        rate[pwf<0] = numpy.nan
-
         PI = getattr(self,f"PI{regime}")(**kwargs)
 
-        rate[pwf>self.pb] = PI*(pres-pwf[pwf>self.pb])
+        rate[pwf>pb] = self.undersaturated(pres,None,pwf[pwf>pb],regime,**kwargs)
 
-        TP = (1-0.2*(pwf[pwf<=self.pb]/self.pb)-0.8*(pwf[pwf<=self.pb]/self.pb)**2)
+        rate[pwf<=pb] = self.undersaturated(pres,None,pb,regime,**kwargs)
 
-        rate[pwf<=self.pb] = PI*(pres-self.pb)+PI*self.pb/1.8*TP
+        if model == "vogel":
+            rate[pwf<=pb] += self.vogel(PI,pb,None,pwf[pwf<=pb])
+        elif model == "fetkovich":
+            rate[pwf<=pb] += self.fetkovich(PI,pb,None,pwf[pwf<=pb],n)
+
+        rate[pwf<0] = numpy.nan
 
         return rate
+
+        # rate[pwf>self.pb] = PI*(pres-pwf[pwf>self.pb])
+
+        # TP = (1-0.2*(pwf[pwf<=self.pb]/self.pb)-0.8*(pwf[pwf<=self.pb]/self.pb)**2)
+
+        # rate[pwf<=self.pb] = PI*(pres-self.pb)+PI*self.pb/1.8*TP
+
+        # return rate
 
 if __name__ == "__main__":
 
@@ -136,13 +163,13 @@ if __name__ == "__main__":
     
     # p_vogel = inflow.vogel(Pres,rate=qrange,regime="transient",time=30)
     # p_vogel = inflow.vogel(Pres,rate=qrange,regime="steady")
-    p_vogel = inflow.vogel(Pres,rate=qrange,regime="pseudo")
+    p_vogel = inflow.saturated(Pres,rate=qrange,model="vogel")
 
     # q_vogel = inflow.vogel(Pres,pwf=prange,regime="transient",time=30)
     # q_vogel = inflow.vogel(Pres,pwf=prange,regime="steady")
-    q_vogel1 = inflow.vogel(Pres,pwf=prange,regime="pseudo")
+    q_vogel1 = inflow.saturated(Pres,pwf=prange,model="vogel",regime="pseudo")
 
-    q_fetkovich = inflow.fetkovich(Pres,pwf=prange,regime="pseudo",n=2)
+    q_fetkovich = inflow.saturated(Pres,pwf=prange,model="fetkovich",regime="pseudo",n=2)
 
     q_vogel2 = inflow.saturated(Pres,pwf=prange,regime="pseudo")
 
