@@ -47,8 +47,11 @@ class IPR():
         return upper/lower
 
     def undersaturated(self,pres,rate=None,pwf=None,regime="pseudo",**kwargs):
-        
-        PI = getattr(self,f"PI{regime}")(**kwargs)
+
+        if kwargs.get("PI") is None:
+            PI = getattr(self,f"PI_{regime}")(**kwargs)
+        else:
+            PI = kwargs.get("PI")
 
         if rate is None:
             return PI*(pres-pwf)
@@ -83,7 +86,10 @@ class IPR():
 
     def saturated(self,pres,rate=None,pwf=None,model="vogel",n=None,regime="pseudo",**kwargs):
 
-        PI = getattr(self,f"PI{regime}")(**kwargs)
+        if kwargs.get("PI") is None:
+            PI = getattr(self,f"PI_{regime}")(**kwargs)
+        else:
+            PI = kwargs.get("PI")
 
         if model == "vogel":
             return self.vogel(PI,pres,rate,pwf)
@@ -94,7 +100,10 @@ class IPR():
 
         rate = numpy.zeros(pwf.shape)
 
-        PI = getattr(self,f"PI{regime}")(**kwargs)
+        if kwargs.get("PI") is None:
+            PI = getattr(self,f"PI_{regime}")(**kwargs)
+        else:
+            PI = kwargs.get("PI")
 
         rate[pwf>pb] = self.undersaturated(pres,None,pwf[pwf>pb],regime,**kwargs)
 
@@ -109,13 +118,25 @@ class IPR():
 
         return rate
 
-        # rate[pwf>self.pb] = PI*(pres-pwf[pwf>self.pb])
+    def PI_vogel(self,pb,pres,rate1:float,pwf1:float):
 
-        # TP = (1-0.2*(pwf[pwf<=self.pb]/self.pb)-0.8*(pwf[pwf<=self.pb]/self.pb)**2)
+        if pwf1>pb:
+            return rate1/(pres-pwf1)
 
-        # rate[pwf<=self.pb] = PI*(pres-self.pb)+PI*self.pb/1.8*TP
+        dp1 = (pres-pb)+self.vogel(1,pb,None,pwf1)
 
-        # return rate
+        return rate1/dp1
+
+    def PI_fetkovich(self,pb,pres,rate1:float,rate2:float,pwf1:float,pwf2:float):
+
+        upper = numpy.log10(rate1/rate2)
+        lower = numpy.log10((pres**2-pwf1**2)/(pres**2-pwf2**2))
+
+        n = upper/lower
+
+        dp1 = (pres-pb)+self.fetkovich(1,pb,None,pwf1,n)
+
+        return rate1/dp1,n
 
 if __name__ == "__main__":
 
