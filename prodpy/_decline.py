@@ -21,19 +21,25 @@ class DCA():
 		self._start = start
 		self._stop  = stop
 
-	def curve(self,rhead,method='exponential',exponent=None):
+	def fit(self,rhead,method='exponential',**kwargs):
+		return self.fit_method(*self.preprocess(rhead),method='exponential',**kwargs)
 
-		xvals,rates = self.preprocess(rhead)
+	def preprocess(self,rhead):
 
-		param = getattr(self,f"{method}_param")(xvals,rates)
+		frame = self.trim()
 
-		return getattr(self,f"{method}_curve")(xvals,*param)
+		dates = frame[self._dhead]
 
-	def param(self,rhead,method='exponential',exponent=None):
+		days = dates-dates[0]
 
-		xvals,rates = self.preprocess(rhead)
+		return days,frame[rhead]
 
-		return getattr(self,f"{method}_param")(xvals,rates)
+	def trim(self):
+
+		t0 = [self.dates>=self.start]
+		t1 = [self.dates<=self.stop]
+
+		return self._frame[np.logical_and(t0,t1)]
 
 	@property
 	def frame(self):
@@ -55,60 +61,58 @@ class DCA():
 	def stop(self):
 		return self._dates[-1] if self._stop is None else self._stop
 
-	def preprocess(self,rhead):
-
-		frame = self.trim()
-
-		dates = frame[self._dhead]
-
-		xvals = dates-dates[0]
-		rates = frame[rhead]
-
-		return xvals,rates
-
-	def trim(self):
-
-		t0 = [self.dates>=self.start]
-		t1 = [self.dates<=self.stop]
-
-		return self._frame[np.logical_and(t0,t1)]
+	@staticmethod
+	def fit_method(days,rates,method='exponential',**kwargs):
+		prop = DCA.inverse(days,rates,method,**kwargs)
+		return DCA.forward(days,*prop,method,**kwargs),prop
 
 	@staticmethod
-	def exponential_curve(xvals,rate0,decline):
-		return rate0*numpy.exp(-decline*xvals)
+	def forward(days,rate0,decline0,method="exponential",**kwargs):
+		return getattr(DCA,f"{method}")(days,rate0,decline0,**kwargs)
 
 	@staticmethod
-	def hyperbolic_curve(xvals,rate0,decline,exponent=0.5):
-		return rate0/(1+exponent*decline*xvals)**(1/exponent)
+	def exponential(days,rate0,decline0):
+		return rate0*numpy.exp(-decline0*days)
 
 	@staticmethod
-	def harmonic_curve(xvals,rate0,decline):
-		return rate0/(1+decline*xvals)
+	def hyperbolic(days,rate0,decline0,exponent=0.5):
+		return rate0/(1+exponent*decline0*days)**(1/exponent)
 
 	@staticmethod
-	def exponential_param(xvals,rates):
-		
+	def harmonic(days,rate0,decline0):
+		return rate0/(1+decline0*days)
+
+	@staticmethod
+	def inverse(days,rates,method='exponential',**kwargs):
+		return getattr(DCA,f"inv{method}")(days,rates,**kwargs)
+
+	@staticmethod
+	def invexponential(days,rates):
+		intercept,slope = DCA.fit_line(days,numpy.log(rates))
+		return numpy.exp(intercept),-slope
+
+	@staticmethod
+	def invhyperbolic(days,rates,exponent=0.5):
+		intercept,slope = DCA.fit_line(days,numpy.power(1/rates,exponent))
+		return intercept**(-1/exponent),slope/intercept/exponent
+
+	@staticmethod
+	def invharmonic(days,rates):
+		intercept,slope = DCA.fit_line(days,1/rates)
+		return intercept**(-1),slope/intercept
+
+	@staticmethod
+	def fit_line(xvals,yvals):
+
 		A = numpy.zeros((2,2))
 		b = numpy.zeros((2,1))
 
 		A[0,0] = len(xvals)
-		A[0,1] = -np.sum(xvals)
+		A[0,1] = np.sum(xvals)
 		A[1,0] = np.sum(xvals)
-		A[1,1] = -np.sum(xvals**2)
+		A[1,1] = np.sum(xvals**2)
 
-		b[0,0] = numpy.sum(numpy.log(rates))
-		b[1,0] = numpy.sum(numpy.log(rates)*xvals)
+		b[0,0] = numpy.sum(numpy.log(yvals))
+		b[1,0] = numpy.sum(numpy.log(yvals)*xvals)
 
-		sol = numpy.linalg.solve(A,b).flatten()
-
-		return numpy.exp(sol[0]),sol[1]
-
-	@staticmethod
-	def hyperbolic_param(xvals,rates,exponent=0.5):
-		return
-
-	@staticmethod
-	def harmonic_param(xvals,rates):
-		return
-	
-	
+		return numpy.linalg.solve(A,b).flatten()
