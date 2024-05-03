@@ -1,73 +1,128 @@
+import pandas
+
+from ._model import Model
+from ._heads import Heads
+
 class Analysis():
 
-	def __init__(self,frame,dhead='date',start=None,stop=None):
+	def __init__(self,frame,heads:Heads):
 		"""
-		frame 	: panda DataFrame to be used in Decline Curve Analysis
+		Initializing decline analysis with dataframe and column keys.
 
-		dhead 	: head of date column that contains production dates
-		rhead 	: head of rate column that contains production rates (oil, water, or gas rate)
-
-		start 	: start date of interval where to implement DCA, if None first date is selected
-		stop 	: stop  date of interval where to implement DCA, if None last date is selected
+		frame 	: panda DataFrame
+		
+		dates 	: production dates
+		orate 	: oil rates
+		grate 	: gas rates
+		wrate 	: water rates
 		"""
 
 		self._frame = frame
+		self._heads = heads
 
-		self._dhead  = dhead
+	def fit(self,*args,**kwargs):
 
-		self._start = start
-		self._stop  = stop
+		start = kwargs.get('start')
+		cease = kwargs.get('cease')
 
-	def fit(self,rhead,method='exponential',**kwargs):
-		return self.fit_method(*self.preprocess(rhead),method='exponential',**kwargs)
+		if start is not None:
+			_ = kwargs.pop('start')
 
-	def preprocess(self,rhead):
+		if cease is not None:
+			_ = kwargs.pop('cease')
 
-		frame = self.trim()
+		days,orate = self.preprocess(*args,start,cease)
 
-		dates = frame[self._dhead]
+		dca = Model(days)
 
-		days = dates-dates[0]
+		return dca.fit(orate,**kwargs)
 
-		return days,frame[rhead]
+	def preprocess(self,*args,start=None,cease=None):
 
-	def trim(self):
+		frame = self.filter(*args)
 
-		t0 = [self.dates>=self.start]
-		t1 = [self.dates<=self.stop]
+		frame = self.trim(frame,start,cease)
 
-		return self._frame[np.logical_and(t0,t1)]
+		dates = frame[self.heads.dates]
+
+		return dates-dates[0],frame[self.heads.orate]
+
+	def filter(self,*args):
+
+		frame = self.frame.groupby(args)
+
+		return frame.groupby(self.heads.dates)[self.numericals].sum()
+
+	def trim(self,frame,start=None,cease=None):
+		"""Returns data frame that is in the range of start and cease dates.
+
+		start 	: start date when to start analysis
+		cease 	: cease date when to cease analysis
+		"""
+
+		if start is not None:
+			frame = frame[frame[self.heads.dates]>=start]
+
+		if cease is not None:
+			frame = frame[frame[self.heads.dates]<=cease]
+
+		return frame
 
 	@property
 	def frame(self):
 		return self._frame
 
 	@property
-	def dhead(self):
-		return self._dhead
+	def heads(self):
+		return self._heads
 
 	@property
 	def dates(self):
-		return self._frame[self._dhead]
+		return self._frame[self._heads.dates]
+
+	@property
+	def orate(self):
+		return self._frame[self._heads.orate]
+
+	@property
+	def grate(self):
+		return self._frame[self._heads.grate]
 	
 	@property
-	def start(self):
-		return self._dates[0] if self._start is None else self._start
+	def wrate(self):
+		return self._frame[self._heads.wrate]
+	
+	@property
+	def lrate(self):
+		return self.orate+self.wrate
+	
+	@property
+	def wcut(self):
+		return self.wrate/(self.wrate+self.orate)*100
+	
+	@property
+	def gor(self):
+		return self.grate*1000/self.orate
 
 	@property
-	def stop(self):
-		return self._dates[-1] if self._stop is None else self._stop
+	def numericals(self):
+		return self.frame.select_dtypes(include='number').columns
 
-	@staticmethod
-	def fit_method(days,rates,method='exponential',**kwargs):
-		prop = DCA.inverse(days,rates,method,**kwargs)
-		return DCA.forward(days,*prop,method,**kwargs),prop
-
+	@property
+	def categorical(self):
+		return self.frame.select_dtypes(exclude='number').columns
+	
 if __name__ == "__main__":
 
 	import pandas as pd
 
 	df = pd.read_excel(r"C:\Users\3876yl\OneDrive - BP\Documents\ACG_decline_curve_analysis.xlsx")
+
+	print(df)
+
+	print(df.columns)
+
+	# print(df.groupby('Date').sum('Actual Oil, Mstb/d'))
 
 	# print(df.columns)
 
@@ -75,7 +130,7 @@ if __name__ == "__main__":
 
 	# print(df[df['Well']=='D32'])
 
-	print((df['Date']-df['Date'][0])*5)
+	# print((df['Date']-df['Date'][0])*5)
 
 	# print(df.head)
 
