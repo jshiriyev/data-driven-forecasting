@@ -1,7 +1,4 @@
-import numpy
-import pandas
-
-class DCA():
+class Analysis():
 
 	def __init__(self,frame,dhead='date',start=None,stop=None):
 		"""
@@ -66,53 +63,20 @@ class DCA():
 		prop = DCA.inverse(days,rates,method,**kwargs)
 		return DCA.forward(days,*prop,method,**kwargs),prop
 
-	@staticmethod
-	def forward(days,rate0,decline0,method="exponential",**kwargs):
-		return getattr(DCA,f"{method}")(days,rate0,decline0,**kwargs)
+if __name__ == "__main__":
 
-	@staticmethod
-	def exponential(days,rate0,decline0):
-		return rate0*numpy.exp(-decline0*days)
+	import pandas as pd
 
-	@staticmethod
-	def hyperbolic(days,rate0,decline0,exponent=0.5):
-		return rate0/(1+exponent*decline0*days)**(1/exponent)
+	df = pd.read_excel(r"C:\Users\3876yl\OneDrive - BP\Documents\ACG_decline_curve_analysis.xlsx")
 
-	@staticmethod
-	def harmonic(days,rate0,decline0):
-		return rate0/(1+decline0*days)
+	# print(df.columns)
 
-	@staticmethod
-	def inverse(days,rates,method='exponential',**kwargs):
-		return getattr(DCA,f"inv{method}")(days,rates,**kwargs)
+	# print(df['Well'].unique())
 
-	@staticmethod
-	def invexponential(days,rates):
-		intercept,slope = DCA.fit_line(days,numpy.log(rates))
-		return numpy.exp(intercept),-slope
+	# print(df[df['Well']=='D32'])
 
-	@staticmethod
-	def invhyperbolic(days,rates,exponent=0.5):
-		intercept,slope = DCA.fit_line(days,numpy.power(1/rates,exponent))
-		return intercept**(-1/exponent),slope/intercept/exponent
+	print((df['Date']-df['Date'][0])*5)
 
-	@staticmethod
-	def invharmonic(days,rates):
-		intercept,slope = DCA.fit_line(days,1/rates)
-		return intercept**(-1),slope/intercept
+	# print(df.head)
 
-	@staticmethod
-	def fit_line(xvals,yvals):
-
-		A = numpy.zeros((2,2))
-		b = numpy.zeros((2,1))
-
-		A[0,0] = len(xvals)
-		A[0,1] = np.sum(xvals)
-		A[1,0] = np.sum(xvals)
-		A[1,1] = np.sum(xvals**2)
-
-		b[0,0] = numpy.sum(numpy.log(yvals))
-		b[1,0] = numpy.sum(numpy.log(yvals)*xvals)
-
-		return numpy.linalg.solve(A,b).flatten()
+	# print(dir(df))
