@@ -5,7 +5,7 @@ from ._heads import Heads
 
 class Analysis():
 
-	def __init__(self,frame,heads:Heads):
+	def __init__(self,frame,**kwargs):
 		"""
 		Initializing decline analysis with dataframe and column keys.
 
@@ -18,7 +18,7 @@ class Analysis():
 		"""
 
 		self._frame = frame
-		self._heads = heads
+		self._heads = Heads(**kwargs)
 
 	def fit(self,*args,**kwargs):
 
