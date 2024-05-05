@@ -5,7 +5,7 @@ from ._heads import Heads
 
 class Analysis():
 
-	def __init__(self,frame,**kwargs):
+	def __init__(self,frame,dates,**kwargs):
 		"""
 		Initializing decline analysis with dataframe and column keys.
 
@@ -15,10 +15,17 @@ class Analysis():
 		orate 	: oil rates
 		grate 	: gas rates
 		wrate 	: water rates
+
+		lrate	: Liquid Rate"
+		wcut 	: Water Cut
+		gor 	: Gas-Oil Ratio
 		"""
 
 		self._frame = frame
-		self._heads = Heads(**kwargs)
+
+		self._heads = Heads(dates,**kwargs)
+
+		self._rates = list(kwargs.values())
 
 	def fit(self,*args,**kwargs):
 
@@ -39,7 +46,7 @@ class Analysis():
 
 	def preprocess(self,*args,start=None,cease=None):
 
-		frame = self.filter(*args)
+		frame = self.groupby(*args)
 
 		frame = self.trim(frame,start,cease)
 
@@ -47,11 +54,20 @@ class Analysis():
 
 		return dates-dates[0],frame[self.heads.orate]
 
-	def filter(self,*args):
+	def groupby(self,*args):
 
-		frame = self.frame.groupby(args)
+		columns = list(args)
 
-		return frame.groupby(self.heads.dates)[self.numericals].sum()
+		columns.append(self.heads.dates)
+
+		frame_by_group = self._frame.groupby(columns)
+
+		return frame_by_group[self.rates].sum().reset_index()
+
+	def filter(self,frame,**kwargs):
+
+		for key,value in kwargs.items():
+			return frame[frame[key]==value]
 
 	def trim(self,frame,start=None,cease=None):
 		"""Returns data frame that is in the range of start and cease dates.
@@ -77,40 +93,8 @@ class Analysis():
 		return self._heads
 
 	@property
-	def dates(self):
-		return self._frame[self._heads.dates]
-
-	@property
-	def orate(self):
-		return self._frame[self._heads.orate]
-
-	@property
-	def grate(self):
-		return self._frame[self._heads.grate]
-	
-	@property
-	def wrate(self):
-		return self._frame[self._heads.wrate]
-	
-	@property
-	def lrate(self):
-		return self.orate+self.wrate
-	
-	@property
-	def wcut(self):
-		return self.wrate/(self.wrate+self.orate)*100
-	
-	@property
-	def gor(self):
-		return self.grate*1000/self.orate
-
-	@property
-	def numericals(self):
-		return self.frame.select_dtypes(include='number').columns
-
-	@property
-	def categorical(self):
-		return self.frame.select_dtypes(exclude='number').columns
+	def rates(self):
+		return self._rates
 	
 if __name__ == "__main__":
 

@@ -1,6 +1,6 @@
 import numpy
 
-from borepy.gmodel._stock import Stock
+# from borepy.gmodel._stock import Stock
 
 class Completion():
 
