@@ -1,15 +1,16 @@
+import datetime
+
 import pandas
 
-from ._model import Model
 from ._heads import Heads
+
+from ._optimize import Optimize
 
 class Analysis():
 
-	def __init__(self,frame,dates,**kwargs):
+	def __init__(self,dates,**kwargs):
 		"""
-		Initializing decline analysis with dataframe and column keys.
-
-		frame 	: panda DataFrame
+		Initializing decline analysis with rate column keys.
 		
 		dates 	: production dates
 		orate 	: oil rates
@@ -20,73 +21,91 @@ class Analysis():
 		wcut 	: Water Cut
 		gor 	: Gas-Oil Ratio
 		"""
-
-		self._frame = frame
-
 		self._heads = Heads(dates,**kwargs)
-
 		self._rates = list(kwargs.values())
 
-	def fit(self,*args,**kwargs):
+	def get(self,frame,**kwargs):
+		"""Groupby and filters input frame based on key-value pair of the first optional argument.
 
-		start = kwargs.get('start')
-		cease = kwargs.get('cease')
+		frame 	: panda DataFrame
 
-		if start is not None:
-			_ = kwargs.pop('start')
+		Returns a new frame with the given value in the first column, date in the second column, and
+		Analysis heads in the rest of the columns.
+		"""
 
-		if cease is not None:
-			_ = kwargs.pop('cease')
+		for key,value in kwargs.items():
+			break
 
-		days,orate = self.preprocess(*args,start,cease)
+		frame = self.groupby(frame,key)
+			
+		return self.filter(frame,value)
 
-		dca = Model(days)
+	def groupby(self,frame,key:str):
+		"""Groupby the input frame for the given key and dates.
 
-		return dca.fit(orate,**kwargs)
+		frame 	: panda DataFrame
 
-	def preprocess(self,*args,start=None,cease=None):
+		Returns a new frame with key and date columns, and Analysis heads.
+		"""
 
-		frame = self.groupby(*args)
-
-		frame = self.trim(frame,start,cease)
-
-		dates = frame[self.heads.dates]
-
-		return dates-dates[0],frame[self.heads.orate]
-
-	def groupby(self,*args):
-
-		columns = list(args)
+		columns = list((key,))
 
 		columns.append(self.heads.dates)
 
-		frame_by_group = self._frame.groupby(columns)
+		frame_by_group = frame.groupby(columns)
 
 		return frame_by_group[self.rates].sum().reset_index()
 
-	def filter(self,frame,**kwargs):
+	def filter(self,frame,value:str):
+		"""Filters input frame based on the first column and the input value.
 
-		for key,value in kwargs.items():
-			return frame[frame[key]==value]
+		frame 	: panda DataFrame
 
-	def trim(self,frame,start=None,cease=None):
-		"""Returns data frame that is in the range of start and cease dates.
+		Returns a new frame with the given value in the first column, date in the second column, and
+		Analysis heads in the rest of the columns.
+		"""
+		return frame[frame.iloc[:,0]==value].reset_index(drop=True)
 
+	def fit(self,frame,start:datetime.date=None,cease:datetime.date=None,**kwargs):
+		"""Returns new frame that is in the range of start and cease dates and newly added days and
+		theoretical rates."""
+
+		frame = self.derive(frame,start=start,cease=cease)
+
+		rates = Optimize(frame['TTimes']).fit(frame.iloc[:,2].to_numpy(),**kwargs)
+
+		return frame.assign(TRates=rates)
+
+	def derive(self,frame,**kwargs):
+		"""Returns new frame that is in the range of start and cease dates and newly added days."""
+
+		date0 = frame[self.heads.dates][0]
+
+		frame = self.trim(frame,**kwargs)
+
+		dates = frame[self.heads.dates]
+
+		times = (dates-date0).to_numpy()
+		times = times.astype('timedelta64[D]')
+
+		return frame.assign(TTimes=times.astype('float64'))
+
+	def trim(self,frame,start:datetime.date=None,cease:datetime.date=None):
+		"""Trims the frame for the start and cease dates.
+		
 		start 	: start date when to start analysis
 		cease 	: cease date when to cease analysis
+
+		Returns the trimmed dataframe.
 		"""
 
 		if start is not None:
-			frame = frame[frame[self.heads.dates]>=start]
+			frame = frame[frame[self.heads.dates].dt.date>=start]
 
 		if cease is not None:
-			frame = frame[frame[self.heads.dates]<=cease]
+			frame = frame[frame[self.heads.dates].dt.date<=cease]
 
 		return frame
-
-	@property
-	def frame(self):
-		return self._frame
 
 	@property
 	def heads(self):

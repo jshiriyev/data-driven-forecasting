@@ -1,143 +1,95 @@
+from dataclasses import dataclass
+
 import numpy
 
-from scipy.stats import linregress
-
+@dataclass
 class Model:
+	"""Initializes Decline Curve Model with the decline attributes and mode.
+	
+	Decline attributes are rate0 (q0) and decline0 (d0):
 
-	def __init__(self,days):
-		"""
-		Initializing decline model with days when the rates are measured.
+	rate0 		: initial flow rate
+	decline0 	: initial decline rate, day**-1
 
-		days 		: rate measured times, array of floats
-		"""
-		self._days = days
+	Decline exponent defines the mode:
 
-	def __call__(self,rates,**kwargs):
+	exponent 	: Arps' decline-curve exponent (b)
 
-		return self.fit(rates,**kwargs)
+		b = 0 		-> mode = 'exponential'
+		0 < b < 1 	-> mode = 'hyperbolic'
+		b = 1 		-> mode = 'harmonic' 
 
-	def fit(self,rates,**kwargs):
-		"""Fits the decline model to the given rates:
+	Rates are calculated for the input days.
+	"""
 
-		rates 		: measured flow rates
+	rate0 		: float
+	decline0 	: float
+	mode 		: str 	= None
+	exponent 	: float = None
 
-		Returns the rates for the estimation days.
-		"""
+	def __post_init__(self):
+		"""Assigns mode and exponent."""
+		self.mode,self.exponent = self.get_kwargs(self.mode,self.exponent)
 
-		days,kwargs = self.get_days(**kwargs)
-		mode,kwargs = self.get_mode(**kwargs)
+	def __call__(self,days):
+		"""Returns the theoretical rates based on class attributes and mode."""
+		return getattr(self,f"{self.mode}")(days)
 
-		args = getattr(self,f"get_{mode}")(rates,**kwargs)
-
-		return getattr(self,f"{mode}")(days,*args,**kwargs)
-
-	def forward(self,*args,**kwargs):
-		"""Returns the calculated rates based on the decline attributes and mode:
-		
-		Decline attributes (*args) are rate0 (q0) and decline0 (d0):
-
-		rate0 		: initial flow rate
-		decline0 	: initial decline rate, day**-1
-
-		Decline exponent defines the mode:
-
-		exponent 	: Arps' decline-curve exponent (b)
-
-			b = 0 		-> exponential
-			0 < b < 1 	-> hyperbolic
-			b = 1 		-> harmonic 
-
-		Rates are calculated for the measurements days or any other input days.
-		"""
-
-		days,kwargs = self.get_days(**kwargs)
-		mode,kwargs = self.get_mode(**kwargs)
-
-		return getattr(self,f"{mode}")(days,*args,**kwargs)
-
-	def get_days(self,**kwargs):
-		"""Returns days for the forward calculations."""
-		if kwargs.get('days') is None:
-			return self._days,kwargs
-
-		return kwargs.pop('days'),kwargs
-
-	def get_mode(self,**kwargs):
-		"""Returns mode based on exponent and mode input."""
-
-		if kwargs.get('mode') is None:
-			mode = 'exponential'
-		else:
-			mode = kwargs.pop('mode')
-
-		exponent = kwargs.get('exponent')
-
-		if exponent is None:
-			return mode,kwargs
-
-		if exponent == 0:
-			_ = kwargs.pop('exponent')
-			return 'exponential',kwargs
-
-		if exponent > 0 and exponent < 1:
-			return 'hyperbolic',kwargs
-
-		if exponent == 1:
-			_ = kwargs.pop('exponent')
-			return 'harmonic',kwargs
-
-	def inverse(self,rates,**kwargs):
-		"""Returns decline attributes (q0,d0) based on input rates:
-		
-		rates 		: measured flow rates
-		
-		Returned decline attributes are initial-rate and initial-decline values.
-		"""
-
-		mode,kwargs = self.get_mode(**kwargs)
-
-		return getattr(self,f"get_{mode}")(rates,**kwargs)
-
-	def get_exponential(self,rates):
-
-		sol = linregress(self._days,numpy.log(rates))
-
-		return numpy.exp(sol.intercept),-sol.slope
-
-	def get_hyperbolic(self,rates,exponent=0.5):
-
-		sol = linregress(self._days,numpy.power(1/rates,exponent))
-
-		return sol.intercept**(-1/exponent),sol.slope/sol.intercept/exponent
-
-	def get_harmonic(self,rates):
-
-		sol = linregress(self._days,1/rates)
-
-		return sol.intercept**(-1),sol.slope/sol.intercept
-
-	@property
-	def days(self):
-
-		return self._days
-
-	@staticmethod
-	def exponential(days,rate0,decline0):
+	def exponential(self,days):
 		"""Exponential decline model: q = q0 * exp(-d0*t) """
+		return self.rate0*numpy.exp(-self.decline0*days)
 
-		return rate0*numpy.exp(-decline0*days)
-
-	@staticmethod
-	def hyperbolic(days,rate0,decline0,exponent=0.5):
+	def hyperbolic(self,days):
 		"""Hyperbolic decline model: q = q0 / (1+b*d0*t)**(1/b) """
+		return self.rate0/(1+self.exponent*self.decline0*days)**(1/self.exponent)
 
-		return rate0/(1+exponent*decline0*days)**(1/exponent)
+	def harmonic(self,days):
+		"""Harmonic decline model: q = q0 / (1+d0*t) """
+		return self.rate0/(1+self.decline0*days)
 
 	@staticmethod
-	def harmonic(days,rate0,decline0):
-		"""Harmonic decline model: q = q0 / (1+d0*t) """
+	def get_kwargs(mode=None,exponent=None):
+		"""Returns mode and exponent based on their values."""
 
-		return rate0/(1+decline0*days)
+		if mode is None and exponent is None:
+			return 'exponential',0
+
+		elif mode is None and exponent is not None:
+			return Model.get_mode(exponent),exponent
+
+		elif mode is not None and exponent is None:
+			return mode,Model.get_exponent(mode)
+
+		return mode,exponent
+
+	@staticmethod
+	def get_mode(exponent:float):
+		"""Returns mode based on the exponent value."""
+		if exponent == 0.:
+			return 'exponential'
+
+		if exponent > 0. and exponent < 1.:
+			return 'hyperbolic'
+
+		if exponent == 1.:
+			return 'harmonic'
+
+		raise Warning("Exponent value needs to be in the range of 0 and 1.")
+
+	@staticmethod
+	def get_exponent(mode:str):
+		"""Returns exponent based on the mode."""
+
+		if mode == 'exponential':
+			return 0.
+
+		if mode == 'hyperbolic':
+			return 0.5
+
+		if mode == 'harmonic':
+			return 1.
+
+		raise Warning("Available modes are exponential, hyperbolic, and harmonic.")
 
 if __name__ == "__main__":
 
@@ -147,29 +99,17 @@ if __name__ == "__main__":
 
 	days = np.linspace(0,100,100)
 
-	forecast = np.linspace(100,200)
+	print(Model.get_kwargs('exponential',0.3))
 
-	dm = Model(days)
+	exp = Model(rate0=10,decline0=0.05)
+	hyp = Model(rate0=10,decline0=0.05,exponent=0.4)
+	har = Model(rate0=10,decline0=0.05,exponent=1.0)
 
-	exp = dm.forward(10,0.05,mode='exponential')
-	hyp = dm.forward(10,0.05,mode='hyperbolic')
-	har = dm.forward(10,0.05,mode='harmonic')
+	print(exp)
 
-	fit1 = dm(exp)
-	fit2 = dm(hyp,mode='hyperbolic',days=forecast)
-	fit3 = dm(har,mode='harmonic',days=forecast)
-
-	# plt.plot(days,exp,label='exponential')
-	# plt.plot(days,hyp,label='hyperbolic')
-	# plt.plot(days,har,label='harmonic')
-
-	plt.plot(days,fit1,'b--',label='exponential')
-	plt.plot(forecast,fit2,c='tab:orange',linestyle='--',label='hyperbolic')
-	plt.plot(forecast,fit3,'g--',label='harmonic')
-
-	print(dm.inverse(exp,mode='exponential'))
-	print(dm.inverse(hyp,mode='hyperbolic'))
-	print(dm.inverse(har,mode='harmonic'))
+	plt.plot(days,exp(days),label='exponential')
+	plt.plot(days,hyp(days),label='hyperbolic')
+	plt.plot(days,har(days),label='harmonic')
 
 	plt.legend()
 
