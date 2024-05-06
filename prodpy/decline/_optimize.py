@@ -16,10 +16,10 @@ class Optimize:
 
 	def __call__(self,rates,**kwargs):
 		"""Returns the theoretical rates based on the optimized attributes."""
-		return self.fit(rates,**kwargs)
+		return self.predict(rates,**kwargs)
 
-	def fit(self,rates,**kwargs):
-		"""Fits the decline model to the given rates:
+	def predict(self,rates,**kwargs):
+		"""Predicts the decline rates for the given measured rates:
 
 		rates 		: measured flow rates
 

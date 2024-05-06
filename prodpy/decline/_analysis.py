@@ -67,14 +67,11 @@ class Analysis():
 		return frame[frame.iloc[:,0]==value].reset_index(drop=True)
 
 	def fit(self,frame,start:datetime.date=None,cease:datetime.date=None,**kwargs):
-		"""Returns new frame that is in the range of start and cease dates and newly added days and
-		theoretical rates."""
+		"""Returns optimized model that fits the rates."""
 
 		frame = self.derive(frame,start=start,cease=cease)
 
-		rates = Optimize(frame['TTimes']).fit(frame.iloc[:,2].to_numpy(),**kwargs)
-
-		return frame.assign(TRates=rates)
+		return Optimize(frame['TTimes']).minimize(frame.iloc[:,2].to_numpy(),**kwargs)
 
 	def derive(self,frame,**kwargs):
 		"""Returns new frame that is in the range of start and cease dates and newly added days."""
@@ -98,7 +95,6 @@ class Analysis():
 
 		Returns the trimmed dataframe.
 		"""
-
 		if start is not None:
 			frame = frame[frame[self.heads.dates].dt.date>=start]
 
@@ -106,6 +102,16 @@ class Analysis():
 			frame = frame[frame[self.heads.dates].dt.date<=cease]
 
 		return frame
+
+	def predict(self,frame,start:datetime.date=None,cease:datetime.date=None,**kwargs):
+		"""Returns new frame that is in the range of start and cease dates and newly added days and
+		theoretical rates."""
+
+		frame = self.derive(frame,start=start,cease=cease)
+
+		model = Optimize(frame['TTimes']).minimize(frame.iloc[:,2].to_numpy(),**kwargs)
+
+		return frame.assign(TRates=model(frame['TTimes']))
 
 	@property
 	def heads(self):
