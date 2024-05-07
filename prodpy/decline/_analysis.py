@@ -111,7 +111,7 @@ class Analysis():
 
 		model = Optimize(frame['TTimes']).minimize(frame.iloc[:,2].to_numpy(),**kwargs)
 
-		return frame.assign(TRates=model(frame['TTimes']))
+		return frame.assign(TRates=model(frame['TTimes'])),model
 
 	@property
 	def heads(self):
