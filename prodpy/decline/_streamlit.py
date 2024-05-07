@@ -1,18 +1,13 @@
 import datetime
 
-import os
-
 import sys
 
-sys.path.append(r'C:\Users\3876yl\Documents\prodpy')
-# sys.path.append(r'C:\Users\user\Documents\GitHub\prodpy')
-
-import matplotlib.pyplot as plt
+# sys.path.append(r'C:\Users\3876yl\Documents\prodpy')
+sys.path.append(r'C:\Users\user\Documents\GitHub\prodpy')
 
 import pandas as pd
 
 import plotly_express as px
-
 import plotly.graph_objects as go
 
 import streamlit as st
@@ -80,108 +75,56 @@ with st.sidebar:
 
 			item_list = frame[group_key].unique()
 
-			item = st.selectbox("Current stock:",item_list,index=None)
+			item = st.selectbox("Filter By:",item_list,index=None)
 
 			if item is not None:
+
 				frame1 = dca.filter(frame,item)
 
 				frame2,model = dca.predict(frame1,start=None,cease=None)
 
 				InputDataIsReady = True
 
-if InputDataIsReady:
+		st.header('Timeseries View')
 
-	column1, column2 = st.columns([0.7, 0.3])
-	
-	with column1 :
+		numbcols = numbcols.drop(rates_key)
 
-		# st.header('Oil Rate')
-		# st.header('Liquid Rate')
-		# st.header('Gas Oil Ratio')
-		# st.header('Water Cut')
-		# st.header('Gas Rate')
-		# st.header('Water Rate')
+		graph_key = st.multiselect("Add to the Plot:",numbcols)
 
-		# orate = wdf['Actual Oil, Mstb/d']
-		# grate = wdf['Actual Gas, MMscf/d']
-		# wrate = wdf['Actual Water, Mstb/d']
-		# lrate = orate+wrate
-		# wcut  = wrate/(wrate+orate)*100
-		# gor   = grate*1000/orate
+column1, column2 = st.columns([0.7, 0.3],gap='large')
 
-		st.header(f'{item} Rates')
+with column1 :
 
-		plot1 = px.scatter(frame2,x='Date',y='Actual Oil, Mstb/d')
-		plot2 = px.line(frame2,x="Date",y="TRates")
+	st.header(f'{item} Rates')
 
-		plot2.update_traces(line_color='black')
+	plot1 = px.scatter(frame2,x='Date',y='Actual Oil, Mstb/d')
+	plot2 = px.line(frame2,x="Date",y="TRates")
 
-		plot3 = go.Figure(data=plot1.data+plot2.data)
+	plot2.update_traces(line_color='black')
 
-		plot3.update_layout(
-			yaxis_title = 'Actual Oil, Mstb/d'
-			)
+	plot3 = go.Figure(data=plot1.data+plot2.data)
 
-		st.plotly_chart(plot3)
+	plot3.update_layout(
+		yaxis_title = 'Actual Oil, Mstb/d'
+		)
 
-		# st.scatter_chart(
-		#     frame2,
-		#     x='Date',
-		#     y='Actual Oil, Mstb/d',
-		# )
+	st.plotly_chart(plot3,use_container_width=True)
 
-		# st.line_chart(frame2, x="Date", y="TRates")
+with column2:
 
-		# fig, ax1 = plt.subplots(nrows=1)
+	st.header('Decline Model Parameters')
 
-		# # fig.set_figheight(15)
-		# ax1.scatter(frame1['Date'],frame1['Actual Oil, Mstb/d'],s=1)
-		# ax1.plot(frame2['Date'],frame2['TRates'],color='k',label='Exponential Decline')
-		# # ax1.scatter(wdf['Date'],orate,s=1)
-		# ax1.set_ylabel('Oil Rate, MSTB/d')
+	slider = st.slider(
+		"Time Interval:",
+		value=(frame2[dca.heads.dates].iloc[0].date(),
+			   frame2[dca.heads.dates].iloc[-1].date())
+		)
 
-		# # ax2.scatter(wdf['Date'],lrate,s=1)
-		# # ax2.set_ylabel('Liquid Rate, MSTB/d')
+	mode = st.selectbox("Decline Mode:",decline_modes)
 
-		# # ax3.scatter(wdf['Date'],gor,s=1)
-		# # ax3.set_ylabel('GOR, SCF/STB')
+	exponent = st.number_input(label='Decline Curve Exponent',value=0.,step=0.05)
 
-		# # ax4.scatter(wdf['Date'],wcut,s=1)
-		# # ax4.set_ylabel('Water Cut, %')
+	rate0 = st.text_input(label='Initial Rate',placeholder=str(model.rate0))
 
-		# # ax5.scatter(wdf['Date'],grate,s=1)
-		# # ax5.set_ylabel('Gas Rate, MMSCF/d')
-
-		# # ax6.scatter(wdf['Date'],wrate,s=1)
-		# # ax6.set_ylabel('Water Rate, MSTB/d')
-
-		# st.pyplot(fig)
-
-	with column2:
-
-		st.header('Decline Model Inputs')
-
-		slider = st.slider(
-			"Select Time Interval:",
-			value=(frame2[dca.heads.dates].iloc[0].date(),
-				   frame2[dca.heads.dates].iloc[-1].date())
-			)
-
-		rate0 = st.text_input(label='Initial Rate',placeholder=str(model.rate0))
-
-		try:
-			float(rate0)
-		except:
-			pass
-
-		decline0 = st.text_input(label='Initial Decline Rate',placeholder=str(model.decline0))
-
-		try:
-			float(decline0)
-		except:
-			pass
-
-		mode = st.selectbox("Choose Decline Mode:",decline_modes)
-
-		exponent = st.number_input(label='Decline Curve Exponent',value=0.,step=0.05)
+	decline0 = st.text_input(label='Initial Decline Rate',placeholder=str(model.decline0))
 
