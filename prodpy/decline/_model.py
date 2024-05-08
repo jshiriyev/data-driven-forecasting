@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import datetime
 
 import numpy
+import pandas
 
 @dataclass
 class Model:
@@ -33,29 +34,14 @@ class Model:
 		"""Assigns mode and exponent."""
 		self.mode,self.exponent = self.get_kwargs(self.mode,self.exponent)
 
-	def __call__(self,*,days=None,datetimes=None,datetime0:datetime.date=None,code='D'):
-
-		if datetimes is not None:
-			datetime0 = None
-
+	def __call__(self,*,days=None,datetimes=None,**kwargs):
+		"""Calculates rates for the given days or datetimes."""
 		if days is None:
-			days = time-datetime0
+			return self.rates(self.datetime2day(datetimes,**kwargs))
 
-		rates = self.get_rates(days)
+		return self.rates(days),self.day2datetime(days,**kwargs)
 
-		
-			return rates
-
-		datetimes = self.get_times(days,datetime0,**kwargs)
-
-		return rates,datetimes
-
-	def get_days(self,datetimes,datetime0=None):
-		if datetime0 is None:
-			datetime0 = datetimes[0]
-		return (datetimes-datetime0).astype('timedelta[D]')
-
-	def get_rates(self,days,*,mode=None):
+	def rates(self,days,*,mode=None):
 		"""Returns the theoretical rates based on class attributes and mode."""
 		locmode = self.mode if mode is None else mode
 		return getattr(self,f"{locmode}")(days)
@@ -90,6 +76,7 @@ class Model:
 	@staticmethod
 	def get_mode(exponent:float):
 		"""Returns mode based on the exponent value."""
+
 		if exponent == 0.:
 			return 'exponential'
 
@@ -117,41 +104,47 @@ class Model:
 		raise Warning("Available modes are exponential, hyperbolic, and harmonic.")
 
 	@staticmethod
-	def get_datetimes(days:list,datetime0:datetime.datetime,code='D'):
-		"""Adds days to datetime0 after doing the conversion according to code.
+	def datetime2day(datetimes:pandas.Series,datetime0=None):
+		"""Calculates days for the given datetime series."""
 
-		Available code and their meanings are shown below:
+		if datetime0 is None:
+			datetime0 = datetimes[0]
 
-			Code	Meaning
+		timedelta = (datetimes-datetime0).to_numpy()
+
+		timedelta = timedelta.astype('timedelta64[D]')
+
+		return timedelta.astype('float64')
+
+	@staticmethod
+	def day2datetime(days:numpy.ndarray,*,datetime0=None,timecode=None):
+		"""
+		Adds days to datetime0 calculating new datetimes with the
+		  specified timecode. Available timecodes and their meanings
+		  are shown below:
+
+		TimeCode	Meaning
+		-------- 	-------------
 			   h	hour
 			   m	minute
 			   s	second
 			  ms	millisecond
 			  us	microsecond
 
-		Returns array of datetime in the datetime code specified.
+		Returns numpy array of datetimes.
 		"""
-		conversion_factors = {
-			'D'  : 1,
-			'h'  : 24,
-			'm'  : 24*60 ,
-			's'  : 24*60*60,
-			'ms' : 24*60*60*1000 ,
-			'us' : 24*60*60*1000*1000,
-			}
 
-		factor = conversion_factors.get(code)
+		if datetime0 is None:
+			datetime0 = datetime.date(2000,1,1)
 
-		if factor is None:
-		    raise ValueError(f"Invalid time code. Valid options are: {list(conversion_factors)}")
+		ustimes = numpy.asarray(days)*24*60*60*1000*1000
 
-		timearray = np.array(days)*factor
+		timedelta = numpy.asarray(ustimes,dtype=f'timedelta64[us]')
+		datetimes = numpy.datetime64(datetime0)+timedelta
 
-		timedelta = np.asarray(timearray,dtype=f'timedelta64[{code}]')
+		dtdtype ='datetime64[D]' if timecode is None else f'datetime64[{timecode}]'
 
-		datetimes = np.datetime64(datetime0)+timedelta
-
-		return datetimes.astype(f'datetime64[{code}]')
+		return datetimes.astype(dtdtype)
 
 if __name__ == "__main__":
 

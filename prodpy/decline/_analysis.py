@@ -3,6 +3,7 @@ import datetime
 import pandas
 
 from ._heads import Heads
+from ._model import Model
 
 from ._optimize import Optimize
 
@@ -76,16 +77,11 @@ class Analysis():
 	def derive(self,frame,**kwargs):
 		"""Returns new frame that is in the range of start and cease dates and newly added days."""
 
-		date0 = frame[self.heads.dates][0]
-
 		frame = self.trim(frame,**kwargs)
 
-		dates = frame[self.heads.dates]
+		delta = Model.datetime2day(frame[self.heads.dates])
 
-		times = (dates-date0).to_numpy()
-		times = times.astype('timedelta64[D]')
-
-		return frame.assign(TTimes=times.astype('float64'))
+		return frame.assign(TTimes=delta.astype('float64'))
 
 	def trim(self,frame,start:datetime.date=None,cease:datetime.date=None):
 		"""Trims the frame for the start and cease dates.
