@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+import datetime
+
 import numpy
 
 @dataclass
@@ -31,9 +33,32 @@ class Model:
 		"""Assigns mode and exponent."""
 		self.mode,self.exponent = self.get_kwargs(self.mode,self.exponent)
 
-	def __call__(self,days):
+	def __call__(self,*,days=None,datetimes=None,datetime0:datetime.date=None,code='D'):
+
+		if datetimes is not None:
+			datetime0 = None
+
+		if days is None:
+			days = time-datetime0
+
+		rates = self.get_rates(days)
+
+		
+			return rates
+
+		datetimes = self.get_times(days,datetime0,**kwargs)
+
+		return rates,datetimes
+
+	def get_days(self,datetimes,datetime0=None):
+		if datetime0 is None:
+			datetime0 = datetimes[0]
+		return (datetimes-datetime0).astype('timedelta[D]')
+
+	def get_rates(self,days,*,mode=None):
 		"""Returns the theoretical rates based on class attributes and mode."""
-		return getattr(self,f"{self.mode}")(days)
+		locmode = self.mode if mode is None else mode
+		return getattr(self,f"{locmode}")(days)
 
 	def exponential(self,days):
 		"""Exponential decline model: q = q0 * exp(-d0*t) """
@@ -90,6 +115,43 @@ class Model:
 			return 1.
 
 		raise Warning("Available modes are exponential, hyperbolic, and harmonic.")
+
+	@staticmethod
+	def get_datetimes(days:list,datetime0:datetime.datetime,code='D'):
+		"""Adds days to datetime0 after doing the conversion according to code.
+
+		Available code and their meanings are shown below:
+
+			Code	Meaning
+			   h	hour
+			   m	minute
+			   s	second
+			  ms	millisecond
+			  us	microsecond
+
+		Returns array of datetime in the datetime code specified.
+		"""
+		conversion_factors = {
+			'D'  : 1,
+			'h'  : 24,
+			'm'  : 24*60 ,
+			's'  : 24*60*60,
+			'ms' : 24*60*60*1000 ,
+			'us' : 24*60*60*1000*1000,
+			}
+
+		factor = conversion_factors.get(code)
+
+		if factor is None:
+		    raise ValueError(f"Invalid time code. Valid options are: {list(conversion_factors)}")
+
+		timearray = np.array(days)*factor
+
+		timedelta = np.asarray(timearray,dtype=f'timedelta64[{code}]')
+
+		datetimes = np.datetime64(datetime0)+timedelta
+
+		return datetimes.astype(f'datetime64[{code}]')
 
 if __name__ == "__main__":
 
