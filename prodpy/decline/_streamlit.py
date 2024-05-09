@@ -2,8 +2,8 @@ import datetime
 
 import sys
 
-sys.path.append(r'C:\Users\3876yl\Documents\prodpy')
-# sys.path.append(r'C:\Users\user\Documents\GitHub\prodpy')
+# sys.path.append(r'C:\Users\3876yl\Documents\prodpy')
+sys.path.append(r'C:\Users\user\Documents\GitHub\prodpy')
 
 import numpy as np
 import pandas as pd
@@ -13,11 +13,10 @@ import plotly.graph_objects as go
 
 import streamlit as st
 
-from prodpy.decline import Analysis
-from prodpy.decline import Optimize
 from prodpy.decline import Model
 
-st.set_page_config(layout='wide',page_title='Decline Curve Analysis')
+from prodpy.decline import Session
+from prodpy.decline import Update
 
 # INPUT FILE PARAMETERS
 
@@ -35,101 +34,11 @@ np.random.seed(0)
 
 rates = np.random.rand(datetimes.size)*1000
 
-def upload_file():
-	pass
+st.set_page_config(layout='wide',page_title='Decline Curve Analysis')
 
-# DECLINE RATE MODEL PARAMETERS
-
-if 'selected_time_interval' not in st.session_state:
-	st.session_state['selected_time_interval'] = (date_amin,date_amax)
-
-decline_type_options = ['Exponential','Hyperbolic','Harmonic']
-
-if 'mode' not in st.session_state:
-    st.session_state['mode'] = 'Exponential'
-
-if 'exponent' not in st.session_state:
-	st.session_state['exponent'] = 0.
-
-if 'rate0' not in st.session_state:
-	st.session_state['rate0'] = None
-
-if 'decline0' not in st.session_state:
-	st.session_state['decline0'] = None
-
-def time_update():
-
-	date_min,date_max = st.session_state.selected_time_interval
-
-	cond1 = st.session_state.datetimes >= np.datetime64(date_min)
-	cond2 = st.session_state.datetimes <= np.datetime64(date_max)
-
-	conds = np.logical_and(cond1,cond2)
-
-	st.session_state['opacity'] = conds*0.7+0.3
-
-def mode_update():
-
-	exponent = Model.get_exponent(st.session_state.mode.lower())
-
-	st.session_state['exponent'] = exponent*100
-
-def exponent_update():
-
-	exponent = st.session_state.exponent/100.
-
-	mode = Model.get_mode(exponent)
-
-	st.session_state['mode'] = mode.capitalize()
-
-def optimize_update():
-
-	pass
-
-def run_model_update():
-
-	ss = st.session_state
-
-	try:
-		float(ss.rate0)
-	except:
-		return
-
-	try:
-		float(ss.decline0)
-	except:
-		return
-
-	model = Model(
-		float(ss.rate0),
-		float(ss.decline0),
-		ss.mode.lower(),
-		ss.exponent/100,
-		)
-
-	ss['fitline'] = model(datetimes=st.session_state.datetimes)
-
-def save_model():
-	pass
-
-def export_fits():
-	pass
-
-# VISUALIZED DATA
-
-if 'datetimes' not in st.session_state:
-	st.session_state['datetimes'] = datetimes
-
-if 'inputrates' not in st.session_state:
-	st.session_state['inputrates'] = None
-
-if 'opacity' not in st.session_state:
-	st.session_state['opacity'] = 1.
-
-if 'fitline' not in st.session_state:
-	st.session_state['fitline'] = None
-
-# DISPLAY SETTINGS
+st.session_state = Session.column1(st.session_state)
+st.session_state = Session.column2(st.session_state,datetimes)
+st.session_state = Session.column3(st.session_state,date_amin,date_amax)
 
 with st.sidebar:
 
@@ -151,7 +60,7 @@ with st.sidebar:
 	dates_key = st.selectbox("Choose Date Column:",datecols,index=None)
 	rates_key = st.selectbox("Choose Rate Column:",numbcols,index=None)
 
-	# dca = Analysis(dates_key,rates_key)
+	# dca = decline.Analysis(dates_key,rates_key)
 
 	st.header('Data Filtering')
 
@@ -159,7 +68,7 @@ with st.sidebar:
 
 	if group_key is not None:
 
-		frame = analysis.groupby(frame,group_key)
+		frame = decline.Analysis.groupby(frame,group_key)
 
 		itemlist = frame[group_key].unique()
 
@@ -209,31 +118,31 @@ with modelColumn:
 
 	st.header('Decline Model Parameters')
 
-	# date_amin = frame2[dca.heads.dates].iloc[0].date()
-	# date_amax = frame2[dca.heads.dates].iloc[-1].date()
-
-	slider = st.slider(
+	st.slider(
 		label = "Time Interval:",
 		min_value = date_amin,
 		max_value = date_amax,
-		key = 'selected_time_interval',
-		on_change = time_update,
+		key = 'time_interval_selected',
+		on_change = Update.time,
+		args = (st.session_state,),
 		)
 
-	mode = st.selectbox(
+	st.selectbox(
 		label = "Decline Mode:",
-		options = decline_type_options,
+		options = Model.options,
 		key = 'mode',
-		on_change = mode_update,
+		on_change = Update.mode,
+		args = (st.session_state,),
 		)
 
-	exponent = st.number_input(
+	st.number_input(
 		label = 'Decline Exponent %',
 		min_value = 0,
 		max_value = 100,
 		key = 'exponent',
 		step = 5,
-		on_change = exponent_update,
+		on_change = Update.exponent,
+		args = (st.session_state,),
 		)
 
 	st.button(
@@ -241,12 +150,12 @@ with modelColumn:
 		use_container_width = True,
 		)
 
-	rate0 = st.text_input(
+	st.text_input(
 		label = 'Initial Rate',
 		key = 'rate0',
 		) # ,placeholder=str(model.rate0)
 
-	decline0 = st.text_input(
+	st.text_input(
 		label='Initial Decline Rate',
 		key = 'decline0',
 		) # ,placeholder=str(model.decline0)
@@ -254,13 +163,11 @@ with modelColumn:
 	st.button(
 		label = 'Run Model',
 		use_container_width = True,
-		on_click = run_model_update,
+		on_click = Update.run,
+		args = (st.session_state,),
 		)
 
-	st.subheader(r'''
-		Save & Export
-		''',
-		)
+	st.subheader(r'''Save & Export''',)
 
 	st.button(
 		label = "Save Model",
@@ -268,7 +175,6 @@ with modelColumn:
 		)
 
 	st.button(
-		label = "Export Fit",
+		label = "Export Fits",
 		use_container_width = True,
 		)
-

@@ -1,11 +1,11 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import datetime
 
 import numpy
 import pandas
 
-@dataclass
+@dataclass(frozen=True)
 class Model:
 	"""Initializes Decline Curve Model with the decline attributes and mode.
 	
@@ -25,26 +25,42 @@ class Model:
 	Rates are calculated for the input days.
 	"""
 
-	rate0 		: float
-	decline0 	: float
-	mode 		: str 	= None
-	exponent 	: float = None
+	mode 		: str = 'Exponential'
+	exponent 	: float = 0.
+	rate0 		: float = 0.
+	decline0 	: float = 0.
+
+	options 	: tuple[str] = field(
+		init = False,
+		default = (
+			'Exponential',
+			'Hyperbolic',
+			'Harmonic',
+			)
+		)
 
 	def __post_init__(self):
 		"""Assigns mode and exponent."""
-		self.mode,self.exponent = self.get_kwargs(self.mode,self.exponent)
+		
+		mode,exponent = self.get_kwargs(self.mode,self.exponent)
+
+		object.__setattr__(self,'mode',mode)
+		object.__setattr__(self,'exponent',exponent)
 
 	def __call__(self,*,days=None,datetimes=None,**kwargs):
 		"""Calculates rates for the given days or datetimes."""
-		if days is None:
-			return self.rates(self.datetime2day(datetimes,**kwargs))
+	
+		_days = self.datetime2day(datetimes,**kwargs) if days is None else days
 
-		return self.rates(days),self.day2datetime(days,**kwargs)
+		if kwargs.get('datetime0') is None:
+			return self.rates(_days)
+
+		return self.day2datetime(_days,**kwargs),self.rates(_days)
 
 	def rates(self,days,*,mode=None):
 		"""Returns the theoretical rates based on class attributes and mode."""
 		locmode = self.mode if mode is None else mode
-		return getattr(self,f"{locmode}")(days)
+		return getattr(self,f"{locmode.lower()}")(days)
 
 	def exponential(self,days):
 		"""Exponential decline model: q = q0 * exp(-d0*t) """
@@ -92,13 +108,13 @@ class Model:
 	def get_exponent(mode:str):
 		"""Returns exponent based on the mode."""
 
-		if mode == 'exponential':
+		if mode.lower() == 'exponential':
 			return 0.
 
-		if mode == 'hyperbolic':
+		if mode.lower() == 'hyperbolic':
 			return 0.5
 
-		if mode == 'harmonic':
+		if mode.lower() == 'harmonic':
 			return 1.
 
 		raise Warning("Available modes are exponential, hyperbolic, and harmonic.")
@@ -112,9 +128,9 @@ class Model:
 
 		timedelta = (datetimes-datetime0).to_numpy()
 
-		timedelta = timedelta.astype('timedelta64[D]')
+		timedelta = timedelta.astype('timedelta64[us]')
 
-		return timedelta.astype('float64')
+		return timedelta.astype('float64')/(24*60*60*1000*1000)
 
 	@staticmethod
 	def day2datetime(days:numpy.ndarray,*,datetime0=None,timecode=None):
@@ -148,27 +164,32 @@ class Model:
 
 if __name__ == "__main__":
 
-	import matplotlib.pyplot as plt
+	# import matplotlib.pyplot as plt
 
-	import numpy as np
+	# import numpy as np
 
-	days = np.linspace(0,100,100)
+	# days = np.linspace(0,100,100)
 
-	print(Model.get_kwargs('exponential',0.3))
+	# print(Model.get_kwargs('exponential',0.3))
 
-	exp = Model(rate0=10,decline0=0.05)
-	hyp = Model(rate0=10,decline0=0.05,exponent=0.4)
-	har = Model(rate0=10,decline0=0.05,exponent=1.0)
+	# exp = Model(rate0=10,decline0=0.05)
+	# hyp = Model(rate0=10,decline0=0.05,exponent=0.4)
+	# har = Model(rate0=10,decline0=0.05,exponent=1.0)
 
-	print(exp)
+	# print(exp)
 
-	plt.plot(days,exp(days),label='exponential')
-	plt.plot(days,hyp(days),label='hyperbolic')
-	plt.plot(days,har(days),label='harmonic')
+	# plt.plot(days,exp(days=days),label='exponential')
+	# plt.plot(days,hyp(days=days),label='hyperbolic')
+	# plt.plot(days,har(days=days),label='harmonic')
 
-	plt.legend()
+	# plt.legend()
 
-	plt.show()
+	# plt.show()
 
+	print(Model.mode)
+	print(Model.exponent)
+	print(Model.rate0)
+	print(Model.decline0)
+	print(Model.options)
 
-	
+	print(Model(5,5,5,5))

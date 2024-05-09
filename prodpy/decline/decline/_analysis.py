@@ -2,7 +2,6 @@ import datetime
 
 import pandas
 
-from ._heads import Heads
 from ._model import Model
 
 from ._optimize import Optimize
@@ -14,58 +13,16 @@ class Analysis():
 		Initializing decline analysis with rate column keys.
 		
 		dates 	: production dates
-		orate 	: oil rates
-		grate 	: gas rates
-		wrate 	: water rates
+		orate 	: oil rate
+		grate 	: gas rate
+		wrate 	: water rate
 
-		lrate	: Liquid Rate"
+		lrate	: Liquid Rate
 		wcut 	: Water Cut
 		gor 	: Gas-Oil Ratio
 		"""
 		self._heads = Heads(dates,**kwargs)
 		self._rates = list(kwargs.values())
-
-	def get(self,frame,**kwargs):
-		"""Groupby and filters input frame based on key-value pair of the first optional argument.
-
-		frame 	: panda DataFrame
-
-		Returns a new frame with the given value in the first column, date in the second column, and
-		Analysis heads in the rest of the columns.
-		"""
-
-		for key,value in kwargs.items():
-			break
-
-		frame = self.groupby(frame,key)
-			
-		return self.filter(frame,value)
-
-	def groupby(self,frame,key:str):
-		"""Groupby the input frame for the given key and dates.
-
-		frame 	: panda DataFrame
-
-		Returns a new frame with key and date columns, and Analysis heads.
-		"""
-
-		columns = list((key,))
-
-		columns.append(self.heads.dates)
-
-		frame_by_group = frame.groupby(columns)
-
-		return frame_by_group[self.rates].sum().reset_index()
-
-	def filter(self,frame,value:str):
-		"""Filters input frame based on the first column and the input value.
-
-		frame 	: panda DataFrame
-
-		Returns a new frame with the given value in the first column, date in the second column, and
-		Analysis heads in the rest of the columns.
-		"""
-		return frame[frame.iloc[:,0]==value].reset_index(drop=True)
 
 	def fit(self,frame,start:datetime.date=None,cease:datetime.date=None,**kwargs):
 		"""Returns optimized model that fits the rates."""
