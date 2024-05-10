@@ -1,25 +1,13 @@
 import numpy
 
-import decline
+from ._model import Model
 
 class Update():
-	
-	@staticmethod
-	def time(state):
-
-		date_min,date_max = state.time_interval_selected
-
-		cond1 = state.datetimes >= numpy.datetime64(date_min)
-		cond2 = state.datetimes <= numpy.datetime64(date_max)
-
-		conds = numpy.logical_and(cond1,cond2)
-
-		state['opacity'] = conds*0.7+0.3
 
 	@staticmethod
 	def mode(state):
 
-		exponent = decline.Model.get_exponent(state.mode)
+		exponent = Model.get_exponent(state.mode)
 
 		state['exponent'] = exponent*100
 
@@ -28,7 +16,7 @@ class Update():
 
 		exponent = state.exponent/100.
 
-		mode = decline.Model.get_mode(exponent)
+		mode = Model.get_mode(exponent)
 
 		state['mode'] = mode.capitalize()
 
@@ -50,7 +38,7 @@ class Update():
 		except:
 			return
 
-		model = decline.Model(
+		model = Model(
 			mode = state.mode.lower(),
 			exponent = state.exponent/100,
 			rate0 = float(state.rate0),

@@ -7,14 +7,9 @@ import pandas
 
 @dataclass(frozen=True)
 class Model:
-	"""Initializes Decline Curve Model with the decline attributes and mode.
-	
-	Decline attributes are rate0 (q0) and decline0 (d0):
+	"""Initializes Decline Curve Model with the decline option and attributes.
 
-	rate0 		: initial flow rate
-	decline0 	: initial decline rate, day**-1
-
-	Decline exponent defines the mode:
+	Decline option is mode-exponent pair, where exponent defines the mode:
 
 	exponent 	: Arps' decline-curve exponent (b)
 
@@ -22,16 +17,22 @@ class Model:
 		0 < b < 1 	-> mode = 'hyperbolic'
 		b = 1 		-> mode = 'harmonic' 
 
-	Rates are calculated for the input days.
+	Decline attributes are rate0 (q0) and decline0 (d0):
+
+	rate0 		: initial flow rate
+	decline0 	: initial decline rate, day**-1
+
+	Rates are calculated for the calculation days.
 	"""
 
-	mode 		: str = 'Exponential'
-	exponent 	: float = 0.
+	mode 		: str   = None
+	exponent 	: float = None
 	rate0 		: float = 0.
 	decline0 	: float = 0.
 
 	options 	: tuple[str] = field(
 		init = False,
+		repr = False,
 		default = (
 			'Exponential',
 			'Hyperbolic',
@@ -40,54 +41,54 @@ class Model:
 		)
 
 	def __post_init__(self):
-		"""Assigns mode and exponent."""
+		"""Assigns corrected mode and exponent values."""
 		
-		mode,exponent = self.get_kwargs(self.mode,self.exponent)
+		mode,exponent = self.get_option(self.mode,self.exponent)
 
 		object.__setattr__(self,'mode',mode)
 		object.__setattr__(self,'exponent',exponent)
 
-	def __call__(self,*,days=None,datetimes=None,**kwargs):
-		"""Calculates rates for the given days or datetimes."""
+	def __call__(self,*,cdays=None,datetimes=None,**kwargs): # WILL NEED CORRECTION
+		"""Calculates rates for the given calculation days or datetimes."""
 	
-		_days = self.datetime2day(datetimes,**kwargs) if days is None else days
+		cdays = self.datetime2day(datetimes,**kwargs) if cdays is None else cdays
 
 		if kwargs.get('datetime0') is None:
-			return self.rates(_days)
+			return self.rates(cdays)
 
-		return self.day2datetime(_days,**kwargs),self.rates(_days)
+		return self.day2datetime(cdays,**kwargs),self.rates(cdays)
 
-	def rates(self,days,*,mode=None):
+	def rates(self,cdays,*,mode=None):
 		"""Returns the theoretical rates based on class attributes and mode."""
 		locmode = self.mode if mode is None else mode
-		return getattr(self,f"{locmode.lower()}")(days)
+		return getattr(self,f"{locmode.lower()}")(cdays)
 
-	def exponential(self,days):
+	def exponential(self,cdays):
 		"""Exponential decline model: q = q0 * exp(-d0*t) """
-		return self.rate0*numpy.exp(-self.decline0*days)
+		return self.rate0*numpy.exp(-self.decline0*cdays)
 
-	def hyperbolic(self,days):
+	def hyperbolic(self,cdays):
 		"""Hyperbolic decline model: q = q0 / (1+b*d0*t)**(1/b) """
-		return self.rate0/(1+self.exponent*self.decline0*days)**(1/self.exponent)
+		return self.rate0/(1+self.exponent*self.decline0*cdays)**(1/self.exponent)
 
-	def harmonic(self,days):
+	def harmonic(self,cdays):
 		"""Harmonic decline model: q = q0 / (1+d0*t) """
-		return self.rate0/(1+self.decline0*days)
+		return self.rate0/(1+self.decline0*cdays)
 
 	@staticmethod
-	def get_kwargs(mode=None,exponent=None):
+	def get_option(mode=None,exponent=None,**kwargs):
 		"""Returns mode and exponent based on their values."""
 
 		if mode is None and exponent is None:
-			return 'exponential',0
+			return Model.get_return('exponential',0,**kwargs)
 
 		elif mode is None and exponent is not None:
-			return Model.get_mode(exponent),exponent
+			return Model.get_return(Model.get_mode(exponent),exponent,**kwargs)
 
 		elif mode is not None and exponent is None:
-			return mode,Model.get_exponent(mode)
+			return Model.get_return(mode,Model.get_exponent(mode),**kwargs)
 
-		return mode,exponent
+		return Model.get_option(mode=None,exponent=exponent,**kwargs)
 
 	@staticmethod
 	def get_mode(exponent:float):
@@ -120,7 +121,15 @@ class Model:
 		raise Warning("Available modes are exponential, hyperbolic, and harmonic.")
 
 	@staticmethod
-	def datetime2day(datetimes:pandas.Series,datetime0=None):
+	def get_return(*args,**kwargs):
+		"""Returns args when kwargs is empty, both (args and kwargs) otherwise."""
+		if len(kwargs)==0:
+			return *args,
+
+		return *args,kwargs
+
+	@staticmethod
+	def datetime2day(datetimes:pandas.Series,*,datetime0=None,**kwargs):
 		"""Calculates days for the given datetime series."""
 
 		if datetime0 is None:
@@ -158,9 +167,9 @@ class Model:
 		timedelta = numpy.asarray(ustimes,dtype=f'timedelta64[us]')
 		datetimes = numpy.datetime64(datetime0)+timedelta
 
-		dtdtype ='datetime64[D]' if timecode is None else f'datetime64[{timecode}]'
+		code = 'D' if timecode is None else timecode
 
-		return datetimes.astype(dtdtype)
+		return datetimes.astype(f'datetime64[{code}]')
 
 if __name__ == "__main__":
 
@@ -170,7 +179,18 @@ if __name__ == "__main__":
 
 	# days = np.linspace(0,100,100)
 
-	# print(Model.get_kwargs('exponential',0.3))
+	print(Model.get_option(cdays=55,exponent=0.5,name='empty'))
+
+	mode,exponent = Model.get_option('exponential',0.5)
+
+	print(mode)
+	print(exponent)
+
+	mode,exponent,kwargs = Model.get_option('exponential',0.5,days=55)
+
+	print(mode)
+	print(exponent)
+	print(kwargs)
 
 	# exp = Model(rate0=10,decline0=0.05)
 	# hyp = Model(rate0=10,decline0=0.05,exponent=0.4)
@@ -192,4 +212,4 @@ if __name__ == "__main__":
 	print(Model.decline0)
 	print(Model.options)
 
-	print(Model(5,5,5,5))
+	print(Model(5,1,5,5))

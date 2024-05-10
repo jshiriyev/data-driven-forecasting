@@ -1,6 +1,6 @@
 import pandas
 
-class Reader():
+class Outlook():
 	
 	@staticmethod
 	def dates(frame:pandas.DataFrame):

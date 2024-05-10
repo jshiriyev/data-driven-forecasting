@@ -1,18 +1,18 @@
 import datetime
 
-import pandas
-
 from ._model import Model
 
 from ._optimize import Optimize
 
 class Analysis():
 
-	def __init__(self,dates,**kwargs):
+	def __init__(self,datekey,ratekey,**kwargs):
 		"""
-		Initializing decline analysis with rate column keys.
+		Initializing decline analysis with date and rate column keys.
+		The rate values is used for decline calculations.
 		
-		dates 	: production dates
+		Other rate arguments may include following keys:
+
 		orate 	: oil rate
 		grate 	: gas rate
 		wrate 	: water rate
@@ -21,24 +21,33 @@ class Analysis():
 		wcut 	: Water Cut
 		gor 	: Gas-Oil Ratio
 		"""
-		self._heads = Heads(dates,**kwargs)
-		self._rates = list(kwargs.values())
+		self._datekey = datekey
+		self._ratekey = ratekey
+
+		for key,value in kwargs.items():
+			setattr(self,key,value)
+
+	def __call__(self):
+
+		pass
 
 	def fit(self,frame,start:datetime.date=None,cease:datetime.date=None,**kwargs):
 		"""Returns optimized model that fits the rates."""
 
-		frame = self.derive(frame,start=start,cease=cease)
+		days,rates = self.derive(frame,start=start,cease=cease)
 
-		return Optimize(frame['TTimes']).minimize(frame.iloc[:,2].to_numpy(),**kwargs)
+		return Optimize(days).minimize(rates,**kwargs)
 
 	def derive(self,frame,**kwargs):
 		"""Returns new frame that is in the range of start and cease dates and newly added days."""
 
-		frame = self.trim(frame,**kwargs)
+		frame = self.trim(frame[self.keys],**kwargs)
 
-		delta = Model.datetime2day(frame[self.heads.dates])
+		days = Model.datetime2day(frame[self.datekey])
 
-		return frame.assign(TTimes=delta.astype('float64'))
+		rates = frame[self.ratekey].to_numpy()
+
+		return days,rates
 
 	def trim(self,frame,start:datetime.date=None,cease:datetime.date=None):
 		"""Trims the frame for the start and cease dates.
@@ -56,23 +65,18 @@ class Analysis():
 
 		return frame
 
-	def predict(self,frame,start:datetime.date=None,cease:datetime.date=None,**kwargs):
-		"""Returns new frame that is in the range of start and cease dates and newly added days and
-		theoretical rates."""
-
-		frame = self.derive(frame,start=start,cease=cease)
-
-		model = Optimize(frame['TTimes']).minimize(frame.iloc[:,2].to_numpy(),**kwargs)
-
-		return frame.assign(TRates=model(frame['TTimes'])),model
+	@property
+	def datekey(self):
+		return self._datekey
 
 	@property
-	def heads(self):
-		return self._heads
+	def ratekey(self):
+		return self._ratekey
 
 	@property
-	def rates(self):
-		return self._rates
+	def keys(self):
+		return [self._datekey,self._ratekey]
+	
 	
 if __name__ == "__main__":
 
