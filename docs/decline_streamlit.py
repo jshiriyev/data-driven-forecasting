@@ -1,10 +1,5 @@
 import datetime
 
-import sys
-
-# sys.path.append(r'C:\Users\3876yl\Documents\prodpy')
-sys.path.append(r'C:\Users\user\Documents\GitHub\prodpy')
-
 import numpy as np
 import pandas as pd
 
@@ -13,106 +8,110 @@ import plotly.graph_objects as go
 
 import streamlit as st
 
-from prodpy.decline import Model
+import sys
 
-from prodpy.decline import Session
-from prodpy.decline import Update
+sys.path.append(r'C:\Users\3876yl\Documents\prodpy')
+# sys.path.append(r'C:\Users\user\Documents\GitHub\prodpy')
 
-# INPUT FILE PARAMETERS
+from prodpy import decline
 
-datecols = [] # columns in date format
-numbcols = [] # columns in number format
-catgcols = [] # columns in string format
-itemlist = [] # filter by elements
+from prodpy import Outlook
+from prodpy import Session
+from prodpy import Update
 
-date_amin = datetime.date(2020,1,1)
-date_amax = datetime.date(2020,6,1)
-
-datetimes = pd.date_range(start=date_amin,end=date_amax)
-
-np.random.seed(0)
-
-rates = np.random.rand(datetimes.size)*1000
+data = Outlook(None)
 
 st.set_page_config(layout='wide',page_title='Decline Curve Analysis')
 
-st.session_state = Session.column1(st.session_state)
-st.session_state = Session.column2(st.session_state,datetimes)
-st.session_state = Session.column3(st.session_state,date_amin,date_amax)
+st.session_state = Session.sidebar(st.session_state)
+
+st.session_state = Session.scene(st.session_state)
+
+st.session_state = decline.Session.parameters(st.session_state)
 
 with st.sidebar:
 
-	st.header('Input Data')
+	st.header(
+		body = 'Input Data',
+		)
 
-	uploaded_file = st.file_uploader(
-		'Upload your input csv or excel file',type=["csv"])
+	st.file_uploader(
+		label = 'Upload your input csv or excel file',
+		type = ["csv"],
+		)
 
-	if uploaded_file is not None:
+	st.header(
+		body = 'Feature Selection',
+		)
 
-		df = pd.read_excel(uploaded_file)
+	st.selectbox(
+		label = "Choose Date Column:",
+		options = data.dates,
+		index = None,
+		)
 
-		datecols = df.select_dtypes(include=('datetime64',)).columns
-		numbcols = df.select_dtypes(include=('number',)).columns
-		catgcols = df.select_dtypes(exclude=('number','datetime64')).columns
+	st.selectbox(
+		label = 'Choose Rate Column:',
+		options = data.numbers,
+		index = None,
+		)
 
-	st.header('Feature Selection')
+	st.header(
+		body = 'Data Filtering',
+		)
 
-	dates_key = st.selectbox("Choose Date Column:",datecols,index=None)
-	rates_key = st.selectbox("Choose Rate Column:",numbcols,index=None)
+	st.selectbox(
+		label = "Group By:",
+		options = data.groups,
+		index = None,
+		)
 
-	# dca = decline.Analysis(dates_key,rates_key)
+	st.selectbox(
+		label = 'Filter By:',
+		options = data.items(),
+		index = None,
+		)
 
-	st.header('Data Filtering')
+	st.header(
+		body = 'Timeseries View',
+		)
 
-	group_key = st.selectbox("Group By:",catgcols,index=None)
-
-	if group_key is not None:
-
-		frame = decline.Analysis.groupby(frame,group_key)
-
-		itemlist = frame[group_key].unique()
-
-	displayedItem = st.selectbox("Filter By:",itemlist,index=None)
-
-	if displayedItem is not None:
-
-		frame1 = dca.filter(frame,displayedItem)
-
-		frame2,model = dca.predict(frame1,start=None,cease=None)
-
-	st.header('Timeseries View')
-
-	if rates_key is not None:
-		numbcols = numbcols.drop(rates_key)
-
-	graph_key = st.multiselect("Add to the Plot:",numbcols)
+	st.multiselect(
+		label = 'Add to the Plot:',
+		options = data.plottable(),
+		)
 
 displayColumn, modelColumn = st.columns([0.7, 0.3],gap='large')
 
 with displayColumn:
 
-	st.header(f'{displayedItem} Rates')
+	st.header(f'None Rates')
 
-	plot1 = px.scatter(
-		x = st.session_state.datetimes,
-		y = rates,
-		opacity = st.session_state.opacity
+	fig = go.Figure()
+
+	data1 = go.Scatter(
+		x = pd.Series(dtype='datetime64[D]'),
+		y = pd.Series(dtype='float64'),
+		mode = 'markers',
+		opacity = st.session_state.opacity,
 		)
 
-	plot2 = px.line(
-		x = st.session_state.datetimes,
-		y = st.session_state.fitline
+	fig.add_trace(data1)
+
+	data2 = go.Scatter(
+		x = pd.Series(dtype='datetime64[D]'),
+		y = pd.Series(dtype='float64'),
+		mode = 'lines',
+		line = dict(color="black"),
 		)
 
-	plot2.update_traces(line_color='black')
+	fig.add_trace(data2)
 
-	plot3 = go.Figure(data=plot1.data+plot2.data)
-
-	# plot3.update_layout(
-	# 	yaxis_title = 'Actual Oil, Mstb/d'
-	# 	)
-
-	st.plotly_chart(plot3,use_container_width=True)
+	fig.update_layout(
+		title = 'None Rates',
+        xaxis_title = 'Date Time',
+        yaxis_title = 'Actual Oil, Mstb/d'
+        )
 
 with modelColumn:
 
@@ -120,18 +119,18 @@ with modelColumn:
 
 	st.slider(
 		label = "Time Interval:",
-		min_value = date_amin,
-		max_value = date_amax,
+		min_value = st.session_state.mindate,
+		max_value = st.session_state.maxdate,
 		key = 'time_interval_selected',
-		on_change = Update.time,
+		on_change = Update.opacity,
 		args = (st.session_state,),
 		)
 
 	st.selectbox(
 		label = "Decline Mode:",
-		options = Model.options,
+		options = decline.Model.options,
 		key = 'mode',
-		on_change = Update.mode,
+		on_change = decline.Update.mode,
 		args = (st.session_state,),
 		)
 
@@ -141,13 +140,15 @@ with modelColumn:
 		max_value = 100,
 		key = 'exponent',
 		step = 5,
-		on_change = Update.exponent,
+		on_change = decline.Update.exponent,
 		args = (st.session_state,),
 		)
 
 	st.button(
 		label = 'Optimize',
 		use_container_width = True,
+		on_click = decline.Update.optimize,
+		args = (st.session_state,),
 		)
 
 	st.text_input(
@@ -163,7 +164,7 @@ with modelColumn:
 	st.button(
 		label = 'Run Model',
 		use_container_width = True,
-		on_click = Update.run,
+		on_click = decline.Update.run,
 		args = (st.session_state,),
 		)
 

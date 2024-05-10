@@ -1,6 +1,12 @@
 import numpy
 
+import pandas
+
+from ._analysis import Analysis
+
 from ._model import Model
+
+from ._optimize import Optimize
 
 class Update():
 
@@ -14,28 +20,33 @@ class Update():
 	@staticmethod
 	def exponent(state):
 
-		exponent = state.exponent/100.
-
-		mode = Model.get_mode(exponent)
+		mode = Model.get_mode(state.exponent/100.)
 
 		state['mode'] = mode.capitalize()
 
 	@staticmethod
-	def optimize():
+	def optimize(state):
 
-		pass
+		if Update.flag(state,'mode','exponent'):
+			return
+
+		model = Optimize.minimize(
+			mdays = None, 
+			rates = None,
+			mode = state.mode.lower(),
+			exponent = state.exponent/100,
+			)
+
+		state['rate0'] = model.rate0
+
+		state['decline0'] = model.decline0
+
+		state['fitline'] = model(datetimes=state.datetimes)
 
 	@staticmethod
 	def run(state):
 
-		try:
-			float(state.rate0)
-		except:
-			return
-
-		try:
-			float(state.decline0)
-		except:
+		if Update.flag(state,'mode','exponent'):
 			return
 
 		model = Model(
@@ -48,9 +59,18 @@ class Update():
 		state['fitline'] = model(datetimes=state.datetimes)
 
 	@staticmethod
-	def save():
+	def flag(state,*args):
+
+		for arg in args:
+			if state[arg] is None:
+				return True
+
+		return False
+
+	@staticmethod
+	def save(state):
 		pass
 
 	@staticmethod
-	def export():
+	def export(state):
 		pass

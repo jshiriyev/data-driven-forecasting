@@ -1,16 +1,21 @@
+import datetime
+
 from ._model import Model
 
 class Session():
 
 	@staticmethod
-	def parameters(state,mindate,maxdate):
+	def parameters(state,mindate:datetime.date=None,maxdate:datetime.date=None):
 		"""MODEL PARAMETERS"""
 
-		if 'time_interval' not in state:
-			state['time_interval'] = (mindate,maxdate)
+		if mindate is None:
+			mindate = datetime.date(2020,1,1)
 
-		if 'time_interval_selected' not in state:
-			state['time_interval_selected'] = (mindate,maxdate)
+		if maxdate is None:
+			maxdate = datetime.date(2020,6,1)
+
+		if 'timelims' not in state:
+			state['timelims'] = (mindate,maxdate)
 
 		if 'mode' not in state:
 		    state['mode'] = Model.mode

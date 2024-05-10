@@ -6,7 +6,7 @@ from ._optimize import Optimize
 
 class Analysis():
 
-	def __init__(self,datekey,ratekey,**kwargs):
+	def __init__(self,datekey,ratekey,groupkey,**kwargs):
 		"""
 		Initializing decline analysis with date and rate column keys.
 		The rate values is used for decline calculations.
@@ -26,10 +26,6 @@ class Analysis():
 
 		for key,value in kwargs.items():
 			setattr(self,key,value)
-
-	def __call__(self):
-
-		pass
 
 	def fit(self,frame,start:datetime.date=None,cease:datetime.date=None,**kwargs):
 		"""Returns optimized model that fits the rates."""
@@ -76,7 +72,6 @@ class Analysis():
 	@property
 	def keys(self):
 		return [self._datekey,self._ratekey]
-	
 	
 if __name__ == "__main__":
 

@@ -1,4 +1,4 @@
-import decline
+import datetime
 
 class Session():
 
@@ -24,11 +24,23 @@ class Session():
 		return state
 
 	@staticmethod
-	def scene(state,datetimes):
+	def scene(state,mindate:datetime.date=None,maxdate:datetime.date=None):
 		"""VISUALIZED DATA"""
 
+		if mindate is None:
+			mindate = datetime.date(2020,1,1)
+
+		if 'mindate' not in state:
+			state['mindate'] = mindate
+
+		if maxdate is None:
+			maxdate = datetime.date(2020,6,1)
+			
+		if 'maxdate' not in state:
+			state['maxdate'] = maxdate
+
 		if 'datetimes' not in state:
-			state['datetimes'] = datetimes
+			state['datetimes'] = None
 
 		if 'rates' not in state:
 			state['rates'] = None
