@@ -2,7 +2,7 @@ import pandas
 
 class Outlook():
 
-	def __init__(self,frame:pandas.DataFrame):
+	def __init__(self,frame:pandas.DataFrame=None):
 		self._frame = frame
 
 	@property

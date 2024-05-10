@@ -4,7 +4,6 @@ class Session():
 
 	@staticmethod
 	def sidebar(state):
-		"""INPUT DATA"""
 
 		if 'datekey' not in state:
 			state['datekey'] = None
@@ -18,8 +17,8 @@ class Session():
 		if 'itemkey' not in state:
 			state['itemkey'] = None
 
-		if 'viewlist' not in state:
-			state['viewlist'] = None
+		if 'viewkey' not in state:
+			state['viewkey'] = None
 
 		return state
 

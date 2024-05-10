@@ -1,6 +1,3 @@
-import datetime
-
-import numpy as np
 import pandas as pd
 
 import plotly_express as px
@@ -10,24 +7,31 @@ import streamlit as st
 
 import sys
 
-sys.path.append(r'C:\Users\3876yl\Documents\prodpy')
-# sys.path.append(r'C:\Users\user\Documents\GitHub\prodpy')
+# sys.path.append(r'C:\Users\3876yl\Documents\prodpy')
+sys.path.append(r'C:\Users\user\Documents\GitHub\prodpy')
 
 from prodpy import decline
+from prodpy import timeview
 
-from prodpy import Outlook
-from prodpy import Session
-from prodpy import Update
-
-data = Outlook(None)
+view = timeview.Outlook()
 
 st.set_page_config(layout='wide',page_title='Decline Curve Analysis')
 
-st.session_state = Session.sidebar(st.session_state)
-
-st.session_state = Session.scene(st.session_state)
+st.session_state = timeview.Session.sidebar(st.session_state)
+st.session_state = timeview.Session.scene(st.session_state)
 
 st.session_state = decline.Session.parameters(st.session_state)
+
+@st.cache_data
+def get_view(uploaded_file):
+
+	frame = pd.read_excel(uploaded_file)
+
+	view = timeview.Outlook(frame)
+
+	timeview.Update.upload(st.session_state,view)
+
+	return view
 
 with st.sidebar:
 
@@ -35,10 +39,13 @@ with st.sidebar:
 		body = 'Input Data',
 		)
 
-	st.file_uploader(
-		label = 'Upload your input csv or excel file',
-		type = ["csv"],
+	uploaded_file = st.file_uploader(
+		label = 'Upload your input excel file',
+		type = ['xlsx'],
 		)
+
+	if uploaded_file is not None:
+		view = get_view(uploaded_file)
 
 	st.header(
 		body = 'Feature Selection',
@@ -46,30 +53,41 @@ with st.sidebar:
 
 	st.selectbox(
 		label = "Choose Date Column:",
-		options = data.dates,
+		options = view.dates,
 		index = None,
+		key = 'datekey',
 		)
 
 	st.selectbox(
 		label = 'Choose Rate Column:',
-		options = data.numbers,
+		options = view.numbers,
 		index = None,
-		)
-
-	st.header(
-		body = 'Data Filtering',
+		key = 'ratekey',
+		on_change = timeview.Update.ratekey,
+		args = (st.session_state,view),
 		)
 
 	st.selectbox(
-		label = "Group By:",
-		options = data.groups,
+		label = "Choose Group By Column:",
+		options = st.session_state.groups,
 		index = None,
+		key = 'groupkey',
+		on_change = timeview.Update.groupkey,
+		args = (st.session_state,view),
+		)
+
+	st.button(
+		label = 'Calculate All',
+		use_container_width = True,
+		on_click = decline.Update.multirun,
+		args = (st.session_state,),
 		)
 
 	st.selectbox(
 		label = 'Filter By:',
-		options = data.items(),
+		options = view.items(st.session_state.groupkey),
 		index = None,
+		key = 'itemkey',
 		)
 
 	st.header(
@@ -78,7 +96,7 @@ with st.sidebar:
 
 	st.multiselect(
 		label = 'Add to the Plot:',
-		options = data.plottable(),
+		options = view.plottable(st.session_state.ratekey),
 		)
 
 displayColumn, modelColumn = st.columns([0.7, 0.3],gap='large')
@@ -122,7 +140,7 @@ with modelColumn:
 		min_value = st.session_state.mindate,
 		max_value = st.session_state.maxdate,
 		key = 'time_interval_selected',
-		on_change = Update.opacity,
+		on_change = timeview.Update.opacity,
 		args = (st.session_state,),
 		)
 

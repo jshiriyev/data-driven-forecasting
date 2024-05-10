@@ -59,6 +59,11 @@ class Update():
 		state['fitline'] = model(datetimes=state.datetimes)
 
 	@staticmethod
+	def multirun(state):
+
+		return
+
+	@staticmethod
 	def flag(state,*args):
 
 		for arg in args:
