@@ -1,57 +1,60 @@
 import datetime
 
+import streamlit
+
 from ._model import Model
 
 class Session():
 
-	def __init__(self,state,mindate:datetime.date=None,maxdate:datetime.date=None):
+	mindate = datetime.date(2020,1,1)
+	maxdate = datetime.date(2020,6,1)
 
-		self._state = state
+	def __init__(self,state:streamlit._SessionStateProxy,model:Model=None,mindate:datetime.date=None,maxdate:datetime.date=None):
 
-		self._mindate = datetime.date(2020,1,1) if mindate is None else mindate
-		self._maxdate = datetime.date(2020,6,1) if maxdate is None else maxdate
+		self.state = state
 
-	def __call__(self,**kwargs):
+		self.model = Model if model is None else model
+
+		if mindate is not None:
+			self.mindate = mindate
+
+		if maxdate is not None:
+			self.maxdate = maxdate
+	
+	def set(self):
+
+		return self.__call__(
+			mode = self.model.mode,
+			exponent = self.model.exponent,
+			rate0 = self.model.rate0.__str__(),
+			decline0 = self.model.decline0.__str__(),
+			mindate = self.mindate,
+			maxdate = self.maxdate,
+		)
+
+	def __call__(self,*args,**kwargs):
+
+		for key in args:
+			if isinstance(key,str):
+				self.state = self.add(key)
+			else:
+				raise Warning("The positional arguments must be string!")
 
 		for key,value in kwargs.items():
-			self.add(self._state,key,value)
+			self.state = self.add(key,value)
 
-		return self._state
+		return self.state
 
-	@property
-	def mindate(self):
-		return self._mindate
-	
-	@property
-	def maxdate(self):
-		return self._maxdate
-	
-	@property
-	def timelims(self):
-		return (self._mindate,self._maxdate)
-	
-	@staticmethod
-	def parameters(state,mindate:datetime.date=None,maxdate:datetime.date=None):
-		"""MODEL PARAMETERS"""
+	def add(self,key,value=None):
 
-		if mindate is None:
-			mindate = datetime.date(2020,1,1)
+		if key not in self.state:
+			self.state[key] = value
 
-		if maxdate is None:
-			maxdate = datetime.date(2020,6,1)
+		return self.state
 
-		state = Session.add(state,'tlim',(mindate,maxdate))
-		state = Session.add(state,'mode',Model.mode)
-		state = Session.add(state,'exponent',Model.exponent)
-		state = Session.add(state,'rate0',str(Model.rate0))
-		state = Session.add(state,'decline0',str(Model.decline0))
+if __name__ == "__main__":
 
-		return state
+	ss = Session(mindate=datetime.date(2008,1,1))
 
-	@staticmethod
-	def add(state,key,value=None):
-
-		if key not in state:
-			state[key] = value
-
-		return state
+	print(ss.mindate)
+	print(ss.maxdate)

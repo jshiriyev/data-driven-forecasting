@@ -43,10 +43,13 @@ class Model:
 	def __post_init__(self):
 		"""Assigns corrected mode and exponent values."""
 		
-		mode,exponent = self.get_option(self.mode,self.exponent)
+		mode,exponent = self.get_option(self.mode,float(self.exponent))
 
 		object.__setattr__(self,'mode',mode)
 		object.__setattr__(self,'exponent',exponent)
+
+		object.__setattr__(self,'rate0',float(self.rate0))
+		object.__setattr__(self,'decline0',float(self.decline0))
 
 	def __call__(self,*,cdays=None,datetimes=None,**kwargs): # WILL NEED CORRECTION
 		"""Calculates rates for the given calculation days or datetimes."""
@@ -178,6 +181,12 @@ if __name__ == "__main__":
 	# import numpy as np
 
 	# days = np.linspace(0,100,100)
+
+	model = Model(rate0=5.)
+
+	print(model.rate0)
+
+	print(Model.rate0)
 
 	print(Model.get_option(cdays=55,exponent=0.5,name='empty'))
 

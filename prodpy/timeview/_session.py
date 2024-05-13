@@ -1,23 +1,37 @@
-import datetime
+import streamlit
 
 class Session():
 
-	@staticmethod
-	def sidebar(state):
+	def __init__(self,state:streamlit._SessionStateProxy):
 
-		if 'datekey' not in state:
-			state['datekey'] = None
+		self.state = state
 
-		if 'ratekey' not in state:
-			state['ratekey'] = None
+	def set(self):
 
-		if 'groupkey' not in state:
-			state['groupkey'] = None
+		return self.__call__(
+			'datekey',
+			'ratekey',
+			'groupkey',
+			'itemkey',
+			viewkeys = [],
+			)
 
-		if 'itemkey' not in state:
-			state['itemkey'] = None
+	def __call__(self,*args,**kwargs):
 
-		if 'viewkeys' not in state:
-			state['viewkeys'] = None
+		for key in args:
+			if isinstance(key,str):
+				self.state = self.add(key)
+			else:
+				raise Warning("The positional arguments must be string!")
 
-		return state
+		for key,value in kwargs.items():
+			self.state = self.add(key,value)
+
+		return self.state
+
+	def add(self,key,value=None):
+
+		if key not in self.state:
+			self.state[key] = value
+
+		return self.state

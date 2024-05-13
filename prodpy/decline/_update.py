@@ -11,6 +11,18 @@ from ._optimize import Optimize
 class Update():
 
 	@staticmethod
+	def opacity(state):
+
+		date_min,date_max = state.time_interval_selected
+
+		cond1 = state.datetimes >= numpy.datetime64(date_min)
+		cond2 = state.datetimes <= numpy.datetime64(date_max)
+
+		conds = numpy.logical_and(cond1,cond2)
+
+		return conds*0.7+0.3
+
+	@staticmethod
 	def mode(state):
 
 		exponent = Model.get_exponent(state.mode)
@@ -23,6 +35,16 @@ class Update():
 		mode = Model.get_mode(state.exponent/100.)
 
 		state['mode'] = mode.capitalize()
+
+	@staticmethod
+	def rate0(state):
+
+		pass
+
+	@staticmethod
+	def decline0(state):
+
+		pass
 
 	@staticmethod
 	def optimize(state):

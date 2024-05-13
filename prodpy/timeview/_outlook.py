@@ -1,3 +1,5 @@
+import datetime
+
 import pandas
 
 class Outlook():
@@ -43,9 +45,16 @@ class Outlook():
 		return [] if self.frame is None or groupkey is None else self.frame[groupkey].unique().tolist()
 
 	def plottable(self,*args):
-		"""Return columns with number excluding the arg column"""
-		return [] if self.frame is None or len(args)==0 else self.frame.select_dtypes(
-			include=('number',)).columns.drop(list(args)).tolist()
+		"""Return columns with number excluding the arg columns."""
+		if self.frame is None:
+			return []
+
+		columns = self.frame.select_dtypes(
+			include=('number',)).columns
+
+		keys = [arg for arg in args if arg is not None]
+
+		return columns.drop(keys).tolist()
 
 	def get_group(self,groupkey:str,datekey:str,*args):
 		"""Groupby (groupkey), and sumup (args) input frame, returning a new frame
@@ -66,6 +75,8 @@ class Outlook():
 		outlook = self.groupby(groupkey,datekey)
 		outlook = outlook.sumup(*args)
 
+		print(outlook.frame)
+
 		return outlook.filter(**kwargs).frame
 
 	def groupby(self,*args,datekey:str=None):
@@ -82,14 +93,46 @@ class Outlook():
 		for groupkey,value in kwargs.items():
 			break
 
+		print(groupkey,value)
+
 		return Outlook(self.frame[self.frame[groupkey]==value].reset_index(drop=True))
+
+	def limits(self,datekey=None):
+
+		if self._frame is None or datekey is None:
+			mindate = datetime.date(2020,1,1)
+			maxdate = datetime.date(2020,6,1)
+		else:
+			mindate = self._frame[datekey].min().date()
+			maxdate = self._frame[datekey].max().date()
+
+		return (mindate,maxdate)
+
+	def mindate(self,datekey=None):
+		if self._frame is None or datekey is None:
+			return datetime.date(2020,1,1)
+		return self._frame[datekey].min().date()
+
+	def maxdate(self,datekey=None):
+		if self._frame is None or datekey is None:
+			return datetime.date(2020,6,1)
+		return self._frame[datekey].max().date()
 
 if __name__ == "__main__":
 
-	df = pandas.read_excel(r"C:\Users\user\Downloads\ACG_decline_curve_analysis.xlsx")
+	frame = pandas.read_excel(r"C:\Users\3876yl\OneDrive - BP\Documents\ACG_decline_curve_analysis.xlsx")
 
-	# columns = Outlook.plottable(df,'Actual Oil, Mstb/d','Actual Gas Lift, MMscf/d')
+	view = Outlook(frame)
 
-	print(Outlook.items(df,'Field'))
-	print(type(Outlook.items(df,'Field').tolist()))
+	print(view.dates)
+
+	print(view.mindate('Date'),type(view.mindate('Date')))
+	print(view.maxdate('Date'))
+
+	# print(view.mindate('Date').date())
+
+	# print(Outlook.items(df,'Field'))
+	# print(type(Outlook.items(df,'Field').tolist()))
+
+
 
