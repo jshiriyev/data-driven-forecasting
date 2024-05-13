@@ -13,7 +13,7 @@ class Session():
 			'ratekey',
 			'groupkey',
 			'itemkey',
-			viewkeys = [],
+			viewlist = [],
 			)
 
 	def __call__(self,*args,**kwargs):

@@ -28,47 +28,43 @@ with st.sidebar:
 		type = ['xlsx'],
 		)
 
-	view = tv.Update.load_file(uploaded_file)
+	data = tv.Update.load_data(uploaded_file)
 
 	st.header(
 		body = 'Feature Selection',
 		)
 
-	st.selectbox(
+	datekey = st.selectbox(
 		label = "Choose Date Column:",
-		options = view.dates,
+		options = data.dates,
 		index = None,
 		key = 'datekey',
 		)
 
-	st.selectbox(
+	ratekey = st.selectbox(
 		label = 'Choose Rate Column:',
-		options = view.numbers,
+		options = data.numbers,
 		index = None,
 		key = 'ratekey',
 		)
 
-	st.selectbox(
+	groupkey = st.selectbox(
 		label = "Choose Group By Column:",
-		options = view.groups,
+		options = data.groups,
 		index = None,
 		key = 'groupkey',
 		)
+	
+	# st.button(
+	# 	label = 'Calculate All',
+	# 	use_container_width = True,
+	# 	# on_click = dc.Update.multirun,
+	# 	# args = (st.session_state,),
+	# 	)
 
-	st.button(
-		label = 'Calculate All',
-		use_container_width = True,
-		# on_click = dc.Update.multirun,
-		# args = (st.session_state,),
-		)
-
-	x,y = tv.Update.load_view(view,st.session_state)
-
-	print(x,y)
-
-	st.selectbox(
+	itemkey = st.selectbox(
 		label = 'Filter By:',
-		options = view.items(st.session_state.groupkey),
+		options = data.items(st.session_state.groupkey),
 		index = None,
 		key = 'itemkey',
 		)
@@ -77,10 +73,10 @@ with st.sidebar:
 		body = 'Timeseries View',
 		)
 
-	st.multiselect(
+	viewlist = st.multiselect(
 		label = 'Add to the Plot:',
-		options = view.plottable(st.session_state.ratekey),
-		key = 'viewkeys',
+		options = data.plottable(st.session_state.ratekey),
+		key = 'viewlist',
 		)
 
 displayColumn, modelColumn = st.columns([0.7, 0.3],gap='large')
@@ -89,7 +85,7 @@ with modelColumn:
 
 	st.header('Decline Model Parameters')
 
-	data_date_limits = view.limits(st.session_state.datekey)
+	data_date_limits = data.limits(st.session_state.datekey)
 
 	user_date_limits = st.slider(
 		label = "Time Interval:",
@@ -160,6 +156,8 @@ with displayColumn:
 	st.header(f'None Rates')
 
 	fig = go.Figure()
+
+	x,y = tv.Update.load_view(data,st.session_state)
 
 	data1 = go.Scatter(
 		x = pd.Series(dtype='datetime64[D]'),

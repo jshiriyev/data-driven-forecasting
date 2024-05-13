@@ -93,8 +93,6 @@ class Outlook():
 		for groupkey,value in kwargs.items():
 			break
 
-		print(groupkey,value)
-
 		return Outlook(self.frame[self.frame[groupkey]==value].reset_index(drop=True))
 
 	def limits(self,datekey=None):
