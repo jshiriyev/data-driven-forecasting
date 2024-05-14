@@ -34,16 +34,16 @@ class Model:
 		init = False,
 		repr = False,
 		default = (
-			'Exponential',
-			'Hyperbolic',
-			'Harmonic',
+			'exponential',
+			'hyperbolic',
+			'harmonic',
 			)
 		)
 
 	def __post_init__(self):
 		"""Assigns corrected mode and exponent values."""
 		
-		mode,exponent = self.get_option(self.mode,float(self.exponent))
+		mode,exponent = self.get_option(self.mode,self.exponent)
 
 		object.__setattr__(self,'mode',mode)
 		object.__setattr__(self,'exponent',exponent)
@@ -86,12 +86,12 @@ class Model:
 			return Model.get_return('exponential',0,**kwargs)
 
 		elif mode is None and exponent is not None:
-			return Model.get_return(Model.get_mode(exponent),exponent,**kwargs)
+			return Model.get_return(Model.get_mode(float(exponent)),float(exponent),**kwargs)
 
 		elif mode is not None and exponent is None:
 			return Model.get_return(mode,Model.get_exponent(mode),**kwargs)
 
-		return Model.get_option(mode=None,exponent=exponent,**kwargs)
+		return Model.get_option(mode=None,exponent=float(exponent),**kwargs)
 
 	@staticmethod
 	def get_mode(exponent:float):

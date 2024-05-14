@@ -17,32 +17,23 @@ class Update():
 
 		return Outlook(frame)
 
-	@streamlit.cache_data
-	def load_view(data,state):
-		"""
-		It should be dependent on the followings:
-
-			datekey
-			ratekey
-			groupkey
-
-			itemkey
-			viewlist
-		"""
+	def load_group(data,state):
 
 		if Update.argNoneFlag(state,'datekey','ratekey','groupkey'):
-			x = pandas.Series(dtype='datetime64[D]')
-			y = pandas.Series(dtype='float64')
-			return x,y
+			return
 
-		items = data.items(state.groupkey)
+		group = data.refine(
+			state.ratekey,
+			*state.viewlist,
+			groupkey = state.groupkey,
+			datekey = state.datekey,
+			)
 
-		frame = data.get_item(state.datekey,state.ratekey,**{state.groupkey:items[0]})
+		return group
 
-		x = frame[state.datekey]
-		y = frame[state.ratekey]
+	def load_frame(group,state):
 
-		return x,y
+		return group.filter(state.itemkey)
 
 	@staticmethod
 	def argNoneFlag(state,*args):

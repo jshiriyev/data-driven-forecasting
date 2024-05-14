@@ -9,10 +9,10 @@ class Session():
 	def set(self):
 
 		return self.__call__(
-			'datekey',
-			'ratekey',
-			'groupkey',
-			'itemkey',
+			datekey = None,
+			ratekey = None,
+			groupkey = None,
+			itemkey = None,
 			viewlist = [],
 			)
 

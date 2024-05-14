@@ -13,7 +13,7 @@ class Session():
 
 		self.state = state
 
-		self.model = Model if model is None else model
+		self.model = Model() if model is None else model
 
 		if mindate is not None:
 			self.mindate = mindate

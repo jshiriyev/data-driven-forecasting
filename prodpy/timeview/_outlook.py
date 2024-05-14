@@ -2,25 +2,17 @@ import datetime
 
 import pandas
 
+from ._refined import Refined
+
 class Outlook():
 
 	def __init__(self,frame:pandas.DataFrame=None):
+
 		self._frame = frame
 
 	@property
 	def frame(self):
 		return self._frame
-
-	def __iter__(self):
-
-		for item in self.items(self.groupkey):
-			yield self.filter(**{self.groupkey:item}).frame
-
-	def __call__(self,groupkey):
-
-		self.groupkey = groupkey
-
-		return self
 	
 	@property
 	def dates(self):
@@ -44,7 +36,7 @@ class Outlook():
 		"""Returns list of items in the given column specified with groupkey."""
 		return [] if self.frame is None or groupkey is None else self.frame[groupkey].unique().tolist()
 
-	def plottable(self,*args):
+	def secondary(self,*args):
 		"""Return columns with number excluding the arg columns."""
 		if self.frame is None:
 			return []
@@ -56,65 +48,62 @@ class Outlook():
 
 		return columns.drop(keys).tolist()
 
-	def get_group(self,groupkey:str,datekey:str,*args):
+	def refine(self,*args,groupkey:str=None,datekey:str=None):
 		"""Groupby (groupkey), and sumup (args) input frame, returning a new frame
 		with the given groupkey in the first column, date in the second column, and
 		argument columns in the remaining columns."""
-		outlook = self.groupby(groupkey,datekey)
 
-		return outlook.sumup(*args).frame
+		datekey = self.datekey(datekey)
 
-	def get_item(self,datekey:str,*args,**kwargs):
-		"""Groupby (kwargs.groupkey), sumup (args) and filters (kwargs.value) input frame
-		based on groupkey-value pair of the first optional argument, returning a new frame
-		with the given value in the first column, date in the second column, and
-		argument columns in the remaining columns."""
-		for groupkey,value in kwargs.items():
-			break
+		if self._frame is None or groupkey is None or datekey is None:
+			return self
 
-		outlook = self.groupby(groupkey,datekey)
-		outlook = outlook.sumup(*args)
+		numbers = self.numbers if len(args)==0 else list(args)
 
-		print(outlook.frame)
+		columns = [groupkey,datekey]+numbers
 
-		return outlook.filter(**kwargs).frame
+		frameGroup = self.frame[columns].groupby([groupkey,datekey])
 
-	def groupby(self,*args,datekey:str=None):
-		"""Groupby the frame for the groupkey (args) and datekey."""
-		return self if self.frame is None or datekey is None else Outlook(
-			self.frame.groupby(list(args)+[datekey]))
+		return Refined(frameGroup.sum(numbers).reset_index())
 
-	def sumup(self,*args):
-		"""Sums the number columns (args) of grouped frame and resets the index."""
-		return Outlook(self.frame[list(args)].sum().reset_index())
+	def datekey(self,datekey=None):
 
-	def filter(self,**kwargs):
-		"""Filters input frame based on the first positional groupkey-value pair."""
-		for groupkey,value in kwargs.items():
-			break
+		if datekey is not None:
+			return datekey
 
-		return Outlook(self.frame[self.frame[groupkey]==value].reset_index(drop=True))
+		if len(self.dates)>0:
+			return self.dates[0]
 
 	def limits(self,datekey=None):
 
-		if self._frame is None or datekey is None:
-			mindate = datetime.date(2020,1,1)
-			maxdate = datetime.date(2020,6,1)
-		else:
-			mindate = self._frame[datekey].min().date()
-			maxdate = self._frame[datekey].max().date()
-
-		return (mindate,maxdate)
+		return (self.mindate(datekey),self.maxdate(datekey))
 
 	def mindate(self,datekey=None):
+
+		datekey = self.datekey(datekey)
+
 		if self._frame is None or datekey is None:
 			return datetime.date(2020,1,1)
+
 		return self._frame[datekey].min().date()
 
 	def maxdate(self,datekey=None):
+
+		datekey = self.datekey(datekey)
+
 		if self._frame is None or datekey is None:
 			return datetime.date(2020,6,1)
+
 		return self._frame[datekey].max().date()
+
+	@staticmethod
+	def argNoneFlag(*args):
+
+		for arg in args:
+			if arg is None:
+				return True
+
+		return False
 
 if __name__ == "__main__":
 

@@ -11,18 +11,6 @@ from ._optimize import Optimize
 class Update():
 
 	@staticmethod
-	def opacity(state):
-
-		date_min,date_max = state.time_interval_selected
-
-		cond1 = state.datetimes >= numpy.datetime64(date_min)
-		cond2 = state.datetimes <= numpy.datetime64(date_max)
-
-		conds = numpy.logical_and(cond1,cond2)
-
-		return conds*0.7+0.3
-
-	@staticmethod
 	def mode(state):
 
 		exponent = Model.get_exponent(state.mode)
@@ -37,14 +25,19 @@ class Update():
 		state['mode'] = mode.capitalize()
 
 	@staticmethod
-	def rate0(state):
+	def forward(state):
 
-		pass
+		if Update.flag(state,'mode','exponent'):
+			return
 
-	@staticmethod
-	def decline0(state):
+		model = Model(
+			mode = state.mode.lower(),
+			exponent = state.exponent/100,
+			rate0 = float(state.rate0),
+			decline0 = float(state.decline0),
+			)
 
-		pass
+		state['fitline'] = model(datetimes=state.datetimes)
 
 	@staticmethod
 	def optimize(state):
@@ -66,24 +59,25 @@ class Update():
 		state['fitline'] = model(datetimes=state.datetimes)
 
 	@staticmethod
-	def run(state):
+	def multirun(state,bar):
 
-		if Update.flag(state,'mode','exponent'):
-			return
+		for percent_complete in range(100):
 
-		model = Model(
-			mode = state.mode.lower(),
-			exponent = state.exponent/100,
-			rate0 = float(state.rate0),
-			decline0 = float(state.decline0),
-			)
+			bar.progress(percent_complete+1,text=progress_text)
 
-		state['fitline'] = model(datetimes=state.datetimes)
+		time.sleep(1)
 
 	@staticmethod
-	def multirun(state):
+	def opacity(state):
 
-		return
+		date_min,date_max = state.time_interval_selected
+
+		cond1 = state.datetimes >= numpy.datetime64(date_min)
+		cond2 = state.datetimes <= numpy.datetime64(date_max)
+
+		conds = numpy.logical_and(cond1,cond2)
+
+		return conds*0.7+0.3
 
 	@staticmethod
 	def flag(state,*args):

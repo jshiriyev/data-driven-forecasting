@@ -1,13 +1,13 @@
+import sys
+
+# sys.path.append(r'C:\Users\3876yl\Documents\prodpy')
+sys.path.append(r'C:\Users\user\Documents\GitHub\prodpy')
+
 import pandas as pd
 
 import plotly.graph_objects as go
 
 import streamlit as st
-
-import sys
-
-sys.path.append(r'C:\Users\3876yl\Documents\prodpy')
-# sys.path.append(r'C:\Users\user\Documents\GitHub\prodpy')
 
 from prodpy import timeview as tv
 from prodpy import decline as dc
@@ -49,21 +49,16 @@ with st.sidebar:
 		)
 
 	groupkey = st.selectbox(
-		label = "Choose Group By Column:",
+		label = "Choose Groupby Column:",
 		options = data.groups,
 		index = None,
 		key = 'groupkey',
 		)
-	
-	# st.button(
-	# 	label = 'Calculate All',
-	# 	use_container_width = True,
-	# 	# on_click = dc.Update.multirun,
-	# 	# args = (st.session_state,),
-	# 	)
+
+	group = tv.Update.load_group(data,st.session_state)
 
 	itemkey = st.selectbox(
-		label = 'Filter By:',
+		label = 'Select Item:',
 		options = data.items(st.session_state.groupkey),
 		index = None,
 		key = 'itemkey',
@@ -75,7 +70,7 @@ with st.sidebar:
 
 	viewlist = st.multiselect(
 		label = 'Add to the Plot:',
-		options = data.plottable(st.session_state.ratekey),
+		options = data.secondary(st.session_state.ratekey),
 		key = 'viewlist',
 		)
 
@@ -83,7 +78,18 @@ displayColumn, modelColumn = st.columns([0.7, 0.3],gap='large')
 
 with modelColumn:
 
-	st.header('Decline Model Parameters')
+	st.header('Decline Curve Analysis')
+
+	st.button(
+		label = "Dry Run",
+		use_container_width = True,
+		)
+	
+	progress_text = "Optimization in progress. Please wait."
+
+	bar = st.progress(0,text=progress_text)
+
+	bar.empty()
 
 	data_date_limits = data.limits(st.session_state.datekey)
 
@@ -98,7 +104,7 @@ with modelColumn:
 		)
 
 	st.selectbox(
-		label = "Decline Mode:",
+		label = "Decline Mode",
 		options = dc.Model.options,
 		key = 'mode',
 		on_change = dc.Update.mode,
@@ -116,7 +122,7 @@ with modelColumn:
 		)
 
 	st.button(
-		label = 'Optimize',
+		label = 'Auto Fit',
 		use_container_width = True,
 		on_click = dc.Update.optimize,
 		args = (st.session_state,),
@@ -133,18 +139,11 @@ with modelColumn:
 		) # ,placeholder=str(model.decline0)
 
 	st.button(
-		label = 'Run Model',
-		use_container_width = True,
-		on_click = dc.Update.run,
-		args = (st.session_state,),
-		)
-
-	st.subheader(r'''Save & Export''',)
-
-	st.button(
 		label = "Save Model",
 		use_container_width = True,
 		)
+
+	st.text("")
 
 	st.button(
 		label = "Export Fits",
@@ -153,32 +152,56 @@ with modelColumn:
 
 with displayColumn:
 
-	st.header(f'None Rates')
+	if group is not None:
 
-	fig = go.Figure()
+		frame = tv.Update.load_frame(group,st.session_state)
 
-	x,y = tv.Update.load_view(data,st.session_state)
+		st.header(f'{group.key} Rates')
 
-	data1 = go.Scatter(
-		x = pd.Series(dtype='datetime64[D]'),
-		y = pd.Series(dtype='float64'),
-		mode = 'markers',
-		# opacity = st.session_state.opacity,
-		)
+		fig1 = go.Figure()
 
-	fig.add_trace(data1)
+		data_obs = go.Scatter(
+			x = frame.iloc[:,0],
+			y = frame.iloc[:,1],
+			mode = 'markers',
+			# opacity = st.session_state.opacity,
+			)
 
-	data2 = go.Scatter(
-		x = pd.Series(dtype='datetime64[D]'),
-		y = pd.Series(dtype='float64'),
-		mode = 'lines',
-		line = dict(color="black"),
-		)
+		fig1.add_trace(data_obs)
 
-	fig.add_trace(data2)
+		data_cal = go.Scatter(
+			x = pd.Series(dtype='datetime64[D]'),
+			y = pd.Series(dtype='float64'),
+			mode = 'lines',
+			line = dict(color="black"),
+			)
 
-	fig.update_layout(
-		title = 'None Rates',
-        xaxis_title = 'Date Time',
-        yaxis_title = 'Actual Oil, Mstb/d'
-        )
+		fig1.add_trace(data_cal)
+
+		fig1.update_layout(
+			title = f'{itemkey} Rates',
+	        xaxis_title = frame.columns[0],
+	        yaxis_title = frame.columns[1],
+	        )
+
+		st.plotly_chart(fig1,use_container_width=True)
+
+		for index in range(2,frame.shape[1]):
+
+			figure = go.Figure()
+
+			data_vis = go.Scatter(
+				x = frame.iloc[:,0],
+				y = frame.iloc[:,index],
+				mode = 'markers',
+				# opacity = st.session_state.opacity,
+				)
+
+			figure.add_trace(data_vis)
+
+			figure.update_layout(
+				xaxis_title = frame.columns[0],
+	        	yaxis_title = frame.columns[index],
+				)
+
+			st.plotly_chart(figure,use_container_width=True)
