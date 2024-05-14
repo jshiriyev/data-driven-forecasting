@@ -80,11 +80,14 @@ with modelColumn:
 
 	st.header('Decline Curve Analysis')
 
-	st.button(
+	dryRun = st.button(
 		label = "Dry Run",
 		use_container_width = True,
 		)
 	
+	if dryRun:
+		pass
+
 	progress_text = "Optimization in progress. Please wait."
 
 	bar = st.progress(0,text=progress_text)
@@ -121,12 +124,13 @@ with modelColumn:
 		args = (st.session_state,),
 		)
 
-	st.button(
+	autoFit = st.button(
 		label = 'Auto Fit',
 		use_container_width = True,
-		on_click = dc.Update.optimize,
-		args = (st.session_state,),
 		)
+
+	if autoFit:
+		dc.Update.optimize(st.session_state)
 
 	st.text_input(
 		label = 'Initial Rate',
@@ -138,10 +142,15 @@ with modelColumn:
 		key = 'decline0',
 		) # ,placeholder=str(model.decline0)
 
-	st.button(
+	model = dc.Update.forward(st.session_state)
+
+	saveModel = st.button(
 		label = "Save Model",
 		use_container_width = True,
 		)
+
+	if saveModel:
+		pass
 
 	st.text("")
 
@@ -169,9 +178,13 @@ with displayColumn:
 
 		fig1.add_trace(data_obs)
 
+		x,y = model(datetimes=frame.iloc[:,0],datetime0=None)
+
 		data_cal = go.Scatter(
-			x = pd.Series(dtype='datetime64[D]'),
-			y = pd.Series(dtype='float64'),
+			# x = pd.Series(dtype='datetime64[D]'),
+			# y = pd.Series(dtype='float64'),
+			x = x,
+			y = y,
 			mode = 'lines',
 			line = dict(color="black"),
 			)

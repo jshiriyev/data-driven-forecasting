@@ -2,13 +2,17 @@ import datetime
 
 import pandas
 
-from ._refined import Refined
+from ._visualized import View
 
 class Outlook():
 
-	def __init__(self,frame:pandas.DataFrame=None):
-
+	def __init__(self,frame:pandas.DataFrame):
 		self._frame = frame
+
+	def __call__(self,datekey:str):
+		self._datekey = datekey
+
+		return self
 
 	@property
 	def frame(self):
@@ -17,93 +21,84 @@ class Outlook():
 	@property
 	def dates(self):
 		"""Returns column names with datetime format."""
-		return [] if self.frame is None else self.frame.select_dtypes(
-			include=('datetime64',)).columns.tolist()
+		return self._frame.select_dtypes(include=('datetime64',)).columns.tolist()
 
 	@property
 	def numbers(self):
 		"""Returns column names with number format."""
-		return [] if self.frame is None else self.frame.select_dtypes(
-			include=('number',)).columns.tolist()
+		return self._frame.select_dtypes(include=('number',)).columns.tolist()
 	
 	@property
 	def groups(self):
 		"""Returns column names that are categorical by nature."""
-		return [] if self.frame is None else self.frame.select_dtypes(
-			exclude=('number','datetime64')).columns.tolist()
+		return self._frame.select_dtypes(exclude=('number','datetime64')).columns.tolist()
 
-	def items(self,groupkey:str=None):
-		"""Returns list of items in the given column specified with groupkey."""
-		return [] if self.frame is None or groupkey is None else self.frame[groupkey].unique().tolist()
+	def items(self,*args):
+		"""Returns list of items for the given groupkeys."""
 
-	def secondary(self,*args):
-		"""Return columns with number excluding the arg columns."""
-		if self.frame is None:
+		try:
+			group = self._frame[list(args)]
+		except KeyError:
 			return []
 
-		columns = self.frame.select_dtypes(
-			include=('number',)).columns
+		return group.agg(' '.join,axis=1).unique().tolist()
 
-		keys = [arg for arg in args if arg is not None]
+	def minors(self,*args):
+		"""Return columns with number excluding the columns of args."""
 
-		return columns.drop(keys).tolist()
+		columns = self._frame.select_dtypes(include=('number',)).columns
 
-	def refine(self,*args,groupkey:str=None,datekey:str=None):
-		"""Groupby (groupkey), and sumup (args) input frame, returning a new frame
-		with the given groupkey in the first column, date in the second column, and
-		argument columns in the remaining columns."""
+		for key in args:
+			try:
+				columns = columns.drop(key)
+			except KeyError:
+				pass
 
-		datekey = self.datekey(datekey)
+		return columns.tolist()
 
-		if self._frame is None or groupkey is None or datekey is None:
-			return self
+	def view(self,*args,numbers:list[str]=None):
+		"""Returns a new frame with the given groupkey (merged args) in the first column,
+		date in the second column, and number columns in the rest."""
 
-		numbers = self.numbers if len(args)==0 else list(args)
+		if numbers is None:
+			numbers = self.numbers
 
-		columns = [groupkey,datekey]+numbers
+		group_key = " ".join(args)
 
-		frameGroup = self.frame[columns].groupby([groupkey,datekey])
+		self._frame[group_key] = self._frame[list(args)].agg(' '.join,axis=1)
 
-		return Refined(frameGroup.sum(numbers).reset_index())
+		columns = [group_key,self._datekey]+numbers
 
-	def datekey(self,datekey=None):
+		frameGroup = self._frame[columns].groupby(
+			[group_key,self._datekey]
+		)
 
-		if datekey is not None:
-			return datekey
+		return View(frameGroup.sum(numbers).reset_index())
 
-		if len(self.dates)>0:
-			return self.dates[0]
-
-	def limits(self,datekey=None):
-
-		return (self.mindate(datekey),self.maxdate(datekey))
-
-	def mindate(self,datekey=None):
-
-		datekey = self.datekey(datekey)
-
-		if self._frame is None or datekey is None:
+	@property
+	def mindate(self):
+		"""Returns the smallest datetime.date observed in the date column."""
+		try:
+			dates = self._frame[self._datekey]
+		except KeyError:
 			return datetime.date(2020,1,1)
 
-		return self._frame[datekey].min().date()
+		return dates.min().date()-datetime.timedelta(days=1)
 
-	def maxdate(self,datekey=None):
+	@property
+	def maxdate(self):
+		"""Returns the largest datetime.date observed in the date column."""
+		try:
+			dates = self._frame[self._datekey]
+		except KeyError:
+			return datetime.date(2030,1,1)
 
-		datekey = self.datekey(datekey)
+		return dates.max().date()+datetime.timedelta(days=1)
 
-		if self._frame is None or datekey is None:
-			return datetime.date(2020,6,1)
-
-		return self._frame[datekey].max().date()
-
-	@staticmethod
-	def argNoneFlag(*args):
-
-		for arg in args:
-			if arg is None:
-				return True
-
-		return False
+	@property
+	def limit(self):
+		"""Returns the datetime.date limits observed in the date column."""
+		return (self.mindate,self.maxdate)
 
 if __name__ == "__main__":
 

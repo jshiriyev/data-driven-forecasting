@@ -5,38 +5,39 @@ import streamlit
 
 from ._outlook import Outlook
 
-class Update():
+from ._visualized import View
+
+class Update:
 
 	@streamlit.cache_data
 	def load_data(file):
 
 		if file is None:
-			return Outlook()
-
-		frame = pandas.read_excel(file)
+			frame = pandas.DataFrame()
+		else:
+			frame = pandas.read_excel(file)
 
 		return Outlook(frame)
 
-	def load_group(data,state):
+	@staticmethod
+	def load_group(state,data:Outlook):
 
-		if Update.argNoneFlag(state,'datekey','ratekey','groupkey'):
+		if Update.NoneFlag(state,'datekey','ratekey','groupkey'):
 			return
 
-		group = data.refine(
-			state.ratekey,
-			*state.viewlist,
-			groupkey = state.groupkey,
-			datekey = state.datekey,
-			)
+		return data(state.datekey).view(
+			*state.groupkey,numbers=[state.ratekey]+state.viewlist)
 
-		return group
+	@staticmethod
+	def load_frame(state,group:View):
 
-	def load_frame(group,state):
+		if Update.NoneFlag(state,'itemkey'):
+			return
 
 		return group.filter(state.itemkey)
 
 	@staticmethod
-	def argNoneFlag(state,*args):
+	def NoneFlag(state,*args):
 
 		for arg in args:
 			if state[arg] is None:

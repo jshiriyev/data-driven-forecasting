@@ -35,19 +35,17 @@ class Update():
 			exponent = state.exponent/100,
 			rate0 = float(state.rate0),
 			decline0 = float(state.decline0),
-			)
+		)
 
-		state['fitline'] = model(datetimes=state.datetimes)
+		return model(datetimes=state.datetimes)
 
 	@staticmethod
-	def optimize(state):
+	def optimize(state,analyze,frame):
 
 		if Update.flag(state,'mode','exponent'):
 			return
 
-		model = Optimize.minimize(
-			mdays = None, 
-			rates = None,
+		model = analyze.fit(frame,
 			mode = state.mode.lower(),
 			exponent = state.exponent/100,
 			)
@@ -56,14 +54,23 @@ class Update():
 
 		state['decline0'] = model.decline0
 
-		state['fitline'] = model(datetimes=state.datetimes)
+		return model(datetimes=state.datetimes)
 
 	@staticmethod
-	def multirun(state,bar):
+	def multirun(state,group,bar):
 
-		for percent_complete in range(100):
+		models = {}
 
-			bar.progress(percent_complete+1,text=progress_text)
+		for index,frame in enumerate(group):
+
+			model = analyze.fit(frame,
+				mode = state.mode.lower(),
+				exponent = state.exponent/100,
+			)
+
+			models[itemkey] = model
+
+			bar.progress(index+1,text=progress_text)
 
 		time.sleep(1)
 

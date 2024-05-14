@@ -6,7 +6,7 @@ from ._optimize import Optimize
 
 class Analysis():
 
-	def __init__(self,datekey,ratekey,groupkey,**kwargs):
+	def __init__(self,datekey,ratekey,**kwargs):
 		"""
 		Initializing decline analysis with date and rate column keys.
 		The rate values is used for decline calculations.

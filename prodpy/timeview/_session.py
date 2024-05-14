@@ -3,18 +3,17 @@ import streamlit
 class Session():
 
 	def __init__(self,state:streamlit._SessionStateProxy):
-
 		self.state = state
 
 	def set(self):
 
-		return self.__call__(
+		return self(
 			datekey = None,
 			ratekey = None,
 			groupkey = None,
 			itemkey = None,
 			viewlist = [],
-			)
+		)
 
 	def __call__(self,*args,**kwargs):
 
