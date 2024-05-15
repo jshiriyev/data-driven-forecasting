@@ -13,9 +13,9 @@ class Model:
 
 	exponent 	: Arps' decline-curve exponent (b)
 
-		b = 0 		-> mode = 'exponential'
-		0 < b < 1 	-> mode = 'hyperbolic'
-		b = 1 		-> mode = 'harmonic' 
+		b = 0 		-> mode = 'Exponential'
+		0 < b < 1 	-> mode = 'Hyperbolic'
+		b = 1 		-> mode = 'Harmonic' 
 
 	Decline attributes are rate0 (q0) and decline0 (d0):
 
@@ -34,9 +34,9 @@ class Model:
 		init = False,
 		repr = False,
 		default = (
-			'exponential',
-			'hyperbolic',
-			'harmonic',
+			'Exponential',
+			'Hyperbolic',
+			'Harmonic',
 			)
 		)
 
@@ -51,30 +51,44 @@ class Model:
 		object.__setattr__(self,'rate0',float(self.rate0))
 		object.__setattr__(self,'decline0',float(self.decline0))
 
-	def __call__(self,*,cdays=None,datetimes=None,**kwargs): # WILL NEED CORRECTION
+	def __call__(self,datetime0:datetime.date,datetimeF:datetime.date):
 		"""Calculates rates for the given calculation days or datetimes."""
-	
-		cdays = self.datetime2day(datetimes,**kwargs) if cdays is None else cdays
 
-		if kwargs.get('datetime0') is None:
-			return self.rates(cdays)
+		cdays = numpy.linspace(0,(datetimeF-datetime0).days)
 
-		return self.day2datetime(cdays,**kwargs),self.rates(cdays)
+		dates = self.day2datetime(cdays,datetime0=datetime0,timecode='us')
 
-	def rates(self,cdays,*,mode=None):
+		return {'dates':dates,'rates':self.run(cdays)}
+
+	def option2(self,datetime0:datetime.date,datetimeF:datetime.date):
+		"""Calculates rates for the given calculation days or datetimes."""
+
+		return {
+			"dates"	: pandas.date_range(
+				datetime0,
+				datetimeF,
+				),
+
+			"rates" : self.run(
+				numpy.arange(
+					(datetimeF-datetime0).days)
+				),
+		}
+
+	def run(self,cdays,*,mode=None):
 		"""Returns the theoretical rates based on class attributes and mode."""
 		locmode = self.mode if mode is None else mode
-		return getattr(self,f"{locmode.lower()}")(cdays)
+		return getattr(self,f"{locmode.capitalize()}")(cdays)
 
-	def exponential(self,cdays):
+	def Exponential(self,cdays):
 		"""Exponential decline model: q = q0 * exp(-d0*t) """
 		return self.rate0*numpy.exp(-self.decline0*cdays)
 
-	def hyperbolic(self,cdays):
+	def Hyperbolic(self,cdays):
 		"""Hyperbolic decline model: q = q0 / (1+b*d0*t)**(1/b) """
 		return self.rate0/(1+self.exponent*self.decline0*cdays)**(1/self.exponent)
 
-	def harmonic(self,cdays):
+	def Harmonic(self,cdays):
 		"""Harmonic decline model: q = q0 / (1+d0*t) """
 		return self.rate0/(1+self.decline0*cdays)
 
@@ -83,7 +97,7 @@ class Model:
 		"""Returns mode and exponent based on their values."""
 
 		if mode is None and exponent is None:
-			return Model.get_return('exponential',0,**kwargs)
+			return Model.get_return('Exponential',0,**kwargs)
 
 		elif mode is None and exponent is not None:
 			return Model.get_return(Model.get_mode(float(exponent)),float(exponent),**kwargs)
@@ -98,13 +112,13 @@ class Model:
 		"""Returns mode based on the exponent value."""
 
 		if exponent == 0.:
-			return 'exponential'
+			return 'Exponential'
 
 		if exponent > 0. and exponent < 1.:
-			return 'hyperbolic'
+			return 'Hyperbolic'
 
 		if exponent == 1.:
-			return 'harmonic'
+			return 'Harmonic'
 
 		raise Warning("Exponent value needs to be in the range of 0 and 1.")
 
@@ -112,16 +126,16 @@ class Model:
 	def get_exponent(mode:str):
 		"""Returns exponent based on the mode."""
 
-		if mode.lower() == 'exponential':
+		if mode.capitalize() == 'Exponential':
 			return 0.
 
-		if mode.lower() == 'hyperbolic':
+		if mode.capitalize() == 'Hyperbolic':
 			return 0.5
 
-		if mode.lower() == 'harmonic':
+		if mode.capitalize() == 'Harmonic':
 			return 1.
 
-		raise Warning("Available modes are exponential, hyperbolic, and harmonic.")
+		raise Warning("Available modes are Exponential, Hyperbolic, and Harmonic.")
 
 	@staticmethod
 	def get_return(*args,**kwargs):
@@ -190,12 +204,12 @@ if __name__ == "__main__":
 
 	print(Model.get_option(cdays=55,exponent=0.5,name='empty'))
 
-	mode,exponent = Model.get_option('exponential',0.5)
+	mode,exponent = Model.get_option('Exponential',0.5)
 
 	print(mode)
 	print(exponent)
 
-	mode,exponent,kwargs = Model.get_option('exponential',0.5,days=55)
+	mode,exponent,kwargs = Model.get_option('Exponential',0.5,days=55)
 
 	print(mode)
 	print(exponent)
@@ -207,9 +221,9 @@ if __name__ == "__main__":
 
 	# print(exp)
 
-	# plt.plot(days,exp(days=days),label='exponential')
-	# plt.plot(days,hyp(days=days),label='hyperbolic')
-	# plt.plot(days,har(days=days),label='harmonic')
+	# plt.plot(days,exp(days=days),label='Exponential')
+	# plt.plot(days,hyp(days=days),label='Hyperbolic')
+	# plt.plot(days,har(days=days),label='Harmonic')
 
 	# plt.legend()
 
