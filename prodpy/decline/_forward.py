@@ -25,7 +25,7 @@ class Forward():
 		"""Calculates the theoretical rates for the given days or datetime parameters."""
 
 		if days is None:
-			days = Forward.time_range(start,end,number)
+			days = Forward.day_range(start,end,number)
 
 		rates = getattr(Forward,f"{model.mode}")(model,days)
 
@@ -49,7 +49,7 @@ class Forward():
 		return model.rate0/(1+model.decline0*days)
 
 	@staticmethod
-	def time_range(start:datetime.date,end:datetime.date,number:int=None):
+	def day_range(start:datetime.date,end:datetime.date,number:int=None):
 
 		if number is None:
 			return numpy.arange((end-start).days)
