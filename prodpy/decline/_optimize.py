@@ -86,6 +86,19 @@ class Optimize:
 		
 		return value,kwargs
 
+	@staticmethod
+	def datetime2day(datetimes:pandas.Series,*,start=None,**kwargs):
+		"""Calculates days for the given datetime series."""
+
+		if start is None:
+			start = datetimes[0]
+
+		timedelta = (datetimes-start).to_numpy()
+
+		timedelta = timedelta.astype('timedelta64[us]')
+
+		return timedelta.astype('float64')/(24*60*60*1000*1000)
+
 
 if __name__ == "__main__":
 

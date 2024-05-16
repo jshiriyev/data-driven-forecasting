@@ -1,10 +1,5 @@
 from dataclasses import dataclass, field
 
-import datetime
-
-import numpy
-import pandas
-
 @dataclass(frozen=True)
 class Model:
 	"""Initializes Decline Curve Model with the decline option and attributes.
@@ -42,70 +37,39 @@ class Model:
 
 	def __post_init__(self):
 		"""Assigns corrected mode and exponent values."""
-		
-		mode,exponent = self.get_option(self.mode,self.exponent)
 
-		object.__setattr__(self,'mode',mode)
-		object.__setattr__(self,'exponent',exponent)
+		mode,exponent = self.get_option(mode=self.mode,exponent=self.exponent)
 
-		object.__setattr__(self,'rate0',float(self.rate0))
-		object.__setattr__(self,'decline0',float(self.decline0))
+		object.__setattr__(
+			self,'mode',mode
+			)
 
-	def __call__(self,datetime0:datetime.date,datetimeF:datetime.date):
-		"""Calculates rates for the given calculation days or datetimes."""
+		object.__setattr__(
+			self,'exponent',exponent
+			)
 
-		cdays = numpy.linspace(0,(datetimeF-datetime0).days)
+		object.__setattr__(
+			self,'rate0',float(self.rate0)
+			)
 
-		dates = self.day2datetime(cdays,datetime0=datetime0,timecode='us')
-
-		return {'dates':dates,'rates':self.run(cdays)}
-
-	def option2(self,datetime0:datetime.date,datetimeF:datetime.date):
-		"""Calculates rates for the given calculation days or datetimes."""
-
-		return {
-			"dates"	: pandas.date_range(
-				datetime0,
-				datetimeF,
-				),
-
-			"rates" : self.run(
-				numpy.arange(
-					(datetimeF-datetime0).days)
-				),
-		}
-
-	def run(self,cdays,*,mode=None):
-		"""Returns the theoretical rates based on class attributes and mode."""
-		locmode = self.mode if mode is None else mode
-		return getattr(self,f"{locmode.capitalize()}")(cdays)
-
-	def Exponential(self,cdays):
-		"""Exponential decline model: q = q0 * exp(-d0*t) """
-		return self.rate0*numpy.exp(-self.decline0*cdays)
-
-	def Hyperbolic(self,cdays):
-		"""Hyperbolic decline model: q = q0 / (1+b*d0*t)**(1/b) """
-		return self.rate0/(1+self.exponent*self.decline0*cdays)**(1/self.exponent)
-
-	def Harmonic(self,cdays):
-		"""Harmonic decline model: q = q0 / (1+d0*t) """
-		return self.rate0/(1+self.decline0*cdays)
+		object.__setattr__(
+			self,'decline0',float(self.decline0)
+			)
 
 	@staticmethod
-	def get_option(mode=None,exponent=None,**kwargs):
+	def get_option(*,mode=None,exponent=None):
 		"""Returns mode and exponent based on their values."""
 
 		if mode is None and exponent is None:
-			return Model.get_return('Exponential',0,**kwargs)
+			return 'Exponential',0
 
-		elif mode is None and exponent is not None:
-			return Model.get_return(Model.get_mode(float(exponent)),float(exponent),**kwargs)
+		if mode is None and exponent is not None:
+			return Model.get_mode(float(exponent)),float(exponent)
 
-		elif mode is not None and exponent is None:
-			return Model.get_return(mode,Model.get_exponent(mode),**kwargs)
+		if mode is not None and exponent is None:
+			return mode.capitalize(),Model.get_exponent(mode)
 
-		return Model.get_option(mode=None,exponent=float(exponent),**kwargs)
+		return Model.get_option(mode=None,exponent=float(exponent))
 
 	@staticmethod
 	def get_mode(exponent:float):
@@ -137,57 +101,6 @@ class Model:
 
 		raise Warning("Available modes are Exponential, Hyperbolic, and Harmonic.")
 
-	@staticmethod
-	def get_return(*args,**kwargs):
-		"""Returns args when kwargs is empty, both (args and kwargs) otherwise."""
-		if len(kwargs)==0:
-			return *args,
-
-		return *args,kwargs
-
-	@staticmethod
-	def datetime2day(datetimes:pandas.Series,*,datetime0=None,**kwargs):
-		"""Calculates days for the given datetime series."""
-
-		if datetime0 is None:
-			datetime0 = datetimes[0]
-
-		timedelta = (datetimes-datetime0).to_numpy()
-
-		timedelta = timedelta.astype('timedelta64[us]')
-
-		return timedelta.astype('float64')/(24*60*60*1000*1000)
-
-	@staticmethod
-	def day2datetime(days:numpy.ndarray,*,datetime0=None,timecode=None):
-		"""
-		Adds days to datetime0 calculating new datetimes with the
-		  specified timecode. Available timecodes and their meanings
-		  are shown below:
-
-		TimeCode	Meaning
-		-------- 	-------------
-			   h	hour
-			   m	minute
-			   s	second
-			  ms	millisecond
-			  us	microsecond
-
-		Returns numpy array of datetimes.
-		"""
-
-		if datetime0 is None:
-			datetime0 = datetime.date(2000,1,1)
-
-		ustimes = numpy.asarray(days)*24*60*60*1000*1000
-
-		timedelta = numpy.asarray(ustimes,dtype=f'timedelta64[us]')
-		datetimes = numpy.datetime64(datetime0)+timedelta
-
-		code = 'D' if timecode is None else timecode
-
-		return datetimes.astype(f'datetime64[{code}]')
-
 if __name__ == "__main__":
 
 	# import matplotlib.pyplot as plt
@@ -202,18 +115,12 @@ if __name__ == "__main__":
 
 	print(Model.rate0)
 
-	print(Model.get_option(cdays=55,exponent=0.5,name='empty'))
+	print(Model.mode)
 
-	mode,exponent = Model.get_option('Exponential',0.5)
-
-	print(mode)
-	print(exponent)
-
-	mode,exponent,kwargs = Model.get_option('Exponential',0.5,days=55)
+	mode,exponent = Model.get_option(mode='Exponential',exponent=0.5)
 
 	print(mode)
 	print(exponent)
-	print(kwargs)
 
 	# exp = Model(rate0=10,decline0=0.05)
 	# hyp = Model(rate0=10,decline0=0.05,exponent=0.4)
