@@ -21,26 +21,26 @@ class Optimize():
 	def exponent(self):
 		return self._exponent
 
-	def __call__(self,dates:pandas.Series,rates:pandas.Series,**kwargs):
+	def __call__(self,dates:pandas.DatetimeIndex,rates:numpy.ndarray,start:datetime.date=None):
 		"""Predicts the decline rates for the measured dates and rates,
 		and returns either the model or the rates for the pandas.date_range parameters."""
 
-		days = Forward.days(dates,kwargs.get('start'))
+		days = Forward.days(dates,start)
 
 		model = self.minimize(days,rates)
 
-		return model,Forward.run(model,**kwargs)
+		return model,Forward()(model).method(days)
 
-	def predict(self,days,rates,**kwargs):
+	def predict(self,days:numpy.ndarray,rates:numpy.ndarray,**kwargs):
 		"""Predicts the decline rates for the measured days and rates,
 		and returns the rates for the pandas.date_range parameters."""
 
 		model = self.minimize(days,rates)
 
-		return Forward.run(model,**kwargs)
+		return Forward()(model).run(**kwargs)
 
-	def minimize(self,days,rates):
-		"""Returns decline model based on input rates:
+	def minimize(self,days:numpy.ndarray,rates:numpy.ndarray):
+		"""Inversely calculates decline model based on input rates:
 		
 		days 		: measurement days, array of floats
 		rates 		: measured flow rates, array of floats
@@ -60,19 +60,19 @@ class Optimize():
 	def method(self):
 		return getattr(self,f"{self._mode}")
 
-	def Exponential(self,days,rates):
+	def Exponential(self,days:numpy.ndarray,rates:numpy.ndarray):
 		"""Optimization based on exponential decline model."""
 		sol = linregress(days,numpy.log(rates))
 
 		return numpy.exp(sol.intercept),-sol.slope
 
-	def Hyperbolic(self,days,rates):
+	def Hyperbolic(self,days:numpy.ndarray,rates:numpy.ndarray):
 		"""Optimization based on hyperbolic decline model."""
 		sol = linregress(days,numpy.power(1/rates,self.exponent))
 
 		return sol.intercept**(-1/self.exponent),sol.slope/sol.intercept/self.exponent
 
-	def Harmonic(self,days,rates):
+	def Harmonic(self,days:numpy.ndarray,rates:numpy.ndarray):
 		"""Optimization based on harmonic decline model."""
 		sol = linregress(days,1/rates)
 

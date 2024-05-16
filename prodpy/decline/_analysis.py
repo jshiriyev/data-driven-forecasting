@@ -2,6 +2,8 @@ import datetime
 
 from ._model import Model
 
+from ._forward import Forward
+
 from ._optimize import Optimize
 
 class Analysis():
@@ -27,15 +29,15 @@ class Analysis():
 		for key,value in kwargs.items():
 			setattr(self,key,value)
 
-	def fit(self,frame,start:datetime.date=None,cease:datetime.date=None,**kwargs):
+	def fit(self,frame,start:datetime.date=None,end:datetime.date=None,**kwargs):
 		"""Returns optimized model that fits the rates."""
 
-		days,rates = self.derive(frame,start=start,cease=cease)
+		days,rates = self.derive(frame,start=start,end=end)
 
 		return Optimize(days).minimize(rates,**kwargs)
 
 	def derive(self,frame,**kwargs):
-		"""Returns new frame that is in the range of start and cease dates and newly added days."""
+		"""Returns new frame that is in the range of start and end dates and newly added days."""
 
 		frame = self.trim(frame[self.keys],**kwargs)
 
@@ -45,19 +47,19 @@ class Analysis():
 
 		return days,rates
 
-	def trim(self,frame,start:datetime.date=None,cease:datetime.date=None):
-		"""Trims the frame for the start and cease dates.
+	def trim(self,frame,start:datetime.date=None,end:datetime.date=None):
+		"""Trims the frame for the start and end dates.
 		
 		start 	: start date when to start analysis
-		cease 	: cease date when to cease analysis
+		end 	: end date when to end analysis
 
 		Returns the trimmed dataframe.
 		"""
 		if start is not None:
 			frame = frame[frame[self.heads.dates].dt.date>=start]
 
-		if cease is not None:
-			frame = frame[frame[self.heads.dates].dt.date<=cease]
+		if end is not None:
+			frame = frame[frame[self.heads.dates].dt.date<=end]
 
 		return frame
 

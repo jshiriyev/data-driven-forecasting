@@ -7,51 +7,46 @@ from ._model import Model
 
 class Forward():
 
-	def __init__(self,*args,**kwargs):
-		self._model = Model(*args,**kwargs)
+	def __init__(self):
+		pass
 
-	@property
-	def model(self):
-		return self._model
+	def __call__(self,model):
 
-	def __call__(self,**kwargs):
-		return self.run(self.model,**kwargs)
+		self.model = model
+
+		return self
+
+	def run(self,dates:pandas.DatetimeIndex=None,**kwargs):
+		"""Calculates the theoretical rates for the given model and
+		dates or pandas.date_range parameters."""
+		
+		if dates is None
+			dates = pandas.date_range(**kwargs)
+
+		days = self.days(dates,kwargs.get('start'))
+
+		return {"dates":dates,"rates":self.method(days)}
 
 	@property
 	def method(self):
-		return getattr(self,f"{self._model.mode}")
+		return getattr(self,f"{self.model.mode}")
 
-	@staticmethod
-	def run(model:Model,**kwargs):
-		"""Calculates the theoretical rates for the given model and pandas.date_range parameters."""
-		dates = pandas.date_range(**kwargs)
-
-		curve = getattr(Forward,f"{model.mode}")
-
-		return {"dates":dates,"rates":curve(model,Forward.days(dates))}
-
-	@staticmethod
-	def Exponential(model:Model,days:numpy.ndarray):
+	def Exponential(self,days:numpy.ndarray):
 		"""Exponential decline model: q = q0 * exp(-d0*t) """
-		return model.rate0*numpy.exp(-model.decline0*days)
+		return self.model.rate0*numpy.exp(-self.model.decline0*days)
 
-	@staticmethod
-	def Hyperbolic(model:Model,days:numpy.ndarray):
+	def Hyperbolic(self,days:numpy.ndarray):
 		"""Hyperbolic decline model: q = q0 / (1+b*d0*t)**(1/b) """
-		return model.rate0/(1+model.exponent*model.decline0*days)**(1/model.exponent)
+		return self.model.rate0/(1+self.model.exponent*self.model.decline0*days)**(1/self.model.exponent)
 
-	@staticmethod
-	def Harmonic(model:Model,days:numpy.ndarray):
+	def Harmonic(self,days:numpy.ndarray):
 		"""Harmonic decline model: q = q0 / (1+d0*t) """
-		return model.rate0/(1+model.decline0*days)
+		return self.model.rate0/(1+self.model.decline0*days)
 
 	@staticmethod
 	def days(dates:pandas.DatetimeIndex,start:datetime.date=None):
 		"""Return days calculated from the dates."""
-		
-		if start is None:
-			start = dates[0]
-
+		start = dates[0] if start is None else start
 		start = numpy.datetime64(start)
 
 		delta = (dates-start).to_numpy().astype('timedelta64[ns]')
