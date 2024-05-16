@@ -1,104 +1,82 @@
 import numpy
+import pandas
 
 from scipy.stats import linregress
 
 from ._model import Model
 
-class Optimize:
+from ._forward import Forward
 
-	@staticmethod
-	def predict(mdays,rates,**kwargs):
-		"""Predicts the decline rates for the given measured rates,
-		and returns the rates for the calculation days."""
+class Optimize():
 
-		mode,exponent,kwargs = Optimize.get_option(**kwargs)
+	def __init__(self,mode:str=None,exponent:float=None):
 
-		rate0,decline0 = getattr(Optimize,f"{mode}")(mdays,rates,exponent=exponent)
+		self._mode,self._exponent = Model.get_option(mode=mode,exponent=exponent)
 
-		model = Model(mode=mode,exponent=exponent,rate0=rate0,decline0=decline0)
+	@property
+	def mode(self):
+		return self._mode
+	
+	@property
+	def exponent(self):
+		return self._exponent
 
-		if kwargs.get('cdays') is None and kwargs.get('datetimes') is None:
-			kwargs['cdays'] = mdays
+	def __call__(self,dates:pandas.Series,rates:pandas.Series,**kwargs):
+		"""Predicts the decline rates for the measured dates and rates,
+		and returns either the model or the rates for the pandas.date_range parameters."""
 
-		return model(**kwargs)
+		days = Forward.days(dates,kwargs.get('start'))
 
-	@staticmethod
-	def minimize(mdays,rates,**kwargs):
+		model = self.minimize(days,rates)
+
+		return model,Forward.run(model,**kwargs)
+
+	def predict(self,days,rates,**kwargs):
+		"""Predicts the decline rates for the measured days and rates,
+		and returns the rates for the pandas.date_range parameters."""
+
+		model = self.minimize(days,rates)
+
+		return Forward.run(model,**kwargs)
+
+	def minimize(self,days,rates):
 		"""Returns decline model based on input rates:
 		
-		mdays 		: measurement days, array of floats
+		days 		: measurement days, array of floats
 		rates 		: measured flow rates, array of floats
-
-		**kwargs 	: decline mode and exponent
 
 		Returns decline model with mode, exponent, and initial rate and decline.
 		"""
-		mode,exponent,kwargs = Optimize.get_option(**kwargs)
+		rate0,decline0 = self.method(days,rates)
 
-		rate0,decline0 = getattr(Optimize,f"{mode}")(mdays,rates,exponent=exponent)
+		return Model(
+			mode = self.mode,
+			exponent = self.exponent,
+			rate0 = rate0,
+			decline0 = decline0
+			)
 
-		return Model(mode=mode,exponent=exponent,rate0=rate0,decline0=decline0)
+	@property
+	def method(self):
+		return getattr(self,f"{self._mode}")
 
-	@staticmethod
-	def exponential(days,rates,**kwargs):
+	def Exponential(self,days,rates):
 		"""Optimization based on exponential decline model."""
 		sol = linregress(days,numpy.log(rates))
 
 		return numpy.exp(sol.intercept),-sol.slope
 
-	@staticmethod
-	def hyperbolic(days,rates,exponent=0.5):
+	def Hyperbolic(self,days,rates):
 		"""Optimization based on hyperbolic decline model."""
-		sol = linregress(days,numpy.power(1/rates,exponent))
+		sol = linregress(days,numpy.power(1/rates,self.exponent))
 
-		return sol.intercept**(-1/exponent),sol.slope/sol.intercept/exponent
+		return sol.intercept**(-1/self.exponent),sol.slope/sol.intercept/self.exponent
 
-	@staticmethod
-	def harmonic(days,rates,**kwargs):
+	def Harmonic(self,days,rates):
 		"""Optimization based on harmonic decline model."""
 		sol = linregress(days,1/rates)
 
 		return sol.intercept**(-1),sol.slope/sol.intercept
-
-	@staticmethod
-	def get_option(**kwargs):
-		"""Returns decline option (mode and exponent) and remaining kwargs."""
-
-		m,kwargs = Optimize.pop_dict(kwargs,'mode')
-		e,kwargs = Optimize.pop_dict(kwargs,'exponent')
-
-		output = Model.get_option(m,e,**kwargs)
-
-		if len(output)>2:
-			return output
-
-		return *output,{}
-
-	@staticmethod
-	def pop_dict(kwargs,key,default=None):
-		"""Returns the value of kwargs[key] and kwargs. If the key is not
-		in the dictionary, default value and kwargs will be returned."""
-
-		if kwargs.get(key) is None:
-			return default,kwargs
-
-		value = kwargs.pop(key)
-		
-		return value,kwargs
-
-	@staticmethod
-	def datetime2day(datetimes:pandas.Series,*,start=None,**kwargs):
-		"""Calculates days for the given datetime series."""
-
-		if start is None:
-			start = datetimes[0]
-
-		timedelta = (datetimes-start).to_numpy()
-
-		timedelta = timedelta.astype('timedelta64[us]')
-
-		return timedelta.astype('float64')/(24*60*60*1000*1000)
-
 
 if __name__ == "__main__":
 
@@ -106,19 +84,19 @@ if __name__ == "__main__":
 
 	import numpy as np
 
-	mdays = np.linspace(0,100,100)
+	days = np.linspace(0,100,100)
 
-	exp = Model(mode='exponential',rate0=10,decline0=0.05).rates(mdays)
-	hyp = Model(mode='hyperbolic',rate0=10,decline0=0.05).rates(mdays)
-	har = Model(mode='harmonic',rate0=10,decline0=0.05).rates(mdays)
+	exp = Model(mode='exponential',rate0=10,decline0=0.05).rates(days)
+	hyp = Model(mode='hyperbolic',rate0=10,decline0=0.05).rates(days)
+	har = Model(mode='harmonic',rate0=10,decline0=0.05).rates(days)
 
 	# print(exp)
 	# print(hyp)
 	# print(har)
 
-	# plt.plot(mdays,exp,c='b',label='exponential')
-	# plt.plot(mdays,hyp,c='tab:orange',label='hyperbolic')
-	# plt.plot(mdays,har,c='g',label='harmonic')
+	# plt.plot(days,exp,c='b',label='exponential')
+	# plt.plot(days,hyp,c='tab:orange',label='hyperbolic')
+	# plt.plot(days,har,c='g',label='harmonic')
 
 	# plt.legend()
 
@@ -126,21 +104,21 @@ if __name__ == "__main__":
 
 	forecast = np.linspace(100,200)
 
-	fit1 = Optimize.predict(mdays,exp)
-	fit2 = Optimize.predict(mdays,hyp,mode='hyperbolic',cdays=forecast)
-	fit3 = Optimize.predict(mdays,har,mode='harmonic',cdays=forecast)
+	fit1 = Optimize.predict(days,exp)
+	fit2 = Optimize.predict(days,hyp,mode='hyperbolic',cdays=forecast)
+	fit3 = Optimize.predict(days,har,mode='harmonic',cdays=forecast)
 
-	plt.plot(mdays,exp,label='exponential')
-	plt.plot(mdays,hyp,label='hyperbolic')
-	plt.plot(mdays,har,label='harmonic')
+	plt.plot(days,exp,label='exponential')
+	plt.plot(days,hyp,label='hyperbolic')
+	plt.plot(days,har,label='harmonic')
 
-	plt.plot(mdays,fit1,'b--',label='exponential')
+	plt.plot(days,fit1,'b--',label='exponential')
 	plt.plot(forecast,fit2,c='tab:orange',linestyle='--',label='hyperbolic')
 	plt.plot(forecast,fit3,'g--',label='harmonic')
 
-	print(Optimize.minimize(mdays,exp,mode='exponential'))
-	print(Optimize.minimize(mdays,hyp,mode='hyperbolic'))
-	print(Optimize.minimize(mdays,har,mode='harmonic'))
+	print(Optimize.minimize(days,exp,mode='exponential'))
+	print(Optimize.minimize(days,hyp,mode='hyperbolic'))
+	print(Optimize.minimize(days,har,mode='harmonic'))
 
 	plt.legend()
 

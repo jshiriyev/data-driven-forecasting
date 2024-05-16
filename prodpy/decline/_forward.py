@@ -7,31 +7,28 @@ from ._model import Model
 
 class Forward():
 
-	def __init__(self,model:Model=None):
-		self._model = model
+	def __init__(self,*args,**kwargs):
+		self._model = Model(*args,**kwargs)
 
 	@property
 	def model(self):
 		return self._model
-	
-	def __call__(self,start:datetime.date,end:datetime.date,*,model:Model=None,dayCodeFlag=False):
 
-		method = "run1" if dayCodeFlag else "run2"
+	def __call__(self,**kwargs):
+		return self.run(self.model,**kwargs)
 
-		return getattr(self,method)(self.model,start,end)
+	@property
+	def method(self):
+		return getattr(self,f"{self._model.mode}")
 
 	@staticmethod
-	def run(model:Model,days:numpy.ndarray=None,start:datetime.date=None,end:datetime.date=None,number:int=None,timecode:str=None):
-		"""Calculates the theoretical rates for the given days or datetime parameters."""
+	def run(model:Model,**kwargs):
+		"""Calculates the theoretical rates for the given model and pandas.date_range parameters."""
+		dates = pandas.date_range(**kwargs)
 
-		if days is None:
-			days = Forward.day_range(start,end,number)
+		curve = getattr(Forward,f"{model.mode}")
 
-		rates = getattr(Forward,f"{model.mode}")(model,days)
-
-		dates = Forward.date_range(None,start,end,number,timecode)
-
-		return {"dates":dates,"rates":rates}
+		return {"dates":dates,"rates":curve(model,Forward.days(dates))}
 
 	@staticmethod
 	def Exponential(model:Model,days:numpy.ndarray):
@@ -49,52 +46,30 @@ class Forward():
 		return model.rate0/(1+model.decline0*days)
 
 	@staticmethod
-	def day_range(start:datetime.date,end:datetime.date,number:int=None):
-
-		if number is None:
-			return numpy.arange((end-start).days)
+	def days(dates:pandas.DatetimeIndex,start:datetime.date=None):
+		"""Return days calculated from the dates."""
 		
-		return numpy.linspace(0,(end-start).days,number)
-
-	@staticmethod
-	def date_range(days:numpy.ndarray=None,start:datetime.date=None,end:datetime.date=None,number:int=None,timecode:str=None):
-		"""
-		Adds days to start calculating new datetimes with the
-		  specified timecode. Available timecodes and their meanings
-		  are shown below:
-
-		TimeCode	Meaning
-		-------- 	-------------
-			   h	hour
-			   m	minute
-			   s	second
-			  ms	millisecond
-			  us	microsecond
-
-		Returns numpy array of datetimes.
-		"""
-
-		if number is None:
-			return pandas.date_range(start,end)
-
 		if start is None:
-			start = datetime.date(2000,1,1)
+			start = dates[0]
 
-		return pandas.date_range(start,end,periods=number,unit="us")
+		start = numpy.datetime64(start)
 
-		microsecs = numpy.asarray(days)*24*60*60*1000*1000
+		delta = (dates-start).to_numpy().astype('timedelta64[ns]')
 
-		timedelta = numpy.asarray(
-			microsecs,dtype=f'timedelta64[us]'
-			)
+		return delta.astype('float64')/(24*60*60*1e9)
 
-		datetimes = numpy.datetime64(start)+timedelta
+if __name__ == "__main__":
 
-		code = 'D' if timecode is None else timecode
+	import datetime
 
-		return datetimes.astype(f'datetime64[{code}]')
-		
+	print(
+		Forward.days(5)
+		)
 
-		
+	print(
+		Forward.days(datetime.date(2022,2,3),datetime.date(2022,2,7))
+		)
 
-		
+	print(
+		Forward.days(datetime.date(2022,2,3),datetime.date(2022,2,7),12)
+		)

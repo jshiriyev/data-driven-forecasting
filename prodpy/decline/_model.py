@@ -57,7 +57,7 @@ class Model:
 			)
 
 	@staticmethod
-	def get_option(*,mode=None,exponent=None):
+	def get_option(mode=None,exponent=None):
 		"""Returns mode and exponent based on their values."""
 
 		if mode is None and exponent is None:
