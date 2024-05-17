@@ -1,3 +1,5 @@
+import datetime
+
 from dataclasses import dataclass, field
 
 @dataclass(frozen=True)
@@ -17,13 +19,15 @@ class Model:
 	rate0 		: initial flow rate
 	decline0 	: initial decline rate, day**-1
 
-	Rates are calculated for the calculation days.
+	The class contains methods to get the correct pair of options.
 	"""
 
 	mode 		: str   = None
 	exponent 	: float = None
 	rate0 		: float = 0.
 	decline0 	: float = 0.
+
+	date0 		: datetime.date = None
 
 	options 	: tuple[str] = field(
 		init = False,
@@ -38,23 +42,17 @@ class Model:
 	def __post_init__(self):
 		"""Assigns corrected mode and exponent values."""
 
-		mode,exponent = self.get_option(mode=self.mode,exponent=self.exponent)
+		mode,exponent = self.get_option(
+			self.mode,self.exponent)
 
-		object.__setattr__(
-			self,'mode',mode
-			)
+		rate0 = self.get_rate0(self.rate0)
 
-		object.__setattr__(
-			self,'exponent',exponent
-			)
+		decline0 = self.get_decline0(self.decline0)
 
-		object.__setattr__(
-			self,'rate0',float(self.rate0)
-			)
-
-		object.__setattr__(
-			self,'decline0',float(self.decline0)
-			)
+		object.__setattr__(self,'mode',mode)
+		object.__setattr__(self,'exponent',exponent)
+		object.__setattr__(self,'rate0',rate0)
+		object.__setattr__(self,'decline0',decline0)
 
 	@staticmethod
 	def get_option(mode=None,exponent=None):
@@ -101,6 +99,21 @@ class Model:
 
 		raise Warning("Available modes are Exponential, Hyperbolic, and Harmonic.")
 
+	@staticmethod
+	def get_rate0(rate0:float):
+
+		return float(rate0)
+
+	@staticmethod
+	def get_decline0(decline0:float):
+
+		decline0 = float(decline0)
+
+		# if decline0 < 0. or decline0 > 1.:
+		# 	raise Warning("Initial decline rate (decline0) needs to be in [0., 1.]")
+
+		return decline0
+
 if __name__ == "__main__":
 
 	# import matplotlib.pyplot as plt
@@ -142,4 +155,4 @@ if __name__ == "__main__":
 	print(Model.decline0)
 	print(Model.options)
 
-	print(Model(5,1,5,5))
+	print(Model(5,1,5,0.5))

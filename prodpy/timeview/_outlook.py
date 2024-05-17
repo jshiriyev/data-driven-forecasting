@@ -2,7 +2,7 @@ import datetime
 
 import pandas
 
-from ._visualized import View
+from . import View
 
 class Outlook():
 

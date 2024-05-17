@@ -2,15 +2,14 @@ import datetime
 
 import streamlit
 
-from ._model import Model
+from . import Model
 
 class Session():
 
 	mindate = datetime.date(2020,1,1)
-	maxdate = datetime.date(2020,6,1)
+	maxdate = datetime.date(2025,1,1)
 
 	def __init__(self,state:streamlit._SessionStateProxy,model:Model=None,mindate:datetime.date=None,maxdate:datetime.date=None):
-
 		self.state = state
 
 		self.model = Model() if model is None else model
@@ -24,12 +23,12 @@ class Session():
 	def set(self):
 
 		return self.__call__(
-			mode = self.model.mode,
+			mode     = self.model.mode,
 			exponent = self.model.exponent,
-			rate0 = self.model.rate0.__str__(),
+			rate0    = self.model.rate0.__str__(),
 			decline0 = self.model.decline0.__str__(),
-			mindate = self.mindate,
-			maxdate = self.maxdate,
+			mindate  = self.mindate,
+			maxdate  = self.maxdate,
 		)
 
 	def __call__(self,*args,**kwargs):

@@ -1,70 +1,44 @@
-import datetime
-
 import numpy
-import pandas
 
-from ._model import Model
+from . import Model
 
 class Forward():
 
-	def __init__(self):
-		pass
-
-	def __call__(self,model):
-
-		self.model = model
-
-		return self
-
-	def run(self,dates:pandas.DatetimeIndex=None,**kwargs):
-		"""Calculates the theoretical rates for the given model and
-		dates or pandas.date_range parameters."""
-		
-		if dates is None
-			dates = pandas.date_range(**kwargs)
-
-		days = self.days(dates,kwargs.get('start'))
-
-		return {"dates":dates,"rates":self.method(days)}
+	def __init__(self,model:Model):
+		self._model = model
 
 	@property
-	def method(self):
+	def model(self):
+		return self._model
+	
+	@property
+	def run(self):
+		"""Returns the method based on the class mode."""
 		return getattr(self,f"{self.model.mode}")
 
 	def Exponential(self,days:numpy.ndarray):
 		"""Exponential decline model: q = q0 * exp(-d0*t) """
-		return self.model.rate0*numpy.exp(-self.model.decline0*days)
+		return self.model.rate0*numpy.exp(-self.__decline(days))
 
 	def Hyperbolic(self,days:numpy.ndarray):
 		"""Hyperbolic decline model: q = q0 / (1+b*d0*t)**(1/b) """
-		return self.model.rate0/(1+self.model.exponent*self.model.decline0*days)**(1/self.model.exponent)
+		return self.model.rate0/(1+self.model.exponent*self.__decline(days))**(1/self.model.exponent)
 
 	def Harmonic(self,days:numpy.ndarray):
 		"""Harmonic decline model: q = q0 / (1+d0*t) """
-		return self.model.rate0/(1+self.model.decline0*days)
+		return self.model.rate0/(1+self.__decline(days))
 
-	@staticmethod
-	def days(dates:pandas.DatetimeIndex,start:datetime.date=None):
-		"""Return days calculated from the dates."""
-		start = dates[0] if start is None else start
-		start = numpy.datetime64(start)
-
-		delta = (dates-start).to_numpy().astype('timedelta64[ns]')
-
-		return delta.astype('float64')/(24*60*60*1e9)
+	def __decline(self,days:numpy.ndarray):
+		"""Returns the multiplication of decline0 and days."""
+		return self.model.decline0*numpy.asarray(days)
 
 if __name__ == "__main__":
 
-	import datetime
+	model = Model()
 
-	print(
-		Forward.days(5)
-		)
+	print(Forward(model).run([1,2,3]))
 
-	print(
-		Forward.days(datetime.date(2022,2,3),datetime.date(2022,2,7))
-		)
+	fw = Forward(model)
 
-	print(
-		Forward.days(datetime.date(2022,2,3),datetime.date(2022,2,7),12)
-		)
+	for d in dir(fw):
+		print(d)

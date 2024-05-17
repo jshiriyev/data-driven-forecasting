@@ -1,16 +1,24 @@
 import numpy
-import pandas
 
 from scipy.stats import linregress
 
-from ._model import Model
-
-from ._forward import Forward
+from . import Model
 
 class Optimize():
 
 	def __init__(self,mode:str=None,exponent:float=None):
+		"""Initializes Optimization with the decline option.
 
+		Decline option is mode-exponent pair, where exponent defines the mode:
+
+		exponent 	: Arps' decline-curve exponent (b)
+
+			b = 0 		-> mode = 'Exponential'
+			0 < b < 1 	-> mode = 'Hyperbolic'
+			b = 1 		-> mode = 'Harmonic' 
+		
+		The class contains methods to optimize curve fitting based on different modes.
+		"""
 		self._mode,self._exponent = Model.get_option(mode=mode,exponent=exponent)
 
 	@property
@@ -21,44 +29,28 @@ class Optimize():
 	def exponent(self):
 		return self._exponent
 
-	def __call__(self,dates:pandas.DatetimeIndex,rates:numpy.ndarray,start:datetime.date=None):
-		"""Predicts the decline rates for the measured dates and rates,
-		and returns either the model or the rates for the pandas.date_range parameters."""
-
-		days = Forward.days(dates,start)
-
-		model = self.minimize(days,rates)
-
-		return model,Forward()(model).method(days)
-
-	def predict(self,days:numpy.ndarray,rates:numpy.ndarray,**kwargs):
-		"""Predicts the decline rates for the measured days and rates,
-		and returns the rates for the pandas.date_range parameters."""
-
-		model = self.minimize(days,rates)
-
-		return Forward()(model).run(**kwargs)
-
-	def minimize(self,days:numpy.ndarray,rates:numpy.ndarray):
-		"""Inversely calculates decline model based on input rates:
+	def fit(self,days:numpy.ndarray,rates:numpy.ndarray,**kwargs):
+		"""Inversely calculates decline model based on input days and rates:
 		
-		days 		: measurement days, array of floats
-		rates 		: measured flow rates, array of floats
+		days 		: measured days, array of floats
+		rates 		: measured rates, array of floats
 
 		Returns decline model with mode, exponent, and initial rate and decline.
 		"""
-		rate0,decline0 = self.method(days,rates)
+		rate0,decline0 = self.minimize(days,rates)
 
 		return Model(
 			mode = self.mode,
 			exponent = self.exponent,
 			rate0 = rate0,
-			decline0 = decline0
+			decline0 = decline0,
+			**kwargs,
 			)
 
 	@property
-	def method(self):
-		return getattr(self,f"{self._mode}")
+	def minimize(self):
+		"""Returns the method based on the class mode."""
+		return getattr(self,f"{self.mode}")
 
 	def Exponential(self,days:numpy.ndarray,rates:numpy.ndarray):
 		"""Optimization based on exponential decline model."""
@@ -68,15 +60,19 @@ class Optimize():
 
 	def Hyperbolic(self,days:numpy.ndarray,rates:numpy.ndarray):
 		"""Optimization based on hyperbolic decline model."""
-		sol = linregress(days,numpy.power(1/rates,self.exponent))
+		sol = linregress(days,numpy.power(self.__inverse(rates),self.exponent))
 
 		return sol.intercept**(-1/self.exponent),sol.slope/sol.intercept/self.exponent
 
 	def Harmonic(self,days:numpy.ndarray,rates:numpy.ndarray):
 		"""Optimization based on harmonic decline model."""
-		sol = linregress(days,1/rates)
+		sol = linregress(days,self.__inverse(rates))
 
 		return sol.intercept**(-1),sol.slope/sol.intercept
+
+	def __inverse(self,rates):
+		"""Returns the inverse of rates."""
+		return 1/numpy.asarray(rates)
 
 if __name__ == "__main__":
 

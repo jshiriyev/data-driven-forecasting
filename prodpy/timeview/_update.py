@@ -3,9 +3,8 @@ import pandas
 
 import streamlit
 
-from ._outlook import Outlook
-
-from ._visualized import View
+from . import Outlook
+from . import View
 
 class Update:
 
