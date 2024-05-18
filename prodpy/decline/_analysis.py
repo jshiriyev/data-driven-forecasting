@@ -51,9 +51,9 @@ class Analysis():
 	def run(self,model:Model,**kwargs):
 		"""Forecasts the rates based on the model, and for the pandas.date_range parameters."""
 
-		dates = pandas.date_range(start=model.date0,**kwargs)
+		dates = pandas.date_range(**kwargs)
 
-		cdays = self.get_days(dates,model.date0)
+		cdays = self.get_days(dates,start=model.date0)
 
 		return {"dates":dates,"rates":Forward(model).run(cdays)}
 
