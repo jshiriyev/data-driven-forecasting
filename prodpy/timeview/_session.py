@@ -8,10 +8,10 @@ class Session():
 	def set(self):
 
 		return self(
-			datekey = None,
-			ratekey = None,
-			grouplist = [],
-			itemkey = None,
+			datehead = None,
+			ratehead = None,
+			pilelist = [],
+			itemname = None,
 			viewlist = [],
 		)
 
@@ -28,9 +28,9 @@ class Session():
 
 		return self.state
 
-	def add(self,key,value=None):
+	def add(self,head,value=None):
 
-		if key not in self.state:
-			self.state[key] = value
+		if head not in self.state:
+			self.state[head] = value
 
 		return self.state

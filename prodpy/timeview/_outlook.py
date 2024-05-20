@@ -2,8 +2,6 @@ import datetime
 
 import pandas
 
-from ._visualized import View
-
 class Outlook():
 
 	_mindate = datetime.date(2020,1,1)
@@ -12,8 +10,8 @@ class Outlook():
 	def __init__(self,frame:pandas.DataFrame):
 		self._frame = frame
 
-	def __call__(self,datekey:str):
-		self._datekey = datekey
+	def __call__(self,datehead:str):
+		self._datehead = datehead
 
 		return self
 
@@ -51,9 +49,9 @@ class Outlook():
 
 		columns = self._frame.select_dtypes(include=('number',)).columns
 
-		for key in args:
+		for head in args:
 			try:
-				columns = columns.drop(key)
+				columns = columns.drop(head)
 			except KeyError:
 				pass
 
@@ -63,33 +61,39 @@ class Outlook():
 		"""Returns a new frame with the given groupkey (merged args) in the first column,
 		date in the second column, and number columns in the rest."""
 
+		try:
+			datehead = self._datehead
+		except AttributeError:
+			raise Warning("Date head needs to be defined to group the data.")
+
+		if len(args)==0:
+			raise Warning("At least one group head should be provided.")
+
 		if numbers is None:
 			numbers = self.numbers
 
-		if len(args)==0:
-			raise Warning("At least one group key should be provided.")
+		batch = "_".join(args)
 
-		group_key = "_".join(args)
+		groupby = [batch,self._datehead]
+		blended = self._frame[list(args)].agg(' '.join,axis=1)
 
-		self._frame[group_key] = self._frame[list(args)].agg(' '.join,axis=1)
+		self._frame[batch] = blended
 
-		by = [group_key,self._datekey]
+		frameGroup = self._frame[groupby+numbers].groupby(groupby)
 
-		frameGroup = self._frame[by+numbers].groupby(by)
-
-		return View(frameGroup.sum(numbers).reset_index())
+		return frameGroup.sum(numbers).reset_index()
 
 	@property
 	def mindate(self):
 		"""Returns the smallest datetime.date observed in the date column."""
 
 		try:
-			datekey = self._datekey
+			datehead = self._datehead
 		except AttributeError:
 			return self._mindate
 
 		try:
-			dates = self._frame[datekey]
+			dates = self._frame[datehead]
 		except KeyError:
 			return self._mindate
 
@@ -100,12 +104,12 @@ class Outlook():
 		"""Returns the largest datetime.date observed in the date column."""
 
 		try:
-			datekey = self._datekey
+			datehead = self._datehead
 		except AttributeError:
 			return self._maxdate
 
 		try:
-			dates = self._frame[datekey]
+			dates = self._frame[datehead]
 		except KeyError:
 			return self._maxdate
 

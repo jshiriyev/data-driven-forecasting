@@ -1,6 +1,6 @@
 from ._outlook import Outlook
 
-from ._visualized import View
+from ._itemview import ItemView
 
 from ._session import Session
 

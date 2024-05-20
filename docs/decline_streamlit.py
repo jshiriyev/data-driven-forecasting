@@ -26,7 +26,7 @@ with st.sidebar:
 
 	uploaded_file = st.file_uploader(
 		label = 'Upload your input excel file',
-		type = ['xlsx'],
+		type = ['csv','xlsx'],
 		)
 
 	data = tv.Update.load_data(uploaded_file)
@@ -35,51 +35,51 @@ with st.sidebar:
 		body = 'Feature Selection',
 		)
 
-	datekey = st.selectbox(
+	datehead = st.selectbox(
 		label = "Choose Date Column:",
 		options = data.dates,
 		index = None,
-		key = 'datekey',
+		key = 'datehead',
 		)
 
-	data = data(datekey)
+	if datehead is not None:
+		data = data(datehead)
 
-	ratekey = st.selectbox(
+	ratehead = st.selectbox(
 		label = 'Choose Rate Column:',
 		options = data.numbers,
 		index = None,
-		key = 'ratekey',
+		key = 'ratehead',
 		)
 
-	grouplist = st.multiselect(
+	pilelist = st.multiselect(
 		label = "Choose Groupby Columns:",
 		options = data.groups,
-		key = 'grouplist',
+		key = 'pilelist',
 		)
 
 	view = tv.Update.load_view(st.session_state,data)
 
-	if view is None:
-		viewitems = []
-	else:
-		viewitems = view.items
-
-	itemkey = st.selectbox(
-		label = 'Select Item:',
-		options = viewitems,
-		index = None,
-		key = 'itemkey',
+	st.header(
+		body = 'Item Selection:',
 		)
+
+	itemname = st.selectbox(
+		label = 'Select Item:',
+		options = view.items,
+		index = None,
+		key = 'itemname'
+		)
+
+	frame = tv.Update.load_frame(st.session_state,view)
 
 	st.header(
 		body = 'Timeseries View',
 		)
 
-	print(data.minors(st.session_state.ratekey))
-
 	viewlist = st.multiselect(
 		label = 'Add to the Plot:',
-		options = data.minors(st.session_state.ratekey),
+		options = data.minors(st.session_state.ratehead),
 		key = 'viewlist',
 		)
 
@@ -114,6 +114,8 @@ with modelColumn:
 		# on_change = tv.Update.opacity,
 		# args = (st.session_state,),
 		)
+
+	# opacity = 
 
 	st.selectbox(
 		label = "Decline Mode",
@@ -170,11 +172,9 @@ with modelColumn:
 
 with displayColumn:
 
-	if view is not None:
+	if not frame.empty:
 
-		frame = tv.Update.load_frame(view,st.session_state)
-
-		st.header(f'{view.key} Rates')
+		st.header(f'{frame.title} Rates')
 
 		fig1 = go.Figure()
 
@@ -187,43 +187,42 @@ with displayColumn:
 
 		fig1.add_trace(data_obs)
 
-		x,y = model(datetimes=frame.iloc[:,0],datetime0=None)
+		# x,y = model(datetimes=frame.iloc[:,0],datetime0=None)
 
-		data_cal = go.Scatter(
-			# x = pd.Series(dtype='datetime64[D]'),
-			# y = pd.Series(dtype='float64'),
-			x = x,
-			y = y,
-			mode = 'lines',
-			line = dict(color="black"),
-			)
+		# data_cal = go.Scatter(
+		# 	# x = pd.Series(dtype='datetime64[D]'),
+		# 	# y = pd.Series(dtype='float64'),
+		# 	x = x,
+		# 	y = y,
+		# 	mode = 'lines',
+		# 	line = dict(color="black"),
+		# 	)
 
-		fig1.add_trace(data_cal)
+		# fig1.add_trace(data_cal)
 
 		fig1.update_layout(
-			title = f'{itemkey} Rates',
-	        xaxis_title = frame.columns[0],
-	        yaxis_title = frame.columns[1],
+			title = f'{ratehead}',
+	        # xaxis_title = frame.columns[0],
+	        # yaxis_title = frame.columns[1],
 	        )
 
 		st.plotly_chart(fig1,use_container_width=True)
 
-		for index in range(2,frame.shape[1]):
+		for ratename in viewlist:
 
-			figure = go.Figure()
+			figI = go.Figure()
 
 			data_vis = go.Scatter(
 				x = frame.iloc[:,0],
-				y = frame.iloc[:,index],
+				y = frame[ratename],
 				mode = 'markers',
 				# opacity = st.session_state.opacity,
 				)
 
-			figure.add_trace(data_vis)
+			figI.add_trace(data_vis)
 
-			figure.update_layout(
-				xaxis_title = frame.columns[0],
-	        	yaxis_title = frame.columns[index],
+			figI.update_layout(
+				title = ratename,
 				)
 
-			st.plotly_chart(figure,use_container_width=True)
+			st.plotly_chart(figI,use_container_width=True)
