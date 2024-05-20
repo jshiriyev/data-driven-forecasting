@@ -1,6 +1,6 @@
 import numpy
 
-from . import Model
+from ._model import Model
 
 class Forward():
 

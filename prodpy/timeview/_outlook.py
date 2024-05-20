@@ -2,9 +2,12 @@ import datetime
 
 import pandas
 
-from . import View
+from ._visualized import View
 
 class Outlook():
+
+	_mindate = datetime.date(2020,1,1)
+	_maxdate = datetime.date(2030,1,1)
 
 	def __init__(self,frame:pandas.DataFrame):
 		self._frame = frame
@@ -63,35 +66,48 @@ class Outlook():
 		if numbers is None:
 			numbers = self.numbers
 
-		group_key = " ".join(args)
+		if len(args)==0:
+			raise Warning("At least one group key should be provided.")
+
+		group_key = "_".join(args)
 
 		self._frame[group_key] = self._frame[list(args)].agg(' '.join,axis=1)
 
-		columns = [group_key,self._datekey]+numbers
+		by = [group_key,self._datekey]
 
-		frameGroup = self._frame[columns].groupby(
-			[group_key,self._datekey]
-		)
+		frameGroup = self._frame[by+numbers].groupby(by)
 
 		return View(frameGroup.sum(numbers).reset_index())
 
 	@property
 	def mindate(self):
 		"""Returns the smallest datetime.date observed in the date column."""
+
 		try:
-			dates = self._frame[self._datekey]
+			datekey = self._datekey
+		except AttributeError:
+			return self._mindate
+
+		try:
+			dates = self._frame[datekey]
 		except KeyError:
-			return datetime.date(2020,1,1)
+			return self._mindate
 
 		return dates.min().date()-datetime.timedelta(days=1)
 
 	@property
 	def maxdate(self):
 		"""Returns the largest datetime.date observed in the date column."""
+
 		try:
-			dates = self._frame[self._datekey]
+			datekey = self._datekey
+		except AttributeError:
+			return self._maxdate
+
+		try:
+			dates = self._frame[datekey]
 		except KeyError:
-			return datetime.date(2030,1,1)
+			return self._maxdate
 
 		return dates.max().date()+datetime.timedelta(days=1)
 

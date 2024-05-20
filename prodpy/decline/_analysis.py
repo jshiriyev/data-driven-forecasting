@@ -3,9 +3,11 @@ import datetime
 import numpy
 import pandas
 
-from . import Model
-from . import Forward
-from . import Optimize
+from ._model import Model
+
+from ._forward import Forward
+
+from ._optimize import Optimize
 
 class Analysis():
 
@@ -51,7 +53,10 @@ class Analysis():
 	def run(self,model:Model,**kwargs):
 		"""Forecasts the rates based on the model, and for the pandas.date_range parameters."""
 
-		dates = pandas.date_range(**kwargs)
+		try:
+			dates = pandas.date_range(**kwargs)
+		except ValueError:
+			dates = pandas.date_range(start=model.date0,**kwargs)
 
 		cdays = self.get_days(dates,start=model.date0)
 

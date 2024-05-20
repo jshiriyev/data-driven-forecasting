@@ -2,8 +2,9 @@ import numpy
 
 import pandas
 
-from . import Model
-from . import Analysis
+from ._model import Model
+
+from ._analysis import Analysis
 
 class Update():
 

@@ -3,8 +3,9 @@ import pandas
 
 import streamlit
 
-from . import Outlook
-from . import View
+from ._outlook import Outlook
+
+from ._visualized import View
 
 class Update:
 
@@ -19,13 +20,13 @@ class Update:
 		return Outlook(frame)
 
 	@staticmethod
-	def load_group(state,data:Outlook):
+	def load_view(state,data:Outlook):
 
-		if Update.NoneFlag(state,'datekey','ratekey','groupkey'):
+		if Update.NoneFlag(state,'datekey','ratekey','grouplist'):
 			return
 
 		return data(state.datekey).view(
-			*state.groupkey,numbers=[state.ratekey]+state.viewlist)
+			*state.grouplist,numbers=[state.ratekey]+state.viewlist)
 
 	@staticmethod
 	def load_frame(state,group:View):

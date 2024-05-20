@@ -2,7 +2,7 @@ import datetime
 
 import streamlit
 
-from . import Model
+from ._model import Model
 
 class Session():
 

@@ -2,7 +2,7 @@ import numpy
 
 from scipy.stats import linregress
 
-from . import Model
+from ._model import Model
 
 class Optimize():
 

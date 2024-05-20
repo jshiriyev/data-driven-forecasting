@@ -10,7 +10,7 @@ class Session():
 		return self(
 			datekey = None,
 			ratekey = None,
-			groupkey = None,
+			grouplist = [],
 			itemkey = None,
 			viewlist = [],
 		)

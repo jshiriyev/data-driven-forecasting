@@ -1,7 +1,7 @@
 import sys
 
-# sys.path.append(r'C:\Users\3876yl\Documents\prodpy')
-sys.path.append(r'C:\Users\user\Documents\GitHub\prodpy')
+sys.path.append(r'C:\Users\3876yl\Documents\prodpy')
+# sys.path.append(r'C:\Users\user\Documents\GitHub\prodpy')
 
 import pandas as pd
 
@@ -10,6 +10,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from prodpy import timeview as tv
+
 from prodpy import decline as dc
 
 st.set_page_config(layout='wide',page_title='Decline Curve Analysis')
@@ -41,6 +42,8 @@ with st.sidebar:
 		key = 'datekey',
 		)
 
+	data = data(datekey)
+
 	ratekey = st.selectbox(
 		label = 'Choose Rate Column:',
 		options = data.numbers,
@@ -48,18 +51,22 @@ with st.sidebar:
 		key = 'ratekey',
 		)
 
-	groupkey = st.selectbox(
-		label = "Choose Groupby Column:",
+	grouplist = st.multiselect(
+		label = "Choose Groupby Columns:",
 		options = data.groups,
-		index = None,
-		key = 'groupkey',
+		key = 'grouplist',
 		)
 
-	group = tv.Update.load_group(data,st.session_state)
+	view = tv.Update.load_view(st.session_state,data)
+
+	if view is None:
+		viewitems = []
+	else:
+		viewitems = view.items
 
 	itemkey = st.selectbox(
 		label = 'Select Item:',
-		options = data.items(st.session_state.groupkey),
+		options = viewitems,
 		index = None,
 		key = 'itemkey',
 		)
@@ -68,9 +75,11 @@ with st.sidebar:
 		body = 'Timeseries View',
 		)
 
+	print(data.minors(st.session_state.ratekey))
+
 	viewlist = st.multiselect(
 		label = 'Add to the Plot:',
-		options = data.secondary(st.session_state.ratekey),
+		options = data.minors(st.session_state.ratekey),
 		key = 'viewlist',
 		)
 
@@ -94,13 +103,13 @@ with modelColumn:
 
 	bar.empty()
 
-	data_date_limits = data.limits(st.session_state.datekey)
+	data_date_limit = data.limit
 
-	user_date_limits = st.slider(
+	user_date_limit = st.slider(
 		label = "Time Interval:",
-		min_value = data_date_limits[0],
-		max_value = data_date_limits[1],
-		value = data_date_limits,
+		min_value = data_date_limit[0],
+		max_value = data_date_limit[1],
+		value = data_date_limit,
 		# key = 'time_interval_selected',
 		# on_change = tv.Update.opacity,
 		# args = (st.session_state,),
@@ -142,7 +151,7 @@ with modelColumn:
 		key = 'decline0',
 		) # ,placeholder=str(model.decline0)
 
-	model = dc.Update.forward(st.session_state)
+	# model = dc.Update.forward(st.session_state)
 
 	saveModel = st.button(
 		label = "Save Model",
@@ -161,11 +170,11 @@ with modelColumn:
 
 with displayColumn:
 
-	if group is not None:
+	if view is not None:
 
-		frame = tv.Update.load_frame(group,st.session_state)
+		frame = tv.Update.load_frame(view,st.session_state)
 
-		st.header(f'{group.key} Rates')
+		st.header(f'{view.key} Rates')
 
 		fig1 = go.Figure()
 
