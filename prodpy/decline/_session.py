@@ -7,7 +7,7 @@ from ._model import Model
 class Session():
 
 	mindate = datetime.date(2020,1,1)
-	maxdate = datetime.date(2025,1,1)
+	maxdate = datetime.date(2030,1,1)
 
 	def __init__(self,state:streamlit._SessionStateProxy,model:Model=None,mindate:datetime.date=None,maxdate:datetime.date=None):
 		self.state = state
@@ -27,8 +27,7 @@ class Session():
 			exponent = self.model.exponent,
 			rate0    = self.model.rate0.__str__(),
 			decline0 = self.model.decline0.__str__(),
-			mindate  = self.mindate,
-			maxdate  = self.maxdate,
+			datelim  = (self.mindate,self.maxdate),
 		)
 
 	def __call__(self,*args,**kwargs):

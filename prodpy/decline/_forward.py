@@ -22,7 +22,10 @@ class Forward():
 
 	def Hyperbolic(self,days:numpy.ndarray):
 		"""Hyperbolic decline model: q = q0 / (1+b*d0*t)**(1/b) """
-		return self.model.rate0/(1+self.model.exponent*self.__decline(days))**(1/self.model.exponent)
+
+		exponent = self.model.exponent/100.
+
+		return self.model.rate0/(1+exponent*self.__decline(days))**(1/exponent)
 
 	def Harmonic(self,days:numpy.ndarray):
 		"""Harmonic decline model: q = q0 / (1+d0*t) """

@@ -60,9 +60,12 @@ class Optimize():
 
 	def Hyperbolic(self,days:numpy.ndarray,rates:numpy.ndarray):
 		"""Optimization based on hyperbolic decline model."""
-		sol = linregress(days,numpy.power(self.__inverse(rates),self.exponent))
 
-		return sol.intercept**(-1/self.exponent),sol.slope/sol.intercept/self.exponent
+		exponent = self.exponent/100.
+
+		sol = linregress(days,numpy.power(self.__inverse(rates),exponent))
+
+		return sol.intercept**(-1/exponent),sol.slope/sol.intercept/exponent
 
 	def Harmonic(self,days:numpy.ndarray,rates:numpy.ndarray):
 		"""Optimization based on harmonic decline model."""

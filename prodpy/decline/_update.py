@@ -9,52 +9,6 @@ from ._analysis import Analysis
 class Update():
 
 	@staticmethod
-	def mode(state):
-
-		exponent = Model.get_exponent(state.mode)
-
-		state['exponent'] = exponent*100
-
-	@staticmethod
-	def exponent(state):
-
-		mode = Model.get_mode(state.exponent/100.)
-
-		state['mode'] = mode.capitalize()
-
-	@staticmethod
-	def forward(state):
-
-		if Update.flag(state,'mode','exponent'):
-			return
-
-		model = Model(
-			mode = state.mode.lower(),
-			exponent = state.exponent/100,
-			rate0 = float(state.rate0),
-			decline0 = float(state.decline0),
-		)
-
-		return model(datetimes=state.datetimes)
-
-	@staticmethod
-	def optimize(state,analyze,frame):
-
-		if Update.flag(state,'mode','exponent'):
-			return
-
-		model = analyze.fit(frame,
-			mode = state.mode.lower(),
-			exponent = state.exponent/100,
-			)
-
-		state['rate0'] = model.rate0
-
-		state['decline0'] = model.decline0
-
-		return model(datetimes=state.datetimes)
-
-	@staticmethod
 	def multirun(state,group,bar):
 
 		models = {}
@@ -63,7 +17,7 @@ class Update():
 
 			model = analyze.fit(frame,
 				mode = state.mode.lower(),
-				exponent = state.exponent/100,
+				exponent = state.exponent,
 			)
 
 			models[itemkey] = model
@@ -73,16 +27,92 @@ class Update():
 		time.sleep(1)
 
 	@staticmethod
-	def opacity(state):
+	def load_analysis(state,frame,title,limit):
 
-		date_min,date_max = state.time_interval_selected
+		analysis = Analysis(state.datehead,state.ratehead)
 
-		cond1 = state.datetimes >= numpy.datetime64(date_min)
-		cond2 = state.datetimes <= numpy.datetime64(date_max)
+		analysis = analysis(frame)
 
-		conds = numpy.logical_and(cond1,cond2)
+		analysis._title = title
+		analysis._limit = limit
 
-		return conds*0.7+0.3
+		if not analysis.frame.empty:
+			state.datelim = analysis.limit
+
+		return analysis
+
+	@staticmethod
+	def load_opacity(state,analysis):
+
+		if analysis.frame.empty:
+			return
+
+		dates = analysis.frame[analysis.datehead]
+
+		bools = Analysis.get_bools(dates,*state.datelim)
+
+		return numpy.asarray(bools,'float32')
+
+	@staticmethod
+	def load_model(state,analysis):
+
+		if analysis.frame.empty:
+			return Model()
+
+		if Update.flag(state,'mode','exponent'):
+			return Model()
+
+		model = analysis.fit(
+			mode 		= state.mode,
+			exponent 	= state.exponent,
+			start 		= state.datelim[0],
+			end 		= state.datelim[1],
+			)
+
+		state.rate0 = str(model.rate0)
+
+		state.decline0 = str(model.decline0)
+
+		return model
+
+	@staticmethod
+	def mode(state):
+
+		state['exponent'] = Model.get_exponent(state.mode)
+
+	@staticmethod
+	def exponent(state):
+
+		state['mode'] =  Model.get_mode(state.exponent)
+
+	@staticmethod
+	def load_curve(state,analysis):
+
+		if analysis.frame.empty:
+			return
+
+		if Update.flag(state,'mode','exponent'):
+			return
+
+		start,end = state.datelim
+
+		model = Model(
+			mode 		= state.mode,
+			exponent 	= state.exponent,
+			rate0 		= float(state.rate0),
+			decline0 	= float(state.decline0),
+			date0 		= start,
+		)
+
+		return analysis.run(model,start=start,end=end,periods=30)
+
+	@staticmethod
+	def save(state):
+		pass
+
+	@staticmethod
+	def export(state):
+		pass
 
 	@staticmethod
 	def flag(state,*args):
@@ -92,11 +122,3 @@ class Update():
 				return True
 
 		return False
-
-	@staticmethod
-	def save(state):
-		pass
-
-	@staticmethod
-	def export(state):
-		pass

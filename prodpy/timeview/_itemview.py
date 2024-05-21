@@ -49,9 +49,7 @@ class ItemView():
 		frame = frame.reset_index(drop=True)
 		frame = frame.drop([self.batch],axis=1)
 
-		frame.title = item.replace("_"," ")
-
-		return frame
+		return frame,item.replace("_"," "),self.limit
 
 	@property
 	def items(self):
@@ -66,7 +64,7 @@ class ItemView():
 		if self.empty:
 			return self._mindate
 
-		_mindate = self._frame.iloc[:,2].min().date()
+		_mindate = self._frame.iloc[:,1].min().date()
 
 		return _mindate-datetime.timedelta(days=1)
 
@@ -78,7 +76,7 @@ class ItemView():
 		if self.empty:
 			return self._maxdate
 
-		_maxdate = self._frame.iloc[:,2].max().date()
+		_maxdate = self._frame.iloc[:,1].max().date()
 
 		return _maxdate+datetime.timedelta(days=1)
 

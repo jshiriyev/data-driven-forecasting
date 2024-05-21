@@ -50,11 +50,11 @@ class Update:
 	def load_frame(state,view:ItemView):
 
 		if Update.NoneFlag(state,'itemname'):
-			frame = pandas.DataFrame()
+			frame,title,limit = pandas.DataFrame(),'None',state.datelim
 		else:
-			frame = view.filter(state.itemname)
+			frame,title,limit = view.filter(state.itemname)
 
-		return frame
+		return frame,title,limit
 
 	@staticmethod
 	def NoneFlag(state,*args):

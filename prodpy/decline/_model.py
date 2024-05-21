@@ -11,8 +11,8 @@ class Model:
 	exponent 	: Arps' decline-curve exponent (b)
 
 		b = 0 		-> mode = 'Exponential'
-		0 < b < 1 	-> mode = 'Hyperbolic'
-		b = 1 		-> mode = 'Harmonic' 
+		0 < b < 100	-> mode = 'Hyperbolic'
+		b = 100		-> mode = 'Harmonic' 
 
 	Decline attributes are rate0 (q0) and decline0 (d0):
 
@@ -76,13 +76,13 @@ class Model:
 		if exponent == 0.:
 			return 'Exponential'
 
-		if exponent > 0. and exponent < 1.:
+		if exponent > 0. and exponent < 100.:
 			return 'Hyperbolic'
 
-		if exponent == 1.:
+		if exponent == 100.:
 			return 'Harmonic'
 
-		raise Warning("Exponent value needs to be in the range of 0 and 1.")
+		raise Warning("Exponent value needs to be in the range of 0 and 100.")
 
 	@staticmethod
 	def get_exponent(mode:str):
@@ -92,10 +92,10 @@ class Model:
 			return 0.
 
 		if mode.capitalize() == 'Hyperbolic':
-			return 0.5
+			return 50.
 
 		if mode.capitalize() == 'Harmonic':
-			return 1.
+			return 100.
 
 		raise Warning("Available modes are Exponential, Hyperbolic, and Harmonic.")
 
@@ -130,14 +130,14 @@ if __name__ == "__main__":
 
 	print(Model.mode)
 
-	mode,exponent = Model.get_option(mode='Exponential',exponent=0.5)
+	mode,exponent = Model.get_option(mode='Exponential',exponent=50.)
 
 	print(mode)
 	print(exponent)
 
 	# exp = Model(rate0=10,decline0=0.05)
-	# hyp = Model(rate0=10,decline0=0.05,exponent=0.4)
-	# har = Model(rate0=10,decline0=0.05,exponent=1.0)
+	# hyp = Model(rate0=10,decline0=0.05,exponent=40.)
+	# har = Model(rate0=10,decline0=0.05,exponent=100.)
 
 	# print(exp)
 
@@ -155,4 +155,4 @@ if __name__ == "__main__":
 	print(Model.decline0)
 	print(Model.options)
 
-	print(Model(5,1,5,0.5))
+	print(Model(5,100,5,0.5))

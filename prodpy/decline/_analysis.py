@@ -11,24 +11,24 @@ from ._optimize import Optimize
 
 class Analysis():
 
-	def __init__(self,datekey,ratekey):
+	def __init__(self,datehead,ratehead):
 		"""Initializing the class with date and rate column keys. The date and rate
 		values are used for the optimization and forecasting of pandas.DataFrames."""
 
-		self._datekey = datekey
-		self._ratekey = ratekey
+		self._datehead = datehead
+		self._ratehead = ratehead
 
 	@property
-	def datekey(self):
-		return self._datekey
+	def datehead(self):
+		return self._datehead
 
 	@property
-	def ratekey(self):
-		return self._ratekey
+	def ratehead(self):
+		return self._ratehead
 
 	@property
 	def keys(self):
-		return [self._datekey,self._ratekey]
+		return [self._datehead,self._ratehead]
 
 	def __call__(self,frame):
 
@@ -36,17 +36,25 @@ class Analysis():
 
 		return self
 
+	@property
+	def title(self):
+		return self._title
+	
+	@property
+	def limit(self):
+		return self._limit
+	
 	def fit(self,start:datetime.date=None,end:datetime.date=None,**kwargs):
 		"""Returns optimized model that fits the rates."""
 
-		dates = self.frame[self.datekey]
+		dates = self.frame[self.datehead]
 
 		date0 = self.get_date0(dates,start)
 		bools = self.get_bools(dates,start,end)
 
 		mdays = self.get_days(dates[bools],date0)
 		
-		rates = self.frame[self.ratekey][bools].to_numpy()
+		rates = self.frame[self.ratehead][bools].to_numpy()
 
 		return Optimize(**kwargs).fit(mdays,rates,date0=date0)
 
@@ -83,12 +91,12 @@ class Analysis():
 	@staticmethod
 	def get_bools_upper(dates:pandas.Series,start:datetime.date=None):
 		"""Returns the bools for the interval that is after the start date."""
-		return numpy.ones(dates.shape,dtype='bool') if start is None else dates.dt.date>=start
+		return numpy.ones(dates.shape,dtype='bool') if start is None else (dates.dt.date>=start).to_numpy()
 
 	@staticmethod
 	def get_bools_lower(dates:pandas.Series,end:datetime.date=None):
 		"""Returns the bools for the interval that is before the end date."""
-		return numpy.ones(dates.shape,dtype='bool') if end is None else dates.dt.date<=end
+		return numpy.ones(dates.shape,dtype='bool') if end is None else (dates.dt.date<=end).to_numpy()
 
 	@staticmethod
 	def get_days(dates:pandas.Series,start:datetime.date=None):

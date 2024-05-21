@@ -52,7 +52,7 @@ with st.sidebar:
 		key = 'ratehead',
 		)
 
-	pilelist = st.multiselect(
+	st.multiselect(
 		label = "Choose Groupby Columns:",
 		options = data.groups,
 		key = 'pilelist',
@@ -64,14 +64,14 @@ with st.sidebar:
 		body = 'Item Selection:',
 		)
 
-	itemname = st.selectbox(
+	st.selectbox(
 		label = 'Select Item:',
 		options = view.items,
 		index = None,
 		key = 'itemname'
 		)
 
-	frame = tv.Update.load_frame(st.session_state,view)
+	frame,title,limit = tv.Update.load_frame(st.session_state,view)
 
 	st.header(
 		body = 'Timeseries View',
@@ -83,39 +83,33 @@ with st.sidebar:
 		key = 'viewlist',
 		)
 
-displayColumn, modelColumn = st.columns([0.7, 0.3],gap='large')
+displayColumn, modelColumn = st.columns([0.7,0.3],gap='large')
 
 with modelColumn:
 
 	st.header('Decline Curve Analysis')
 
-	dryRun = st.button(
-		label = "Dry Run",
-		use_container_width = True,
-		)
-	
-	if dryRun:
-		pass
+	# COLLECTIVE OPTIMIZATION
+	# multi_run = st.button(
+	# 	label = "Multi Run",
+	# 	use_container_width = True,
+	# 	)
+	# if multi_run:
+	# 	pass
+	# progress_text = "Optimization in progress. Please wait."
+	# bar = st.progress(0,text=progress_text)
+	# bar.empty()
 
-	progress_text = "Optimization in progress. Please wait."
+	analysis = dc.Update.load_analysis(st.session_state,frame,title,limit)
 
-	bar = st.progress(0,text=progress_text)
-
-	bar.empty()
-
-	data_date_limit = data.limit
-
-	user_date_limit = st.slider(
+	st.slider(
 		label = "Time Interval:",
-		min_value = data_date_limit[0],
-		max_value = data_date_limit[1],
-		value = data_date_limit,
-		# key = 'time_interval_selected',
-		# on_change = tv.Update.opacity,
-		# args = (st.session_state,),
+		min_value = analysis.limit[0],
+		max_value = analysis.limit[1],
+		key = 'datelim',
 		)
 
-	# opacity = 
+	opacity = dc.Update.load_opacity(st.session_state,analysis)
 
 	st.selectbox(
 		label = "Decline Mode",
@@ -135,25 +129,13 @@ with modelColumn:
 		args = (st.session_state,),
 		)
 
-	autoFit = st.button(
-		label = 'Auto Fit',
-		use_container_width = True,
-		)
+	model = dc.Update.load_model(st.session_state,analysis)
 
-	if autoFit:
-		dc.Update.optimize(st.session_state)
+	st.text_input(label='Initial Rate',key='rate0')
 
-	st.text_input(
-		label = 'Initial Rate',
-		key = 'rate0',
-		) # ,placeholder=str(model.rate0)
+	st.text_input(label='Initial Decline Rate',key='decline0')
 
-	st.text_input(
-		label='Initial Decline Rate',
-		key = 'decline0',
-		) # ,placeholder=str(model.decline0)
-
-	# model = dc.Update.forward(st.session_state)
+	curve = dc.Update.load_curve(st.session_state,analysis)
 
 	saveModel = st.button(
 		label = "Save Model",
@@ -174,36 +156,30 @@ with displayColumn:
 
 	if not frame.empty:
 
-		st.header(f'{frame.title} Rates')
+		st.header(f'{title} Rates')
 
 		fig1 = go.Figure()
 
 		data_obs = go.Scatter(
-			x = frame.iloc[:,0],
-			y = frame.iloc[:,1],
+			x = frame[datehead],
+			y = frame[ratehead],
 			mode = 'markers',
-			# opacity = st.session_state.opacity,
+			marker = dict(opacity=opacity),
 			)
 
 		fig1.add_trace(data_obs)
 
-		# x,y = model(datetimes=frame.iloc[:,0],datetime0=None)
+		data_cal = go.Scatter(
+			x = curve['dates'],
+			y = curve['rates'],
+			mode = 'lines',
+			line = dict(color="black"),
+			)
 
-		# data_cal = go.Scatter(
-		# 	# x = pd.Series(dtype='datetime64[D]'),
-		# 	# y = pd.Series(dtype='float64'),
-		# 	x = x,
-		# 	y = y,
-		# 	mode = 'lines',
-		# 	line = dict(color="black"),
-		# 	)
-
-		# fig1.add_trace(data_cal)
+		fig1.add_trace(data_cal)
 
 		fig1.update_layout(
-			title = f'{ratehead}',
-	        # xaxis_title = frame.columns[0],
-	        # yaxis_title = frame.columns[1],
+			title = f'{st.session_state.ratehead}',
 	        )
 
 		st.plotly_chart(fig1,use_container_width=True)
@@ -213,10 +189,10 @@ with displayColumn:
 			figI = go.Figure()
 
 			data_vis = go.Scatter(
-				x = frame.iloc[:,0],
+				x = frame[datehead],
 				y = frame[ratename],
 				mode = 'markers',
-				# opacity = st.session_state.opacity,
+				marker = dict(opacity=opacity),
 				)
 
 			figI.add_trace(data_vis)
