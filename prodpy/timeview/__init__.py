@@ -1,3 +1,5 @@
+from ._timeview import TimeView
+
 from ._outlook import Outlook
 
 from ._itemview import ItemView

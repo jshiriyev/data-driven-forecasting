@@ -2,25 +2,15 @@ import datetime
 
 import pandas
 
-class Outlook():
+from ._timeview import TimeView
 
-	_mindate = datetime.date(2020,1,1)
-	_maxdate = datetime.date(2030,1,1)
+class Outlook(TimeView):
 
 	def __init__(self,frame:pandas.DataFrame):
-		self._frame = frame
-
-	def __call__(self,datehead:str):
-		self._datehead = datehead
-
-		return self
+		super().__init__(frame)
 
 	@property
-	def frame(self):
-		return self._frame
-	
-	@property
-	def dates(self):
+	def datetimes(self):
 		"""Returns column names with datetime format."""
 		return self._frame.select_dtypes(include=('datetime64',)).columns.tolist()
 
@@ -30,7 +20,7 @@ class Outlook():
 		return self._frame.select_dtypes(include=('number',)).columns.tolist()
 	
 	@property
-	def groups(self):
+	def nominals(self):
 		"""Returns column names that are categorical by nature."""
 		return self._frame.select_dtypes(exclude=('number','datetime64')).columns.tolist()
 
@@ -61,64 +51,19 @@ class Outlook():
 		"""Returns a new frame with the given groupkey (merged args) in the first column,
 		date in the second column, and number columns in the rest."""
 
-		try:
-			datehead = self._datehead
-		except AttributeError:
-			raise Warning("Date head needs to be defined to group the data.")
+		numbers = self.numbers if numbers is None else list(numbers)
 
-		if len(args)==0:
-			raise Warning("At least one group head should be provided.")
+		nominal = self._frame[list(args)]
 
-		if numbers is None:
-			numbers = self.numbers
+		heading = "_".join(args)
 
-		batch = "_".join(args)
+		self._frame[heading] = nominal.agg(' '.join,axis=1)
 
-		groupby = [batch,self._datehead]
-		blended = self._frame[list(args)].agg(' '.join,axis=1)
+		heading.append(self.datehead)
 
-		self._frame[batch] = blended
-
-		frameGroup = self._frame[groupby+numbers].groupby(groupby)
+		frameGroup = self._frame[[*heading,*numbers]].groupby(heading)
 
 		return frameGroup.sum(numbers).reset_index()
-
-	@property
-	def mindate(self):
-		"""Returns the smallest datetime.date observed in the date column."""
-
-		try:
-			datehead = self._datehead
-		except AttributeError:
-			return self._mindate
-
-		try:
-			dates = self._frame[datehead]
-		except KeyError:
-			return self._mindate
-
-		return dates.min().date()-datetime.timedelta(days=1)
-
-	@property
-	def maxdate(self):
-		"""Returns the largest datetime.date observed in the date column."""
-
-		try:
-			datehead = self._datehead
-		except AttributeError:
-			return self._maxdate
-
-		try:
-			dates = self._frame[datehead]
-		except KeyError:
-			return self._maxdate
-
-		return dates.max().date()+datetime.timedelta(days=1)
-
-	@property
-	def limit(self):
-		"""Returns the datetime.date limits observed in the date column."""
-		return (self.mindate,self.maxdate)
 
 if __name__ == "__main__":
 
@@ -126,7 +71,7 @@ if __name__ == "__main__":
 
 	view = Outlook(frame)
 
-	print(view.dates)
+	print(view.datetimes)
 
 	print(view.mindate('Date'),type(view.mindate('Date')))
 	print(view.maxdate('Date'))

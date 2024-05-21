@@ -39,10 +39,10 @@ class Update:
 	@staticmethod
 	def load_view(state,data:Outlook):
 
-		if Update.NoneFlag(state,'datehead','ratehead','pilelist'):
+		if Update.NoneFlag(state,'datehead','ratehead','nominals'):
 			frame = pandas.DataFrame()
 		else:
-			frame = data(state.datehead).view(*state.pilelist)
+			frame = data(state.datehead).view(*state.nominals)
 
 		return ItemView(frame)
 

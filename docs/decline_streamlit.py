@@ -55,7 +55,7 @@ with st.sidebar:
 	st.multiselect(
 		label = "Choose Groupby Columns:",
 		options = data.groups,
-		key = 'pilelist',
+		key = 'nominals',
 		)
 
 	view = tv.Update.load_view(st.session_state,data)

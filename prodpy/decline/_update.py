@@ -69,9 +69,9 @@ class Update():
 			end 		= state.datelim[1],
 			)
 
-		state.rate0 = str(model.rate0)
+		state.rate0 = f'{model.rate0:f}'
 
-		state.decline0 = str(model.decline0)
+		state.decline0 = f'{model.decline0:f}'
 
 		return model
 

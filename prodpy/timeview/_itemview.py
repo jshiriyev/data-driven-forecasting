@@ -2,35 +2,31 @@ import datetime
 
 import pandas
 
-class ItemView():
+from ._timeview import TimeView
 
-	_mindate = datetime.date(2020,1,1)
-	_maxdate = datetime.date(2030,1,1)
+class ItemView(TimeView):
 
 	def __init__(self,frame:pandas.DataFrame):
 		"""
 		The frame needs to be structured pandas dataframe, where:
 
-			1st column shows batch items
+			1st column shows heading items
 			2nd column shows datetimes
 			3rd column and the rest shows columns in number format.
 
 		The class contains properties and a method that simplifies the
 		data visualization process.
 		"""
-		self._frame = frame
-
-	@property
-	def frame(self):
-		return self._frame
-
-	@property
-	def empty(self):
-		return self._frame.empty
+		super().__init__(frame)
 	
 	@property
-	def batch(self):
+	def heading(self):
 		return None if self.empty else self._frame.columns[0]
+
+	@property
+	def items(self):
+		"""Returns list of items in the given frame container."""
+		return [] if self.empty else self._frame[self.heading].unique().tolist()
 
 	def __iter__(self):
 
@@ -38,53 +34,20 @@ class ItemView():
 			yield self.filter(item)
 
 	def filter(self,item):
-		"""Filters and returns frame based on the item in the batch column."""
+		"""Filters and returns frame based on the item in the heading column."""
 
-		if self.empty:
-			return self._frame
+		frame = self._frame
 
-		conds = self._frame[self.batch]==item
-		frame = self._frame[conds]
+		if not self.empty:
+			frame = frame[frame[self.heading]==item]
+			frame = frame.reset_index(drop=True)
+			frame = frame.drop([self.heading],axis=1)
 
-		frame = frame.reset_index(drop=True)
-		frame = frame.drop([self.batch],axis=1)
+		timeview = TimeView(frame)(self._datehead)
 
-		return frame,item.replace("_"," "),self.limit
+		timeview.title = item.replace("_"," ")
 
-	@property
-	def items(self):
-		"""Returns list of items in the given frame container."""
-		return [] if self.empty else self._frame[self.batch].unique().tolist()
-
-	@property
-	def mindate(self):
-		"""Returns the earliest date of the frame. If the frame is empty,
-		the class attribute is returned."""
-
-		if self.empty:
-			return self._mindate
-
-		_mindate = self._frame.iloc[:,1].min().date()
-
-		return _mindate-datetime.timedelta(days=1)
-
-	@property
-	def maxdate(self):
-		"""Returns the latest date of the frame. If the frame is empty,
-		the class attribute is returned."""
-		
-		if self.empty:
-			return self._maxdate
-
-		_maxdate = self._frame.iloc[:,1].max().date()
-
-		return _maxdate+datetime.timedelta(days=1)
-
-	@property
-	def limit(self):
-		"""Returns the earliest and latest dates of the frame. If the
-		frame is empty, the class attributes are returned."""
-		return (self.mindate,self.maxdate)
+		return timeview
 	
 	
 	

@@ -25,8 +25,8 @@ class Session():
 		return self.__call__(
 			mode     = self.model.mode,
 			exponent = self.model.exponent,
-			rate0    = self.model.rate0.__str__(),
-			decline0 = self.model.decline0.__str__(),
+			rate0    = f'{self.model.rate0:f}',
+			decline0 = f'{self.model.decline0:f}',
 			datelim  = (self.mindate,self.maxdate),
 		)
 

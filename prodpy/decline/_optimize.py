@@ -14,8 +14,8 @@ class Optimize():
 		exponent 	: Arps' decline-curve exponent (b)
 
 			b = 0 		-> mode = 'Exponential'
-			0 < b < 1 	-> mode = 'Hyperbolic'
-			b = 1 		-> mode = 'Harmonic' 
+			0 < b < 100	-> mode = 'Hyperbolic'
+			b = 100		-> mode = 'Harmonic' 
 		
 		The class contains methods to optimize curve fitting based on different modes.
 		"""

@@ -10,7 +10,7 @@ class Session():
 		return self(
 			datehead = None,
 			ratehead = None,
-			pilelist = [],
+			nominals = [],
 			itemname = None,
 			viewlist = [],
 		)
