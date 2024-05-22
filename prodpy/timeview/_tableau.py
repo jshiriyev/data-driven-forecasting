@@ -1,7 +1,3 @@
-import datetime
-
-import pandas
-
 from ._timeview import TimeView
 
 class Tableau(TimeView):
@@ -19,34 +15,22 @@ class Tableau(TimeView):
 		"""
 		super().__init__(*args,**kwargs)
 
-	@property
-	def items(self):
-		"""Returns list of items in the given frame container."""
-		return [] if self.empty else self._frame[self.headline].unique().tolist()
-
 	def __iter__(self):
 
 		for item in self.items:
-			yield self.filter(item)
+			yield self.view(item)
 
-	def filter(self,item):
+	def view(self,item):
 		"""Filters and returns frame based on the item in the heading column."""
 
-		frame = self._frame
+		if self.leads.empty:
+			return TimeView()(self.leadhead,self.datehead)
 
-		if not self.empty:
-			frame = frame[frame[self.heading]==item]
-			frame = frame.reset_index(drop=True)
-			frame = frame.drop([self.heading],axis=1)
+		frame = self.get(self.leads==item)
 
-		timeview = TimeView(frame)(self._datehead)
+		if frame.empty:
+			return TimeView()(self.leadhead,self.datehead)
 
-		timeview.title = item.replace("_"," ")
+		frame = frame.reset_index(drop=True)
 
-		return timeview
-	
-	
-	
-	
-
-
+		return TimeView(frame)(self.leadhead,self.datehead)

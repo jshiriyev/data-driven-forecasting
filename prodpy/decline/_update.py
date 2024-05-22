@@ -27,31 +27,21 @@ class Update():
 		time.sleep(1)
 
 	@staticmethod
-	def load_analysis(state,frame,title,limit):
+	def load_analysis(state,view):
 
-		analysis = Analysis(state.datehead,state.ratehead)
-
-		analysis = analysis(frame)
-
-		analysis._title = title
-		analysis._limit = limit
-
-		if not analysis.frame.empty:
-			state.datelim = analysis.limit
-
-		return analysis
+		return Analysis(state.datehead,state.ratehead)(view.frame)
 
 	@staticmethod
-	def load_opacity(state,analysis):
+	def load_opacity(state,view):
 
-		if analysis.frame.empty:
+		if view.frame.empty:
 			return
 
-		dates = analysis.frame[analysis.datehead]
+		bools = Analysis.get_bools(view.dates,*state.datelim)
 
-		bools = Analysis.get_bools(dates,*state.datelim)
+		return bools*0.7+0.3
 
-		return numpy.asarray(bools,'float32')
+		# return numpy.asarray(bools,'float32')
 
 	@staticmethod
 	def load_model(state,analysis):

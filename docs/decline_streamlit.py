@@ -24,12 +24,12 @@ with st.sidebar:
 		body = 'Input Data',
 		)
 
-	uploaded_file = st.file_uploader(
+	file = st.file_uploader(
 		label = 'Upload your input excel file',
 		type = ['csv','xlsx'],
 		)
 
-	data = tv.Update.load_data(uploaded_file)
+	data = tv.Update.load_data(file)
 
 	st.header(
 		body = 'Feature Selection',
@@ -37,13 +37,13 @@ with st.sidebar:
 
 	datehead = st.selectbox(
 		label = "Choose Date Column:",
-		options = data.dates,
+		options = data.datetimes,
 		index = None,
 		key = 'datehead',
 		)
 
 	if datehead is not None:
-		data = data(datehead)
+		data = data(datehead=datehead)
 
 	ratehead = st.selectbox(
 		label = 'Choose Rate Column:',
@@ -52,26 +52,26 @@ with st.sidebar:
 		key = 'ratehead',
 		)
 
-	st.multiselect(
+	nominals = st.multiselect(
 		label = "Choose Groupby Columns:",
-		options = data.groups,
+		options = data.nominals,
 		key = 'nominals',
 		)
 
-	view = tv.Update.load_view(st.session_state,data)
+	table = tv.Update.load_table(st.session_state,data)
 
 	st.header(
 		body = 'Item Selection:',
 		)
 
-	st.selectbox(
+	itemname = st.selectbox(
 		label = 'Select Item:',
-		options = view.items,
+		options = table.items,
 		index = None,
 		key = 'itemname'
 		)
 
-	frame,title,limit = tv.Update.load_frame(st.session_state,view)
+	view = tv.Update.load_view(st.session_state,table)
 
 	st.header(
 		body = 'Timeseries View',
@@ -100,16 +100,16 @@ with modelColumn:
 	# bar = st.progress(0,text=progress_text)
 	# bar.empty()
 
-	analysis = dc.Update.load_analysis(st.session_state,frame,title,limit)
+	analysis = dc.Update.load_analysis(st.session_state,view)
 
 	st.slider(
 		label = "Time Interval:",
-		min_value = analysis.limit[0],
-		max_value = analysis.limit[1],
+		min_value = view.limit[0],
+		max_value = view.limit[1],
 		key = 'datelim',
 		)
 
-	opacity = dc.Update.load_opacity(st.session_state,analysis)
+	opacity = dc.Update.load_opacity(st.session_state,view)
 
 	st.selectbox(
 		label = "Decline Mode",
@@ -154,15 +154,15 @@ with modelColumn:
 
 with displayColumn:
 
-	if not frame.empty:
+	if not view.frame.empty:
 
-		st.header(f'{title} Rates')
+		st.header(f'{itemname} Rates')
 
 		fig1 = go.Figure()
 
 		data_obs = go.Scatter(
-			x = frame[datehead],
-			y = frame[ratehead],
+			x = view.frame[datehead],
+			y = view.frame[ratehead],
 			mode = 'markers',
 			marker = dict(opacity=opacity),
 			)
@@ -180,6 +180,7 @@ with displayColumn:
 
 		fig1.update_layout(
 			title = f'{st.session_state.ratehead}',
+			showlegend = False,
 	        )
 
 		st.plotly_chart(fig1,use_container_width=True)
@@ -189,8 +190,8 @@ with displayColumn:
 			figI = go.Figure()
 
 			data_vis = go.Scatter(
-				x = frame[datehead],
-				y = frame[ratename],
+				x = view.frame[datehead],
+				y = view.frame[ratename],
 				mode = 'markers',
 				marker = dict(opacity=opacity),
 				)

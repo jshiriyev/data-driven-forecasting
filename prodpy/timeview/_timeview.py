@@ -8,7 +8,7 @@ class TimeView():
     _maxdate = datetime.date(2030,1,1)
 
     _datehead = None
-    _headline = None
+    _leadhead = None
 
     def __init__(self,frame:pandas.DataFrame=None):
 
@@ -22,30 +22,43 @@ class TimeView():
         return self._frame
 
     @property
+    def empty(self):
+        return self._frame.empty
+
+    def __call__(self,leadhead:str=None,datehead:str=None):
+            
+        self._leadhead = leadhead
+        self._datehead = datehead
+
+        return self
+
+    def get(self,key,default='DataFrame'):
+
+        try:
+            return self._frame[key]
+        except KeyError:
+            return getattr(pandas,default)()
+
+    @property
+    def leadhead(self):
+        return self._leadhead
+
+    @property
     def datehead(self):
         return self._datehead
 
     @property
-    def headline(self):
-        return self._headline
+    def leads(self):
+        """Returns Series of leads in the given frame."""
+        if self.leadhead is None or self.empty:
+            return pandas.Series()
+
+        return self.get(self.leadhead,'Series')
 
     @property
-    def empty(self):
-        return self._frame.empty
-
-    def __call__(self,datehead:str=None,headline:str=None):
-        
-        self._datehead = datehead
-        self._headline = headline
-
-        return self
-
-    def __getitem__(self,items):
-
-        try:
-            return self._frame[items]
-        except KeyError:
-            return pandas.DataFrame()
+    def items(self):
+        """Returns list of unique leads in the given frame."""
+        return self.leads.unique().tolist()
 
     @property
     def dates(self):
@@ -53,15 +66,15 @@ class TimeView():
         if self.datehead is None or self.empty:
             return pandas.Series()
 
-        return self._frame[self.datehead]
-
+        return self.get(self.datehead,'Series')
+    
     @property
     def mindate(self):
         """Returns the smallest datetime.date observed in the date column."""
         if self.dates.empty:
             return self._mindate
 
-        return dates.min().date()-datetime.timedelta(days=1)
+        return self.dates.min().date()-datetime.timedelta(days=1)
 
     @property
     def maxdate(self):
@@ -69,7 +82,7 @@ class TimeView():
         if self.dates.empty:
             return self._maxdate
 
-        return dates.max().date()+datetime.timedelta(days=1)
+        return self.dates.max().date()+datetime.timedelta(days=1)
 
     @property
     def limit(self):
@@ -82,7 +95,7 @@ if __name__ == "__main__":
 
     print(tv.frame)
     print(tv.datehead)
-    print(tv.headline)
+    print(tv.leadhead)
 
     print(tv('Date').datehead)
 

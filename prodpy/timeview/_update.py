@@ -6,18 +6,17 @@ import pandas
 import streamlit
 
 from ._outlook import Outlook
+from ._tableau import Tableau
 
-from ._itemview import ItemView
+from ._timeview import TimeView
 
 class Update:
 
 	@streamlit.cache_data
 	def load_data(file):
 
-		frame = pandas.DataFrame() # DEFAULT
-
 		if file is None:
-			return Outlook(frame)
+			return Outlook()
 
 		fmt = os.path.splitext(file.name)[1]
 
@@ -33,28 +32,28 @@ class Update:
 			frame = pandas.read_stata(file)
 		elif fmt == '.orc':
 			frame = pandas.read_orc(file)
+		else:
+			frame = pandas.DataFrame()
 
 		return Outlook(frame)
 
 	@staticmethod
-	def load_view(state,data:Outlook):
+	def load_table(state,data:Outlook):
 
 		if Update.NoneFlag(state,'datehead','ratehead','nominals'):
-			frame = pandas.DataFrame()
-		else:
-			frame = data(state.datehead).view(*state.nominals)
+			return Tableau()(data.leadhead,data.datehead)
+		
+		view = data(datehead=state.datehead).view(*state.nominals)
 
-		return ItemView(frame)
+		return Tableau(view.frame)(view.leadhead,view.datehead)
 
 	@staticmethod
-	def load_frame(state,view:ItemView):
+	def load_view(state,table:Tableau):
 
 		if Update.NoneFlag(state,'itemname'):
-			frame,title,limit = pandas.DataFrame(),'None',state.datelim
-		else:
-			frame,title,limit = view.filter(state.itemname)
+			return TimeView()(table.leadhead,table.datehead)
 
-		return frame,title,limit
+		return table.view(state.itemname)
 
 	@staticmethod
 	def NoneFlag(state,*args):
