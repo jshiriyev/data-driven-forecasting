@@ -4,9 +4,9 @@ import pandas
 
 from ._timeview import TimeView
 
-class ItemView(TimeView):
+class Tableau(TimeView):
 
-	def __init__(self,frame:pandas.DataFrame):
+	def __init__(self,*args,**kwargs):
 		"""
 		The frame needs to be structured pandas dataframe, where:
 
@@ -17,16 +17,12 @@ class ItemView(TimeView):
 		The class contains properties and a method that simplifies the
 		data visualization process.
 		"""
-		super().__init__(frame)
-	
-	@property
-	def heading(self):
-		return None if self.empty else self._frame.columns[0]
+		super().__init__(*args,**kwargs)
 
 	@property
 	def items(self):
 		"""Returns list of items in the given frame container."""
-		return [] if self.empty else self._frame[self.heading].unique().tolist()
+		return [] if self.empty else self._frame[self.headline].unique().tolist()
 
 	def __iter__(self):
 

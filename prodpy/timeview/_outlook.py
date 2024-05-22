@@ -6,64 +6,82 @@ from ._timeview import TimeView
 
 class Outlook(TimeView):
 
-	def __init__(self,frame:pandas.DataFrame):
-		super().__init__(frame)
+	def __init__(self,*args,**kwargs):
+		super().__init__(*args,**kwargs)
 
-	@property
-	def datetimes(self):
-		"""Returns column names with datetime format."""
-		return self._frame.select_dtypes(include=('datetime64',)).columns.tolist()
+	def heads(self,*args,include=None,exclude=None):
+		"""Returns the list of heads including the dtypes in include, excluding the
+		dtypes in exclude and safely dropping heads in args."""
 
-	@property
-	def numbers(self):
-		"""Returns column names with number format."""
-		return self._frame.select_dtypes(include=('number',)).columns.tolist()
-	
-	@property
-	def nominals(self):
-		"""Returns column names that are categorical by nature."""
-		return self._frame.select_dtypes(exclude=('number','datetime64')).columns.tolist()
+		dtypes = self._frame.select_dtypes(
+			include = include,
+			exclude = exclude,
+			)
 
-	def items(self,*args):
-		"""Returns list of items for the given groupkeys."""
-
-		try:
-			group = self._frame[list(args)]
-		except KeyError:
-			return []
-
-		return group.agg(' '.join,axis=1).unique().tolist()
-
-	def minors(self,*args):
-		"""Return columns with number excluding the columns of args."""
-
-		columns = self._frame.select_dtypes(include=('number',)).columns
+		heads = dtypes.columns
 
 		for head in args:
 			try:
-				columns = columns.drop(head)
+				heads = heads.drop(head)
 			except KeyError:
 				pass
 
-		return columns.tolist()
+		return heads.tolist()
 
-	def view(self,*args,numbers:list[str]=None):
+	def leads(self,*args):
+		"""Returns series of items for the given groupkeys."""
+		return self[list(args)].agg(' '.join,axis=1)
+
+	@property
+	def datetimes(self):
+		"""Returns the list of column names with datetime format."""
+		return self.heads(include=('datetime64',))
+
+	@property
+	def numbers(self):
+		"""Returns the list of column names with number format."""
+		return self.heads(include=('number',))
+	
+	@property
+	def nominals(self):
+		"""Returns the list of column names that are categorical by nature."""
+		return self.heads(exclude=('number','datetime64'))
+
+	def minors(self,*args):
+		"""Return the list of column names with number format, excluding the columns of args."""
+		return self.heads(*args,include=('number',))
+
+	def items(self,*args):
+		"""Returns the list of items for the given column names."""
+		return self.leads(*args).unique().tolist()
+
+	def view(self,*args):
 		"""Returns a new frame with the given groupkey (merged args) in the first column,
 		date in the second column, and number columns in the rest."""
 
-		numbers = self.numbers if numbers is None else list(numbers)
+		leads = self.leads(*args)
 
-		nominal = self._frame[list(args)]
+		if leads.empty:
+			return TimeView()
 
-		heading = "_".join(args)
+		dhead = self.datehead
 
-		self._frame[heading] = nominal.agg(' '.join,axis=1)
+		frame = self[[dhead,*self.numbers]]
 
-		heading.append(self.datehead)
+		if frame.empty:
+			return TimeView()
 
-		frameGroup = self._frame[[*heading,*numbers]].groupby(heading)
+		hline = "_".join(args)
 
-		return frameGroup.sum(numbers).reset_index()
+		pivot = [hline,dhead]
+
+		frame[hline] = leads
+
+		frame = frame[[*pivot,*self.numbers]]
+		frame = frame.groupby(pivot).sum(self.numbers)
+		frame = frame.reset_index()
+
+		return TimeView(frame)(dhead,hline)
 
 if __name__ == "__main__":
 
