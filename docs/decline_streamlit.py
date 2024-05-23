@@ -107,6 +107,8 @@ with modelColumn:
 		min_value = view.limit[0],
 		max_value = view.limit[1],
 		key = 'datelim',
+		on_change = dc.Update.slider,
+		args = (st.session_state,),
 		)
 
 	opacity = dc.Update.load_opacity(st.session_state,view)
@@ -129,11 +131,21 @@ with modelColumn:
 		args = (st.session_state,),
 		)
 
-	model = dc.Update.load_model(st.session_state,analysis)
+	dc.Update.load_model(st.session_state,analysis)
 
-	st.text_input(label='Initial Rate',key='rate0')
+	st.text_input(
+		label = 'Initial Rate',
+		key = 'rate0',
+		on_change = dc.Update.attributes,
+		args = (st.session_state,),
+		)
 
-	st.text_input(label='Initial Decline Rate',key='decline0')
+	st.text_input(
+		label = 'Initial Decline Rate',
+		key = 'decline0',
+		on_change = dc.Update.attributes,
+		args = (st.session_state,),
+		)
 
 	curve = dc.Update.load_curve(st.session_state,analysis)
 

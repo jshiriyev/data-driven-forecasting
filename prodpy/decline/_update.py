@@ -1,35 +1,41 @@
-import numpy
-
-import pandas
-
 from ._model import Model
 
 from ._analysis import Analysis
 
 class Update():
 
-	@staticmethod
-	def multirun(state,group,bar):
+	# @staticmethod
+	# def multirun(state,group,bar):
 
-		models = {}
+	# 	models = {}
 
-		for index,frame in enumerate(group):
+	# 	for index,frame in enumerate(group):
 
-			model = analyze.fit(frame,
-				mode = state.mode.lower(),
-				exponent = state.exponent,
-			)
+	# 		model = analyze.fit(frame,
+	# 			mode = state.mode.lower(),
+	# 			exponent = state.exponent,
+	# 		)
 
-			models[itemkey] = model
+	# 		models[itemkey] = model
 
-			bar.progress(index+1,text=progress_text)
+	# 		bar.progress(index+1,text=progress_text)
 
-		time.sleep(1)
+	# 	time.sleep(1)
 
 	@staticmethod
 	def load_analysis(state,view):
 
-		return Analysis(state.datehead,state.ratehead)(view.frame)
+		analysis = Analysis(
+			state.datehead,
+			state.ratehead,
+			)
+
+		return analysis(view.frame)
+
+	@staticmethod
+	def slider(state):
+
+		state['optimize'] = True
 
 	@staticmethod
 	def load_opacity(state,view):
@@ -37,20 +43,35 @@ class Update():
 		if view.frame.empty:
 			return
 
-		bools = Analysis.get_bools(view.dates,*state.datelim)
+		bools = Analysis.get_bools(
+			view.dates,*state.datelim
+			)
 
 		return bools*0.7+0.3
 
-		# return numpy.asarray(bools,'float32')
+	@staticmethod
+	def mode(state):
+
+		state['exponent'] = Model.get_exponent(state.mode)
+		state['optimize'] = True
+
+	@staticmethod
+	def exponent(state):
+
+		state['mode'] =  Model.get_mode(state.exponent)
+		state['optimize'] = True
 
 	@staticmethod
 	def load_model(state,analysis):
 
-		if analysis.frame.empty:
-			return Model()
+		if not state.optimize:
+			return
 
-		if Update.flag(state,'mode','exponent'):
-			return Model()
+		if analysis.frame.empty:
+			return
+
+		if Update.flag(state,'datelim','mode','exponent'):
+			return
 
 		model = analysis.fit(
 			mode 		= state.mode,
@@ -59,21 +80,14 @@ class Update():
 			end 		= state.datelim[1],
 			)
 
-		state.rate0 = f'{model.rate0:f}'
+		state['rate0'] = f'{model.rate0:f}'
 
-		state.decline0 = f'{model.decline0:f}'
-
-		return model
+		state['decline0'] = f'{model.decline0:f}'
 
 	@staticmethod
-	def mode(state):
+	def attributes(state):
 
-		state['exponent'] = Model.get_exponent(state.mode)
-
-	@staticmethod
-	def exponent(state):
-
-		state['mode'] =  Model.get_mode(state.exponent)
+		state['optimize'] = False
 
 	@staticmethod
 	def load_curve(state,analysis):
@@ -81,7 +95,7 @@ class Update():
 		if analysis.frame.empty:
 			return
 
-		if Update.flag(state,'mode','exponent'):
+		if Update.flag(state,'datelim','mode','exponent','rate0','decline0'):
 			return
 
 		start,end = state.datelim
@@ -96,13 +110,13 @@ class Update():
 
 		return analysis.run(model,start=start,end=end,periods=30)
 
-	@staticmethod
-	def save(state):
-		pass
+	# @staticmethod
+	# def save(state):
+	# 	pass
 
-	@staticmethod
-	def export(state):
-		pass
+	# @staticmethod
+	# def export(state):
+	# 	pass
 
 	@staticmethod
 	def flag(state,*args):

@@ -28,6 +28,7 @@ class Session():
 			rate0    = f'{self.model.rate0:f}',
 			decline0 = f'{self.model.decline0:f}',
 			datelim  = (self.mindate,self.maxdate),
+			optimize = True
 		)
 
 	def __call__(self,*args,**kwargs):

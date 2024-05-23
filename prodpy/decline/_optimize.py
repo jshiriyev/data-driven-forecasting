@@ -54,7 +54,13 @@ class Optimize():
 
 	def Exponential(self,days:numpy.ndarray,rates:numpy.ndarray):
 		"""Optimization based on exponential decline model."""
-		sol = linregress(days,numpy.log(rates))
+
+		days,rates = days[rates!=0],rates[rates!=0]
+
+		try:
+			sol = linregress(days,numpy.log(rates))
+		except ValueError:
+			return 0.,0.
 
 		return numpy.exp(sol.intercept),-sol.slope
 
@@ -63,19 +69,26 @@ class Optimize():
 
 		exponent = self.exponent/100.
 
-		sol = linregress(days,numpy.power(self.__inverse(rates),exponent))
+		days,rates = days[rates!=0],rates[rates!=0]
+
+		try:
+			sol = linregress(days,numpy.power(1/rates,exponent))
+		except ValueError:
+			return 0.,0.
 
 		return sol.intercept**(-1/exponent),sol.slope/sol.intercept/exponent
 
 	def Harmonic(self,days:numpy.ndarray,rates:numpy.ndarray):
 		"""Optimization based on harmonic decline model."""
-		sol = linregress(days,self.__inverse(rates))
+
+		days,rates = days[rates!=0],rates[rates!=0]
+
+		try:
+			sol = linregress(days,1/rates)
+		except ValueError:
+			return 0.,0.
 
 		return sol.intercept**(-1),sol.slope/sol.intercept
-
-	def __inverse(self,rates):
-		"""Returns the inverse of rates."""
-		return 1/numpy.asarray(rates)
 
 if __name__ == "__main__":
 
