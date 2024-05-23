@@ -1,3 +1,5 @@
+import datetime
+
 import sys
 
 sys.path.append(r'C:\Users\3876yl\Documents\prodpy')
@@ -89,17 +91,6 @@ with modelColumn:
 
 	st.header('Decline Curve Analysis')
 
-	# COLLECTIVE OPTIMIZATION
-	# multi_run = st.button(
-	# 	label = "Multi Run",
-	# 	use_container_width = True,
-	# 	)
-	# if multi_run:
-	# 	pass
-	# progress_text = "Optimization in progress. Please wait."
-	# bar = st.progress(0,text=progress_text)
-	# bar.empty()
-
 	analysis = dc.Update.load_analysis(st.session_state,view)
 
 	st.slider(
@@ -133,6 +124,19 @@ with modelColumn:
 
 	dc.Update.load_model(st.session_state,analysis)
 
+	multi_run = st.button(
+		label = "Run Campaign",
+		help = "Optimize all group items.",
+		use_container_width = True,
+		)
+	# if multi_run:
+	# 	pass
+	progress_text = "Optimization in progress. Please wait."
+
+	bar = st.progress(0,text=progress_text)
+	
+	bar.empty()
+
 	st.text_input(
 		label = 'Initial Rate',
 		key = 'rate0',
@@ -149,18 +153,43 @@ with modelColumn:
 
 	curve = dc.Update.load_curve(st.session_state,analysis)
 
-	saveModel = st.button(
-		label = "Save Model",
+	saveModelEdit = st.button(
+		label = "Save Edits",
+		help = "Save decline attribute edits for the item.",
 		use_container_width = True,
 		)
 
-	if saveModel:
+	if saveModelEdit:
 		pass
 
-	st.text("")
+	st.markdown("""---""")
+
+	show_forecast = st.checkbox(
+		label = "Display Forecasted Rates",
+		)
+
+	next_year = datetime.datetime.now().year + 1
+
+	forecast_interval = st.date_input(
+		"Forecast Interval",
+		# min_value = datetime.date(next_year, 1, 1),
+		# max_value = datetime.date(next_year,12,31),
+		value = (
+			datetime.date(next_year, 1, 1),
+			datetime.date(next_year,12,31),
+			),
+		format="MM.DD.YYYY",
+	)
+
+	forecast_frequency = st.selectbox(
+		label = 'Forecast Frequency:',
+		options = ("Daily","Monthly","Yearly"),
+		key = 'frequency'
+		)
 
 	st.button(
-		label = "Export Fits",
+		label = "Export Forecast",
+		help = "Export rates for all group items.",
 		use_container_width = True,
 		)
 
