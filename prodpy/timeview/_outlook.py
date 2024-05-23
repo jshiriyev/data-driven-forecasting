@@ -7,7 +7,7 @@ class Outlook(TimeView):
 
 	def get_leads(self,*args):
 		"""Returns series of items for the given groupkeys."""
-		return self.get(list(args)).agg(' '.join,axis=1)
+		return self.get(list(args)).astype("str").agg(" ".join,axis=1)
 
 	def get_heads(self,*args,include=None,exclude=None):
 		"""Returns the list of heads including the dtypes in include, excluding the
