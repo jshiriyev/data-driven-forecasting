@@ -114,9 +114,12 @@ class Analysis():
 		"""Returns days calculated from the dates and start date."""
 		start = numpy.datetime64(Analysis.get_date0(dates,start))
 
-		delta = (dates-start).to_numpy().astype('timedelta64[ns]')
+		delta = (dates-start)
+		delta = delta.to_numpy()
+		delta = delta.astype('timedelta64[ns]')
+		delta = delta.astype('float64')
 
-		return delta.astype('float64')/(24*60*60*1e9)
+		return delta/(24*60*60*1e9)
 
 if __name__ == "__main__":
 
