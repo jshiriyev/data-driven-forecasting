@@ -110,6 +110,32 @@ class Update():
 		return analysis.run(model,start=start,end=end,periods=30)
 
 	@staticmethod
+	def load_download_file(state,analysis,interval):
+		"""IT SHOULD RETURN PANDAS DATAFRAME"""
+
+		start,end = interval
+
+		datetimes = analysis.get_datetimes(
+			start=start,end=end,periods=30
+			)
+
+		for itemname,model in state.models.items():
+
+			days = analysis.get_days(
+				datetimes,start=model.date0
+				)
+
+			rates = analysis.get_rates(
+				model,days
+				)
+
+			forecast['items'] = items # CORRECT THIS
+			forecast['dates'] = dates
+			forecast['rates'] = rates
+
+		return forecast
+
+	@staticmethod
 	def flag(state,*args):
 
 		for arg in args:

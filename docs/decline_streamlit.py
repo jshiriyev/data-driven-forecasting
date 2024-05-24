@@ -229,9 +229,9 @@ with modelColumn:
 
 	df = pd.DataFrame()
 
-	output_csv = df.to_csv(index=False).encode('utf-8')
+		output_csv = df.to_csv(index=False).encode('utf-8')
 
-	st.download_button(
+	Download = st.download_button(
 		label = 'Download Forecast',
 		data = output_csv,
 		help = "Download rates for all group items.",

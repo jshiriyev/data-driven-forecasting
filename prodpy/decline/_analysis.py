@@ -62,13 +62,24 @@ class Analysis():
 		"""Forecasts the rates based on the model, and for the pandas.date_range parameters."""
 
 		try:
-			dates = pandas.date_range(**kwargs)
+			dates = self.get_datetimes(**kwargs)
 		except ValueError:
-			dates = pandas.date_range(start=model.date0,**kwargs)
+			dates = self.get_datetimes(start=model.date0,**kwargs)
 
 		cdays = self.get_days(dates,start=model.date0)
+		rates = self.get_rates(model,cdays)
 
-		return {"dates":dates,"rates":Forward(model).run(cdays)}
+		return {"dates":dates,"rates":rates}
+
+	@staticmethod
+	def get_datetimes(**kwargs):
+
+		return pandas.date_range(**kwargs)
+
+	@staticmethod
+	def get_rates(model,days):
+
+		return Forward(model).run(days)
 
 	@staticmethod
 	def get_date0(dates:pandas.Series,start:datetime.date=None):
