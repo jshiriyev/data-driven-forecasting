@@ -4,33 +4,13 @@ from ._analysis import Analysis
 
 class Update():
 
-	# @staticmethod
-	# def multirun(state,group,bar):
-
-	# 	models = {}
-
-	# 	for index,frame in enumerate(group):
-
-	# 		model = analyze.fit(frame,
-	# 			mode = state.mode.lower(),
-	# 			exponent = state.exponent,
-	# 		)
-
-	# 		models[itemkey] = model
-
-	# 		bar.progress(index+1,text=progress_text)
-
-	# 	time.sleep(1)
-
 	@staticmethod
-	def load_analysis(state,view):
+	def load_analysis(state):
 
-		analysis = Analysis(
+		return Analysis(
 			state.datehead,
 			state.ratehead,
 			)
-
-		return analysis(view.frame)
 
 	@staticmethod
 	def slider(state):
@@ -62,6 +42,19 @@ class Update():
 		state['optimize'] = True
 
 	@staticmethod
+	def get_best_model(state,analysis):
+
+		if Update.flag(state,'datelim','mode','exponent'):
+			return
+
+		return analysis.fit(
+			    mode = state.mode,
+			exponent = state.exponent,
+			   start = state.datelim[0],
+				 end = state.datelim[1],
+			)
+
+	@staticmethod
 	def load_model(state,analysis):
 
 		if not state.optimize:
@@ -70,15 +63,7 @@ class Update():
 		if analysis.frame.empty:
 			return
 
-		if Update.flag(state,'datelim','mode','exponent'):
-			return
-
-		model = analysis.fit(
-			mode 		= state.mode,
-			exponent 	= state.exponent,
-			start 		= state.datelim[0],
-			end 		= state.datelim[1],
-			)
+		model = Update.get_best_model(state,analysis)
 
 		state['rate0'] = f'{model.rate0:f}'
 
@@ -90,33 +75,39 @@ class Update():
 		state['optimize'] = False
 
 	@staticmethod
+	def get_user_model(state):
+
+		if Update.flag(state,'datelim','mode','exponent','rate0','decline0'):
+			return
+
+		return Model(
+				mode = state.mode,
+			exponent = state.exponent,
+			   rate0 = float(state.rate0),
+			decline0 = float(state.decline0),
+			   date0 = state.datelim[0],
+			)
+
+	@staticmethod
 	def load_curve(state,analysis):
 
 		if analysis.frame.empty:
 			return
 
-		if Update.flag(state,'datelim','mode','exponent','rate0','decline0'):
-			return
+		model = Update.get_user_model(state)
 
 		start,end = state.datelim
 
-		model = Model(
-			mode 		= state.mode,
-			exponent 	= state.exponent,
-			rate0 		= float(state.rate0),
-			decline0 	= float(state.decline0),
-			date0 		= start,
-		)
-
 		return analysis.run(model,start=start,end=end,periods=30)
 
-	# @staticmethod
-	# def save(state):
-	# 	pass
+	@staticmethod
+	def load_forecast(state,analysis,interval):
 
-	# @staticmethod
-	# def export(state):
-	# 	pass
+		model = Update.get_user_model(state)
+
+		start,end = interval
+
+		return analysis.run(model,start=start,end=end,periods=30)
 
 	@staticmethod
 	def flag(state,*args):

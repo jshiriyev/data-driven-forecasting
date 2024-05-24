@@ -2,8 +2,10 @@ import datetime
 
 import sys
 
-sys.path.append(r'C:\Users\3876yl\Documents\prodpy')
-# sys.path.append(r'C:\Users\user\Documents\GitHub\prodpy')
+# sys.path.append(r'C:\Users\3876yl\Documents\prodpy')
+sys.path.append(r'C:\Users\user\Documents\GitHub\prodpy')
+
+import time
 
 import pandas as pd
 
@@ -19,6 +21,9 @@ st.set_page_config(layout='wide',page_title='Decline Curve Analysis')
 
 st.session_state = tv.Session(st.session_state).set()
 st.session_state = dc.Session(st.session_state).set()
+
+if "models" not in st.session_state:
+	st.session_state["models"] = {}
 
 with st.sidebar:
 
@@ -91,7 +96,7 @@ with modelColumn:
 
 	st.header('Decline Curve Analysis')
 
-	analysis = dc.Update.load_analysis(st.session_state,view)
+	analysis = dc.Update.load_analysis(st.session_state)
 
 	st.slider(
 		label = "Time Interval:",
@@ -122,20 +127,39 @@ with modelColumn:
 		args = (st.session_state,),
 		)
 
-	dc.Update.load_model(st.session_state,analysis)
-
-	multi_run = st.button(
-		label = "Run Campaign",
+	FitGroup = st.button(
+		label = "Fit Group",
 		help = "Optimize all group items.",
 		use_container_width = True,
 		)
-	# if multi_run:
-	# 	pass
-	progress_text = "Optimization in progress. Please wait."
 
-	bar = st.progress(0,text=progress_text)
+	if FitGroup:
+
+		st.session_state.models = {}
+
+		progress_text = "Optimization in progress. Please wait."
+
+		bar = st.progress(0.,text=progress_text)
+		
+		for index,v in enumerate(table,start=1):
+
+			st.session_state.models[v.items[0]] = dc.Update.get_best_model(
+				st.session_state,
+				analysis(v.frame),
+				)
+
+			bar.progress(
+				value = index/table.num,
+				text = progress_text,
+				)
+
+		time.sleep(1)
 	
-	bar.empty()
+		bar.empty()
+
+	analysis = analysis(view.frame)
+
+	dc.Update.load_model(st.session_state,analysis)
 
 	st.text_input(
 		label = 'Initial Rate',
@@ -153,14 +177,25 @@ with modelColumn:
 
 	curve = dc.Update.load_curve(st.session_state,analysis)
 
-	saveModelEdit = st.button(
+	SaveModelEdit = st.button(
 		label = "Save Edits",
 		help = "Save decline attribute edits for the item.",
 		use_container_width = True,
 		)
 
-	if saveModelEdit:
-		pass
+	if SaveModelEdit:
+
+		if len(st.session_state.models)==0:
+			st.warning("Click Fit Group first.")
+		else:
+			try:
+				st.session_state.models[itemname] = dc.Update.get_user_model(
+					st.session_state
+					)
+			except Exception as message:
+				st.warning(message)
+			else:
+				st.success(f"The model for {itemname} is updated.")
 
 	st.markdown("""---""")
 
@@ -187,9 +222,21 @@ with modelColumn:
 		key = 'frequency'
 		)
 
-	st.button(
-		label = "Export Forecast",
-		help = "Export rates for all group items.",
+	if show_forecast:
+		forecast = dc.Update.load_forecast(
+			st.session_state,analysis,forecast_interval
+			)
+
+	df = pd.DataFrame()
+
+	output_csv = df.to_csv(index=False).encode('utf-8')
+
+	st.download_button(
+		label = 'Download Forecast',
+		data = output_csv,
+		help = "Download rates for all group items.",
+		file_name = f"{table.leadhead}_forecast.csv",
+		mime = 'text/csv',
 		use_container_width = True,
 		)
 
@@ -201,23 +248,33 @@ with displayColumn:
 
 		fig1 = go.Figure()
 
-		data_obs = go.Scatter(
+		data_observed = go.Scatter(
 			x = view.frame[datehead],
 			y = view.frame[ratehead],
 			mode = 'markers',
 			marker = dict(opacity=opacity),
 			)
 
-		fig1.add_trace(data_obs)
+		fig1.add_trace(data_observed)
 
-		data_cal = go.Scatter(
+		data_calculated = go.Scatter(
 			x = curve['dates'],
 			y = curve['rates'],
 			mode = 'lines',
 			line = dict(color="black"),
 			)
 
-		fig1.add_trace(data_cal)
+		fig1.add_trace(data_calculated)
+
+		if show_forecast:
+			data_forecast = go.Scatter(
+				x = forecast['dates'],
+				y = forecast['rates'],
+				mode = 'lines',
+				line = dict(color="red"),
+				)
+
+			fig1.add_trace(data_forecast)
 
 		fig1.update_layout(
 			title = f'{st.session_state.ratehead}',

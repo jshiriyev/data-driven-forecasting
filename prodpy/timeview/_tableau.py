@@ -20,6 +20,10 @@ class Tableau(TimeView):
 		for item in self.items:
 			yield self.view(item)
 
+	@property
+	def num(self):
+		return len(self.items)
+
 	def view(self,item):
 		"""Filters and returns frame based on the item in the heading column."""
 
