@@ -5,6 +5,8 @@ import pandas
 
 from ._model import Model
 
+from ._timespan import TimeSpan
+
 from ._forward import Forward
 
 from ._optimize import Optimize

@@ -24,10 +24,9 @@ class Model:
 
 	mode 		: str   = None
 	exponent 	: float = None
+	date0 		: datetime.date = None
 	rate0 		: float = 0.
 	decline0 	: float = 0.
-
-	date0 		: datetime.date = None
 
 	options 	: tuple[str] = field(
 		init = False,
