@@ -5,35 +5,36 @@ import pandas
 
 class TimeSpan:
 
-	def __init__(self,array:pandas.Series):
+	def __init__(self,series:pandas.Series):
 
-		self._array = array
+		self._series = series
 
 	@property
-	def array(self):
+	def series(self):
 
-		return self._array
-	
-	@staticmethod
-	def get(*args,**kwargs):
+		return self._series
 
-		index = pandas.DatetimeIndex([])
+	@property
+	def size(self):
 
-		for limit in args:
+		return self._series.size
 
-			kwargs['start'],kwargs['end'] = limit
+	def days(self,date:datetime.date):
+		"""Returns the days passed after the date."""
 
-			datetimes = pandas.date_range(**kwargs)
+		delta = self.series-date
 
-			index = index.append(datetimes)
+		delta = delta.to_numpy()
+		delta = delta.astype('timedelta64[ns]')
+		delta = delta.astype('float64')
 
-		return TimeSpan(index.to_series())
+		return delta/(24*60*60*1e9)
 
-	def bools(self,*args):
+	def between(self,*args):
 		"""Returns the bools for the interval that is in between
 		start and end dates."""
 
-		array = numpy.zeros(self.array.size,dtype='bool')
+		bools = numpy.zeros(self.size,dtype='bool')
 
 		for limit in args:
 
@@ -42,34 +43,43 @@ class TimeSpan:
 
 			among = numpy.logical_and(later,prior)
 
-			array = numpy.logical_or(array,among)
+			bools = numpy.logical_or(bools,among)
 
-		return array
+		return bools
 	
 	def prior(self,date:datetime.date):
 		"""Returns the bools for the datetimes that
 		is prior to the date."""
 
-		return (self.array.dt.date<=date).to_numpy()
+		return (self.series.dt.date<=date).to_numpy()
 
 	def later(self,date:datetime.date):
 		"""Returns the bools for the datetimes that is
 		later than the date."""
 
-		return (self.array.dt.date>=date).to_numpy()
+		return (self.series.dt.date>=date).to_numpy()
 
-	def days(self,date:datetime.date):
-		"""Returns the days passed after the date."""
+	@staticmethod
+	def get(*args,**kwargs):
+		"""Static TimeSpan constructor from limits."""
 
-		delta = (self.array-date)
-		delta = delta.to_numpy()
-		delta = delta.astype('timedelta64[ns]')
-		delta = delta.astype('float64')
+		index = pandas.DatetimeIndex([])
 
-		return delta/(24*60*60*1e9)
+		for limit in args:
+
+			kwargs['start'],kwargs['end'] = limit
+
+			space = pandas.date_range(**kwargs)
+			index = index.append(space)
+
+		return TimeSpan(index.to_series())
 
 if __name__ == "__main__":
 
-	times = TimeSpan.get((datetime.date(2021,1,1),datetime.date(2021,2,1)))
+	span = TimeSpan.get(
+		(datetime.date(2021,1,1),datetime.date(2021,2,1)),
+		(datetime.date(2024,1,1),datetime.date(2024,2,1)),
+		periods=4
+	)
 
-	print(times.array.iloc[1])
+	print(span.series)
