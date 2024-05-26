@@ -24,7 +24,7 @@ class Update():
 			return
 
 		bools = Analysis.get_bools(
-			view.dates,*state.datelim
+			view.dates,*state.estimate
 			)
 
 		return bools*0.7+0.3
@@ -44,14 +44,14 @@ class Update():
 	@staticmethod
 	def get_best_model(state,analysis):
 
-		if Update.flag(state,'datelim','mode','exponent'):
+		if Update.flag(state,'estimate','mode','exponent'):
 			return
 
 		return analysis.fit(
 			    mode = state.mode,
 			exponent = state.exponent,
-			   start = state.datelim[0],
-				 end = state.datelim[1],
+			   start = state.estimate[0],
+				 end = state.estimate[1],
 			)
 
 	@staticmethod
@@ -77,15 +77,15 @@ class Update():
 	@staticmethod
 	def get_user_model(state):
 
-		if Update.flag(state,'datelim','mode','exponent','rate0','decline0'):
+		if Update.flag(state,'estimate','mode','exponent','rate0','decline0'):
 			return
 
 		return Model(
 				mode = state.mode,
 			exponent = state.exponent,
+			   date0 = state.date0,
 			   rate0 = float(state.rate0),
 			decline0 = float(state.decline0),
-			   date0 = state.datelim[0],
 			)
 
 	@staticmethod
@@ -96,24 +96,24 @@ class Update():
 
 		model = Update.get_user_model(state)
 
-		start,end = state.datelim
+		start,end = state.estimate
 
 		return analysis.run(model,start=start,end=end,periods=30)
 
 	@staticmethod
-	def load_forecast(state,analysis,interval):
+	def load_forecast(state,analysis):
 
 		model = Update.get_user_model(state)
 
-		start,end = interval
+		start,end = state.forecast
 
 		return analysis.run(model,start=start,end=end,periods=30)
 
 	@staticmethod
-	def load_download_file(state,analysis,interval):
+	def load_download(state,analysis):
 		"""IT SHOULD RETURN PANDAS DATAFRAME"""
 
-		start,end = interval
+		start,end = state.forecast
 
 		datetimes = analysis.get_datetimes(
 			start=start,end=end,periods=30
