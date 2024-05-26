@@ -11,12 +11,27 @@ class TimeSpan:
 
 	@property
 	def series(self):
-
+		
 		return self._series
 
 	@property
-	def size(self):
+	def mindate(self):
+		"""Returns the first date."""
+		return self._series.iloc[0].date()
 
+	@property
+	def maxdate(self):
+		"""Returns the last date."""
+		return self._series.iloc[-1].date()
+
+	@property
+	def limit(self):
+		"""Returns the limits (min,max) in the span."""
+		return (self.mindate,self.maxdate)
+	
+	@property
+	def size(self):
+		
 		return self._series.size
 
 	def days(self,date:datetime.date):

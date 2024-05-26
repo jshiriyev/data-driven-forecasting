@@ -39,12 +39,9 @@ class Analysis():
 		return self
 
 	@property
-	def title(self):
-		return self._title
-	
-	@property
-	def limit(self):
-		return self._limit
+	def span(self):
+		
+		return TimeSpan(self.frame[self.datehead])
 	
 	def fit(self,start:datetime.date=None,end:datetime.date=None,**kwargs):
 		"""Returns optimized model that fits the rates."""
@@ -96,18 +93,18 @@ class Analysis():
 	@staticmethod
 	def get_bools(dates:pandas.Series,start:datetime.date=None,end:datetime.date=None):
 		"""Returns the bools for the interval that is in between start and end dates."""
-		upper = Analysis.get_bools_upper(dates,start)
-		lower = Analysis.get_bools_lower(dates,end)
+		upper = Analysis.later(dates,start)
+		lower = Analysis.prior(dates,end)
 
 		return numpy.logical_and(upper,lower)
 
 	@staticmethod
-	def get_bools_upper(dates:pandas.Series,start:datetime.date=None):
+	def later(dates:pandas.Series,start:datetime.date=None):
 		"""Returns the bools for the interval that is after the start date."""
 		return numpy.ones(dates.shape,dtype='bool') if start is None else (dates.dt.date>=start).to_numpy()
 
 	@staticmethod
-	def get_bools_lower(dates:pandas.Series,end:datetime.date=None):
+	def prior(dates:pandas.Series,end:datetime.date=None):
 		"""Returns the bools for the interval that is before the end date."""
 		return numpy.ones(dates.shape,dtype='bool') if end is None else (dates.dt.date<=end).to_numpy()
 
