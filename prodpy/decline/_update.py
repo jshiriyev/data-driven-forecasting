@@ -25,7 +25,7 @@ class Update():
 
 		span = TimeSpan(analysis.dates)
 
-		bools = span.iswithin(*state.estimate)
+		bools = span.iswithin(state.estimate)
 
 		return bools*0.7+0.3
 
@@ -50,7 +50,7 @@ class Update():
 		if Update.flag(state,'estimate','date0','mode','exponent'):
 			return
 
-		return analysis.fit(*state.estimate,
+		return analysis.fit(state.estimate,
 			date0=state.date0,mode=state.mode,exponent=state.exponent)
 
 	@staticmethod
@@ -61,9 +61,10 @@ class Update():
 
 		model = Update.best_model(state,analysis)
 
-		state['rate0'] = f'{model.rate0:f}'
-
-		state['decline0'] = f'{model.decline0:f}'
+		if model is not None:
+		
+			state['rate0'] = f'{model.rate0:f}'
+			state['decline0'] = f'{model.decline0:f}'
 
 	@staticmethod
 	def attributes(state):
@@ -86,26 +87,32 @@ class Update():
 			)
 
 	@staticmethod
-	def load_estimate(state):
+	def load_estimate_curve(state):
 		"""Returns estimated data frame."""
 
 		model = Update.user_model(state)
 
-		return Analysis.run(model,*state.estimate,periods=30)
+		if model is None:
+			return
+
+		return Analysis.run(model,state.estimate,periods=30)
 
 	@staticmethod
-	def load_forecast(state):
+	def load_forecast_curve(state):
 		"""Returns forecasted data frame."""
 
 		model = Update.user_model(state)
 
-		return Analysis.run(model,*state.forecast,periods=30)
+		if model is None:
+			return
+
+		return Analysis.run(model,state.forecast,periods=30)
 
 	@staticmethod
 	def load_download(state):
 		"""Returns group forecasted data frame."""
 
-		span = TimeSpan.get(*state.forecast,periods=30)
+		span = TimeSpan.get(state.forecast,periods=30)
 
 		date = span.series.to_list()
 

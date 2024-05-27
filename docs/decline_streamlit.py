@@ -2,8 +2,8 @@ import datetime
 
 import sys
 
-# sys.path.append(r'C:\Users\3876yl\Documents\prodpy')
-sys.path.append(r'C:\Users\user\Documents\GitHub\prodpy')
+sys.path.append(r'C:\Users\3876yl\Documents\prodpy')
+# sys.path.append(r'C:\Users\user\Documents\GitHub\prodpy')
 
 import time
 
@@ -99,8 +99,8 @@ with modelColumn:
 
 	st.slider(
 		label = "Time Interval:",
-		min_value = view.estimate[0],
-		max_value = view.estimate[1],
+		min_value = view.limit[0],
+		max_value = view.limit[1],
 		key = 'estimate',
 		on_change = dc.Update.slider,
 		args = (st.session_state,),
@@ -128,13 +128,13 @@ with modelColumn:
 		args = (st.session_state,),
 		)
 
-	FitGroup = st.button(
+	FitGroupButton = st.button(
 		label = "Fit Group",
 		help = "Optimize all group items.",
 		use_container_width = True,
 		)
 
-	if FitGroup:
+	if FitGroupButton:
 
 		st.session_state.models = {}
 
@@ -170,7 +170,7 @@ with modelColumn:
 		args = (st.session_state,),
 		)
 
-	curve_estimate = dc.Update.load_estimate(st.session_state,analysis)
+	estimate_curve = dc.Update.load_estimate_curve(st.session_state)
 
 	SaveModelEdit = st.button(
 		label = "Save Edits",
@@ -217,7 +217,7 @@ with modelColumn:
 		)
 
 	if show_forecast:
-		curve_forecast = dc.Update.load_forecast(st.session_state)
+		forecast_curve = dc.Update.load_forecast_curve(st.session_state)
 
 	# output = dc.Update.load_download(st.session_state)
 
@@ -265,19 +265,21 @@ with displayColumn:
 
 		fig1.add_trace(data_observed)
 
-		data_calculated = go.Scatter(
-			x = curve_estimate['dates'],
-			y = curve_estimate['rates'],
-			mode = 'lines',
-			line = dict(color="black"),
-			)
+		if estimate_curve is not None:
 
-		fig1.add_trace(data_calculated)
+			data_calculated = go.Scatter(
+				x = estimate_curve['dates'],
+				y = estimate_curve['predicted'],
+				mode = 'lines',
+				line = dict(color="black"),
+				)
 
-		if show_forecast:
+			fig1.add_trace(data_calculated)
+
+		if show_forecast and forecast_curve is not None:
 			data_forecast = go.Scatter(
-				x = curve_forecast['dates'],
-				y = curve_forecast['rates'],
+				x = forecast_curve['dates'],
+				y = forecast_curve['predicted'],
 				mode = 'lines',
 				line = dict(color="red"),
 				)

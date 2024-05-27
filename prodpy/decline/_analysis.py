@@ -90,7 +90,7 @@ class Analysis():
 	@staticmethod
 	def toframe(dictionary):
 
-		return pandas.dataframe(dictionary)
+		return pandas.DataFrame(dictionary)
 
 if __name__ == "__main__":
 

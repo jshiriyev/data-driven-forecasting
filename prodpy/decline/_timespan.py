@@ -41,7 +41,7 @@ class TimeSpan:
 	def days(self,date:datetime.date):
 		"""Returns the days passed after the date."""
 
-		delta = self.series-date
+		delta = self.series-numpy.datetime64(date)
 
 		delta = delta.to_numpy()
 
@@ -62,8 +62,8 @@ class TimeSpan:
 
 		for limit in args:
 
-			later = TimeSpan.later(limit[0])
-			prior = TimeSpan.prior(limit[1])
+			later = self.islater(limit[0])
+			prior = self.isprior(limit[1])
 
 			among = numpy.logical_and(later,prior)
 
@@ -73,7 +73,7 @@ class TimeSpan:
 
 	def prior(self,date:datetime.date):
 
-		return self[self.isprior(self.series,date)]
+		return self[self.isprior(date)]
 	
 	def isprior(self,date:datetime.date):
 		"""Returns the bools for the datetimes that
@@ -83,7 +83,7 @@ class TimeSpan:
 
 	def later(self,date:datetime.date):
 		
-		return self[self.islater(self.series,date)]
+		return self[self.islater(date)]
 
 	def islater(self,date:datetime.date):
 		"""Returns the bools for the datetimes that is
