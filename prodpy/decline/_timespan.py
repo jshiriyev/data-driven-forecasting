@@ -14,6 +14,10 @@ class TimeSpan:
 		
 		return self._series
 
+	def __getitem__(self,key):
+
+		return TimeSpan(self._series[key])
+
 	@property
 	def mindate(self):
 		"""Returns the first date."""
@@ -40,35 +44,48 @@ class TimeSpan:
 		delta = self.series-date
 
 		delta = delta.to_numpy()
+
 		delta = delta.astype('timedelta64[ns]')
 		delta = delta.astype('float64')
 
 		return delta/(24*60*60*1e9)
 
-	def between(self,*args):
-		"""Returns the bools for the interval that is in between
+	def within(self,*args):
+
+		return self[self.iswithin(*args)]
+
+	def iswithin(self,*args):
+		"""Returns the bools for the interval that is in within
 		start and end dates."""
 
 		bools = numpy.zeros(self.size,dtype='bool')
 
 		for limit in args:
 
-			later = self.later(limit[0])
-			prior = self.prior(limit[1])
+			later = TimeSpan.later(limit[0])
+			prior = TimeSpan.prior(limit[1])
 
 			among = numpy.logical_and(later,prior)
 
 			bools = numpy.logical_or(bools,among)
 
 		return bools
-	
+
 	def prior(self,date:datetime.date):
+
+		return self[self.isprior(self.series,date)]
+	
+	def isprior(self,date:datetime.date):
 		"""Returns the bools for the datetimes that
 		is prior to the date."""
 
 		return (self.series.dt.date<=date).to_numpy()
 
 	def later(self,date:datetime.date):
+		
+		return self[self.islater(self.series,date)]
+
+	def islater(self,date:datetime.date):
 		"""Returns the bools for the datetimes that is
 		later than the date."""
 

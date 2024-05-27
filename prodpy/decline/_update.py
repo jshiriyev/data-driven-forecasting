@@ -1,31 +1,31 @@
 from ._model import Model
 
+from ._timespan import TimeSpan
 from ._analysis import Analysis
 
 class Update():
 
+
 	@staticmethod
 	def load_analysis(state):
 
-		return Analysis(
-			state.datehead,
-			state.ratehead,
-			)
+		return Analysis(state.datehead,state.ratehead)
 
 	@staticmethod
 	def slider(state):
 
+		state['date0'] = state.estimate[0]
 		state['optimize'] = True
 
 	@staticmethod
-	def load_opacity(state,view):
+	def load_opacity(state,analysis):
 
-		if view.frame.empty:
+		if analysis.frame.empty:
 			return
 
-		bools = Analysis.get_bools(
-			view.dates,*state.estimate
-			)
+		span = TimeSpan(analysis.dates)
+
+		bools = span.iswithin(*state.estimate)
 
 		return bools*0.7+0.3
 
@@ -42,17 +42,16 @@ class Update():
 		state['optimize'] = True
 
 	@staticmethod
-	def get_best_model(state,analysis):
+	def best_model(state,analysis):
 
-		if Update.flag(state,'estimate','mode','exponent'):
+		if analysis.frame.empty:
 			return
 
-		return analysis.fit(
-			    mode = state.mode,
-			exponent = state.exponent,
-			   start = state.estimate[0],
-				 end = state.estimate[1],
-			)
+		if Update.flag(state,'estimate','date0','mode','exponent'):
+			return
+
+		return analysis.fit(*state.estimate,
+			date0=state.date0,mode=state.mode,exponent=state.exponent)
 
 	@staticmethod
 	def load_model(state,analysis):
@@ -60,10 +59,7 @@ class Update():
 		if not state.optimize:
 			return
 
-		if analysis.frame.empty:
-			return
-
-		model = Update.get_best_model(state,analysis)
+		model = Update.best_model(state,analysis)
 
 		state['rate0'] = f'{model.rate0:f}'
 
@@ -75,9 +71,10 @@ class Update():
 		state['optimize'] = False
 
 	@staticmethod
-	def get_user_model(state):
+	def user_model(state):
+		"""Returns user model based on the frontend selections."""
 
-		if Update.flag(state,'estimate','mode','exponent','rate0','decline0'):
+		if Update.flag(state,'mode','exponent','date0','rate0','decline0'):
 			return
 
 		return Model(
@@ -89,51 +86,46 @@ class Update():
 			)
 
 	@staticmethod
-	def load_curve(state,analysis):
+	def load_estimate(state):
+		"""Returns estimated data frame."""
 
-		if analysis.frame.empty:
-			return
+		model = Update.user_model(state)
 
-		model = Update.get_user_model(state)
-
-		start,end = state.estimate
-
-		return analysis.run(model,start=start,end=end,periods=30)
+		return Analysis.run(model,*state.estimate,periods=30)
 
 	@staticmethod
-	def load_forecast(state,analysis):
+	def load_forecast(state):
+		"""Returns forecasted data frame."""
 
-		model = Update.get_user_model(state)
+		model = Update.user_model(state)
 
-		start,end = state.forecast
-
-		return analysis.run(model,start=start,end=end,periods=30)
+		return Analysis.run(model,*state.forecast,periods=30)
 
 	@staticmethod
-	def load_download(state,analysis):
-		"""IT SHOULD RETURN PANDAS DATAFRAME"""
+	def load_download(state):
+		"""Returns group forecasted data frame."""
 
-		start,end = state.forecast
+		span = TimeSpan.get(*state.forecast,periods=30)
 
-		datetimes = analysis.get_datetimes(
-			start=start,end=end,periods=30
-			)
+		date = span.series.to_list()
 
-		for itemname,model in state.models.items():
+		items,dates,rates = [],[],[]
 
-			days = analysis.get_days(
-				datetimes,start=model.date0
-				)
+		for name,model in state.models.items():
 
-			rates = analysis.get_rates(
-				model,days
-				)
+			item = [name]*span.size
 
-			forecast['items'] = items # CORRECT THIS
-			forecast['dates'] = dates
-			forecast['rates'] = rates
+			days = span.days(model.date0)
 
-		return forecast
+			rate = Analysis.predict(model,days).tolist()
+			
+			items.append(item)
+			dates.append(date)
+			rates.append(rate)
+
+		frame = Analysis.toframe({"Name":items,"Date":dates,"Rate":rates})
+
+		return frame.to_csv(index=False).encode('utf-8')
 
 	@staticmethod
 	def flag(state,*args):

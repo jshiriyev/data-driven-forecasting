@@ -24,7 +24,9 @@ class Model:
 
 	mode 		: str   = None
 	exponent 	: float = None
+
 	date0 		: datetime.date = None
+	
 	rate0 		: float = 0.
 	decline0 	: float = 0.
 
@@ -122,6 +124,8 @@ if __name__ == "__main__":
 	# days = np.linspace(0,100,100)
 
 	model = Model(rate0=5.)
+
+	print(model)
 
 	print(model.rate0)
 

@@ -13,7 +13,7 @@ from ._optimize import Optimize
 
 class Analysis():
 
-	def __init__(self,datehead,ratehead):
+	def __init__(self,datehead:str,ratehead:str):
 		"""Initializing the class with date and rate column keys. The date and rate
 		values are used for the optimization and forecasting of pandas.DataFrames."""
 
@@ -39,86 +39,58 @@ class Analysis():
 		return self
 
 	@property
+	def dates(self):
+		return self.frame[self._datehead]
+
+	@property
 	def span(self):
-		
-		return TimeSpan(self.frame[self.datehead])
+		return TimeSpan(self.dates)
+
+	@property
+	def rates(self):
+		return self.frame[self._ratehead]
 	
-	def fit(self,start:datetime.date=None,end:datetime.date=None,**kwargs):
+	def fit(self,*args,date0:datetime.date=None,**kwargs):
 		"""Returns optimized model that fits the rates."""
 
-		dates = self.frame[self.datehead]
+		bools = self.span.within(*args)
 
-		date0 = self.get_date0(dates,start)
-		bools = self.get_bools(dates,start,end)
+		span = TimeSpan(self.dates[bools])
 
-		mdays = self.get_days(dates[bools],date0)
-		
-		rates = self.frame[self.ratehead][bools].to_numpy()
+		rates = self.rates[bools].to_numpy()
 
-		return Optimize(**kwargs).fit(mdays,rates,date0=date0)
+		date0 = span.mindate if date0 is None else date0
 
-	def run(self,model:Model,**kwargs):
+		days = span.days(date0)
+
+		return self.optimize(days,rates,date0,**kwargs)
+
+	@staticmethod
+	def optimize(days:numpy.ndarray,rates:numpy.ndarray,date0:datetime.date=None,**kwargs):
+
+		return Optimize(**kwargs).fit(days,rates,date0)
+
+	@staticmethod
+	def run(model:Model,*args,**kwargs):
 		"""Forecasts the rates based on the model, and for the pandas.date_range parameters."""
 
-		try:
-			dates = self.get_datetimes(**kwargs)
-		except ValueError:
-			dates = self.get_datetimes(start=model.date0,**kwargs)
+		dates = TimeSpan.get(*args,**kwargs)
 
-		cdays = self.get_days(dates,start=model.date0)
-		rates = self.get_rates(model,cdays)
+		days = dates.days(model.date0)
 
-		return {"dates":dates,"rates":rates}
+		rates = Analysis.predict(model,days)
+		
+		return Analysis.toframe({"dates":dates,"predicted":rates})
 
 	@staticmethod
-	def get_datetimes(**kwargs):
-
-		return pandas.date_range(**kwargs)
-
-	@staticmethod
-	def get_rates(model,days):
+	def predict(model:Model,days:numpy.ndarray):
 
 		return Forward(model).run(days)
 
 	@staticmethod
-	def get_date0(dates:pandas.Series,start:datetime.date=None):
-		"""Returns the first date based on start and dates."""
-		return dates.iloc[0].date() if start is None else start
+	def toframe(dictionary):
 
-	@staticmethod
-	def get_dateL(dates:pandas.Series,end:datetime.date=None):
-		"""Returns the last date based on end and dates."""
-		return dates.iloc[-1].date() if end is None else end
-
-	@staticmethod
-	def get_bools(dates:pandas.Series,start:datetime.date=None,end:datetime.date=None):
-		"""Returns the bools for the interval that is in between start and end dates."""
-		upper = Analysis.later(dates,start)
-		lower = Analysis.prior(dates,end)
-
-		return numpy.logical_and(upper,lower)
-
-	@staticmethod
-	def later(dates:pandas.Series,start:datetime.date=None):
-		"""Returns the bools for the interval that is after the start date."""
-		return numpy.ones(dates.shape,dtype='bool') if start is None else (dates.dt.date>=start).to_numpy()
-
-	@staticmethod
-	def prior(dates:pandas.Series,end:datetime.date=None):
-		"""Returns the bools for the interval that is before the end date."""
-		return numpy.ones(dates.shape,dtype='bool') if end is None else (dates.dt.date<=end).to_numpy()
-
-	@staticmethod
-	def get_days(dates:pandas.Series,start:datetime.date=None):
-		"""Returns days calculated from the dates and start date."""
-		start = numpy.datetime64(Analysis.get_date0(dates,start))
-
-		delta = (dates-start)
-		delta = delta.to_numpy()
-		delta = delta.astype('timedelta64[ns]')
-		delta = delta.astype('float64')
-
-		return delta/(24*60*60*1e9)
+		return pandas.dataframe(dictionary)
 
 if __name__ == "__main__":
 

@@ -22,9 +22,6 @@ st.set_page_config(layout='wide',page_title='Decline Curve Analysis')
 st.session_state = tv.Session(st.session_state).set()
 st.session_state = dc.Session(st.session_state).set()
 
-if "models" not in st.session_state:
-	st.session_state["models"] = {}
-
 with st.sidebar:
 
 	st.header(
@@ -90,6 +87,8 @@ with st.sidebar:
 		key = 'viewlist',
 		)
 
+	frame = view.frame
+
 displayColumn, modelColumn = st.columns([0.7,0.3],gap='large')
 
 with modelColumn:
@@ -100,14 +99,16 @@ with modelColumn:
 
 	st.slider(
 		label = "Time Interval:",
-		min_value = view.limit[0],
-		max_value = view.limit[1],
-		key = 'datelim',
+		min_value = view.estimate[0],
+		max_value = view.estimate[1],
+		key = 'estimate',
 		on_change = dc.Update.slider,
 		args = (st.session_state,),
 		)
 
-	opacity = dc.Update.load_opacity(st.session_state,view)
+	analysis = analysis(frame)
+
+	opacity = dc.Update.load_opacity(st.session_state,analysis)
 
 	st.selectbox(
 		label = "Decline Mode",
@@ -141,23 +142,17 @@ with modelColumn:
 
 		bar = st.progress(0.,text=progress_text)
 		
-		for index,v in enumerate(table,start=1):
+		for index,view in enumerate(table,start=1):
 
-			st.session_state.models[v.items[0]] = dc.Update.get_best_model(
-				st.session_state,
-				analysis(v.frame),
-				)
+			model = dc.Update.best_model(st.session_state,analysis(view.frame))
 
-			bar.progress(
-				value = index/table.num,
-				text = progress_text,
-				)
+			st.session_state.models[view.items[0]] = model
+
+			bar.progress(value=index/table.num,text=progress_text)
 
 		time.sleep(1)
 	
 		bar.empty()
-
-	analysis = analysis(view.frame)
 
 	dc.Update.load_model(st.session_state,analysis)
 
@@ -175,7 +170,7 @@ with modelColumn:
 		args = (st.session_state,),
 		)
 
-	curve = dc.Update.load_curve(st.session_state,analysis)
+	curve_estimate = dc.Update.load_estimate(st.session_state,analysis)
 
 	SaveModelEdit = st.button(
 		label = "Save Edits",
@@ -189,9 +184,7 @@ with modelColumn:
 			st.warning("Click Fit Group first.")
 		else:
 			try:
-				st.session_state.models[itemname] = dc.Update.get_user_model(
-					st.session_state
-					)
+				st.session_state.models[itemname] = dc.Update.user_model(st.session_state)
 			except Exception as message:
 				st.warning(message)
 			else:
@@ -205,7 +198,7 @@ with modelColumn:
 
 	next_year = datetime.datetime.now().year + 1
 
-	forecast_interval = st.date_input(
+	forecast = st.date_input(
 		"Forecast Interval",
 		# min_value = datetime.date(next_year, 1, 1),
 		# max_value = datetime.date(next_year,12,31),
@@ -213,6 +206,7 @@ with modelColumn:
 			datetime.date(next_year, 1, 1),
 			datetime.date(next_year,12,31),
 			),
+		key = 'forecast',
 		format="MM.DD.YYYY",
 	)
 
@@ -223,22 +217,36 @@ with modelColumn:
 		)
 
 	if show_forecast:
-		forecast = dc.Update.load_forecast(
-			st.session_state,analysis,forecast_interval
-			)
+		curve_forecast = dc.Update.load_forecast(st.session_state)
 
-	df = pd.DataFrame()
+	# output = dc.Update.load_download(st.session_state)
 
-		output_csv = df.to_csv(index=False).encode('utf-8')
+	# Download = st.download_button(
+	# 	label = 'Download Forecast',
+	# 	data = output,
+	# 	help = "Download rates for all group items.",
+	# 	file_name = f"{table.leadhead}_forecast.csv",
+	# 	mime = 'text/csv',
+	# 	use_container_width = True,
+	# 	)
 
-	Download = st.download_button(
-		label = 'Download Forecast',
-		data = output_csv,
-		help = "Download rates for all group items.",
-		file_name = f"{table.leadhead}_forecast.csv",
-		mime = 'text/csv',
-		use_container_width = True,
-		)
+	# if Download:
+
+	# 	progress_text = "Forecast in progress. Please wait."
+
+	# 	bar2 = st.progress(0.,text=progress_text)
+		
+	# 	for index,view in enumerate(table,start=1):
+
+	# 		model = dc.Update.best_model(st.session_state,analysis(view.frame))
+
+	# 		st.session_state.models[view.items[0]] = model
+
+	# 		bar2.progress(value=index/table.num,text=progress_text)
+
+	# 	time.sleep(1)
+	
+	# 	bar2.empty()
 
 with displayColumn:
 
@@ -258,8 +266,8 @@ with displayColumn:
 		fig1.add_trace(data_observed)
 
 		data_calculated = go.Scatter(
-			x = curve['dates'],
-			y = curve['rates'],
+			x = curve_estimate['dates'],
+			y = curve_estimate['rates'],
 			mode = 'lines',
 			line = dict(color="black"),
 			)
@@ -268,8 +276,8 @@ with displayColumn:
 
 		if show_forecast:
 			data_forecast = go.Scatter(
-				x = forecast['dates'],
-				y = forecast['rates'],
+				x = curve_forecast['dates'],
+				y = curve_forecast['rates'],
 				mode = 'lines',
 				line = dict(color="red"),
 				)

@@ -29,7 +29,7 @@ class Optimize():
 	def exponent(self):
 		return self._exponent
 
-	def fit(self,days:numpy.ndarray,rates:numpy.ndarray,**kwargs):
+	def fit(self,days:numpy.ndarray,rates:numpy.ndarray,date0=None):
 		"""Inversely calculates decline model based on input days and rates:
 		
 		days 		: measured days, array of floats
@@ -39,13 +39,8 @@ class Optimize():
 		"""
 		rate0,decline0 = self.minimize(days,rates)
 
-		return Model(
-			mode = self.mode,
-			exponent = self.exponent,
-			rate0 = rate0,
-			decline0 = decline0,
-			**kwargs,
-			)
+		return Model(mode=self.mode,exponent=self.exponent,
+			date0=date0,rate0=rate0,decline0=decline0)
 
 	@property
 	def minimize(self):
