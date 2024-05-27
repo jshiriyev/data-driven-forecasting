@@ -53,7 +53,7 @@ class Analysis():
 	def fit(self,*args,date0:datetime.date=None,**kwargs):
 		"""Returns optimized model that fits the rates."""
 
-		bools = self.span.within(*args)
+		bools = self.span.iswithin(*args)
 
 		span = TimeSpan(self.dates[bools])
 
@@ -74,13 +74,13 @@ class Analysis():
 	def run(model:Model,*args,**kwargs):
 		"""Forecasts the rates based on the model, and for the pandas.date_range parameters."""
 
-		dates = TimeSpan.get(*args,**kwargs)
-
-		days = dates.days(model.date0)
+		span = TimeSpan.get(*args,**kwargs)
+		
+		days = span.days(model.date0)
 
 		rates = Analysis.predict(model,days)
 		
-		return Analysis.toframe({"dates":dates,"predicted":rates})
+		return Analysis.toframe({"dates":span.series,"predicted":rates})
 
 	@staticmethod
 	def predict(model:Model,days:numpy.ndarray):

@@ -7,8 +7,6 @@ sys.path.append(r'C:\Users\3876yl\Documents\prodpy')
 
 import time
 
-import pandas as pd
-
 import plotly.graph_objects as go
 
 import streamlit as st
@@ -87,8 +85,6 @@ with st.sidebar:
 		key = 'viewlist',
 		)
 
-	frame = view.frame
-
 displayColumn, modelColumn = st.columns([0.7,0.3],gap='large')
 
 with modelColumn:
@@ -106,9 +102,7 @@ with modelColumn:
 		args = (st.session_state,),
 		)
 
-	analysis = analysis(frame)
-
-	opacity = dc.Update.load_opacity(st.session_state,analysis)
+	opacity = dc.Update.load_opacity(st.session_state,analysis(view.frame))
 
 	st.selectbox(
 		label = "Decline Mode",
@@ -142,11 +136,13 @@ with modelColumn:
 
 		bar = st.progress(0.,text=progress_text)
 		
-		for index,view in enumerate(table,start=1):
+		for index,scene in enumerate(table,start=1):
 
-			model = dc.Update.best_model(st.session_state,analysis(view.frame))
+			model = dc.Update.best_model(
+				st.session_state,analysis(scene.frame)
+				)
 
-			st.session_state.models[view.items[0]] = model
+			st.session_state.models[scene.items[0]] = model
 
 			bar.progress(value=index/table.num,text=progress_text)
 
@@ -154,7 +150,7 @@ with modelColumn:
 	
 		bar.empty()
 
-	dc.Update.load_model(st.session_state,analysis)
+	dc.Update.load_model(st.session_state,analysis(view.frame))
 
 	st.text_input(
 		label = 'Initial Rate',
@@ -172,13 +168,13 @@ with modelColumn:
 
 	estimate_curve = dc.Update.load_estimate_curve(st.session_state)
 
-	SaveModelEdit = st.button(
+	SaveModelEditButton = st.button(
 		label = "Save Edits",
 		help = "Save decline attribute edits for the item.",
 		use_container_width = True,
 		)
 
-	if SaveModelEdit:
+	if SaveModelEditButton:
 
 		if len(st.session_state.models)==0:
 			st.warning("Click Fit Group first.")
@@ -192,20 +188,23 @@ with modelColumn:
 
 	st.markdown("""---""")
 
-	show_forecast = st.checkbox(
+	forecast_show = st.checkbox(
 		label = "Display Forecasted Rates",
 		)
 
-	next_year = datetime.datetime.now().year + 1
+	if forecast_show:
+		xaxis_range = [
+			min(st.session_state.forecast[0],view.limit[0]),
+			max(st.session_state.forecast[1],view.limit[1])
+			]
+	else:
+		xaxis_range = list(view.limit)
+
+	nextyear = datetime.datetime.now().year+1
 
 	forecast = st.date_input(
 		"Forecast Interval",
-		# min_value = datetime.date(next_year, 1, 1),
-		# max_value = datetime.date(next_year,12,31),
-		value = (
-			datetime.date(next_year, 1, 1),
-			datetime.date(next_year,12,31),
-			),
+		value = (datetime.date(nextyear,1,1),datetime.date(nextyear,12,31)),
 		key = 'forecast',
 		format="MM.DD.YYYY",
 	)
@@ -216,21 +215,23 @@ with modelColumn:
 		key = 'frequency'
 		)
 
-	if show_forecast:
-		forecast_curve = dc.Update.load_forecast_curve(st.session_state)
+	forecast_curve = dc.Update.load_forecast_curve(st.session_state)
 
-	# output = dc.Update.load_download(st.session_state)
+	if False:
+		output = dc.Update.load_download(st.session_state)
+	else:
+		output = None
 
-	# Download = st.download_button(
-	# 	label = 'Download Forecast',
-	# 	data = output,
-	# 	help = "Download rates for all group items.",
-	# 	file_name = f"{table.leadhead}_forecast.csv",
-	# 	mime = 'text/csv',
-	# 	use_container_width = True,
-	# 	)
+	DownloadButton = st.download_button(
+		label = 'Download Forecast',
+		data = '',
+		help = "Download rates for all group items.",
+		file_name = f"{table.leadhead}_forecast.csv",
+		mime = 'text/csv',
+		use_container_width = True,
+		)
 
-	# if Download:
+	# if DownloadButton:
 
 	# 	progress_text = "Forecast in progress. Please wait."
 
@@ -256,35 +257,37 @@ with displayColumn:
 
 		fig1 = go.Figure()
 
-		data_observed = go.Scatter(
+		observed_plot = go.Scatter(
 			x = view.frame[datehead],
 			y = view.frame[ratehead],
 			mode = 'markers',
 			marker = dict(opacity=opacity),
 			)
 
-		fig1.add_trace(data_observed)
+		fig1.add_trace(observed_plot)
 
 		if estimate_curve is not None:
 
-			data_calculated = go.Scatter(
+			estimate_plot = go.Scatter(
 				x = estimate_curve['dates'],
 				y = estimate_curve['predicted'],
 				mode = 'lines',
 				line = dict(color="black"),
 				)
 
-			fig1.add_trace(data_calculated)
+			fig1.add_trace(estimate_plot)
 
-		if show_forecast and forecast_curve is not None:
-			data_forecast = go.Scatter(
+		if forecast_show and forecast_curve is not None:
+			forecast_plot = go.Scatter(
 				x = forecast_curve['dates'],
 				y = forecast_curve['predicted'],
 				mode = 'lines',
 				line = dict(color="red"),
 				)
 
-			fig1.add_trace(data_forecast)
+			fig1.add_trace(forecast_plot)
+
+		fig1.update_xaxes(range=xaxis_range)
 
 		fig1.update_layout(
 			title = f'{st.session_state.ratehead}',
@@ -305,6 +308,8 @@ with displayColumn:
 				)
 
 			figI.add_trace(data_vis)
+
+			figI.update_xaxes(range=xaxis_range)
 
 			figI.update_layout(
 				title = ratename,

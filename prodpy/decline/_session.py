@@ -21,22 +21,20 @@ class Session():
 			self.maxdate = maxdate
 
 	@property
-	def limit(self):
+	def estimate(self):
 		return self.mindate,self.maxdate
-	
 	
 	def set(self):
 
 		return self.__call__(
 			models   = {},
-			estimate = self.limit,
+			estimate = self.estimate,
 			mode     = self.model.mode,
 			exponent = self.model.exponent,
-			date0 	 = self.model.date0,
+			date0 	 = self.estimate[0],
 			rate0    = f'{self.model.rate0:f}',
 			decline0 = f'{self.model.decline0:f}',
 			optimize = True,
-			forecast = self.limit,
 		)
 
 	def __call__(self,*args,**kwargs):
