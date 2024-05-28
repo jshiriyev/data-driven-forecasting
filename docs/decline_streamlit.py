@@ -91,6 +91,8 @@ with st.sidebar:
 
 displayColumn, modelColumn = st.columns([0.7,0.3],gap='large')
 
+models = {}
+
 with modelColumn:
 
 	st.header('Decline Curve Analysis')
@@ -134,27 +136,27 @@ with modelColumn:
 
 	if FitGroupButton:
 
-		st.session_state.models = {}
+		models = {}
 
-		progress_text = "Optimization in progress. Please wait."
+		optimization_text = "Optimization in progress. Please wait."
 
-		bar1 = st.progress(0.,text=progress_text)
+		bar1 = st.progress(0.,text=optimization_text)
 		
 		for index,scene in enumerate(table,start=1):
 
-			model = dc.Update.best_model(
+			model = dc.Update.load_best_model(
 				st.session_state,analysis(scene.frame)
 				)
 
-			st.session_state.models[scene.items[0]] = model
+			models[scene.items[0]] = model
 
-			bar1.progress(value=index/table.num,text=progress_text)
+			bar1.progress(value=index/table.num,text=optimization_text)
 
 		time.sleep(1)
 	
 		bar1.empty()
 
-	dc.Update.load_model(st.session_state,analysis(view.frame))
+	dc.Update.model(st.session_state,analysis(view.frame))
 
 	st.text_input(
 		label = 'Initial Rate',
@@ -180,11 +182,11 @@ with modelColumn:
 
 	if SaveModelEditButton:
 
-		if len(st.session_state.models)==0:
+		if len(models)==0:
 			st.warning("Click Fit Group first.")
 		else:
 			try:
-				st.session_state.models[itemname] = dc.Update.user_model(st.session_state)
+				models[itemname] = dc.Update.load_user_model(st.session_state)
 			except Exception as message:
 				st.warning(message)
 			else:
@@ -221,28 +223,28 @@ with modelColumn:
 
 	forecast_curve = dc.Update.load_forecast_curve(st.session_state)
 
-	def download_csv(filename):
+	def MyDownload(filename):
 		
-		progress_text = "Forecast in progress. Please wait."
+		forecast_text = "Forecast in progress. Please wait."
 
-		bar2 = st.progress(0.,text=progress_text)
+		bar2 = st.progress(0.,text=forecast_text)
 
 		frame = pandas.DataFrame(columns=['Names','Dates','Rates'])
 
-		for index,(name,model) in enumerate(models.items()):
+		for index,(name,model) in enumerate(models.items(),start=1):
 
-			minor = Analysis.run(model,forecast,periods=30)
+			minor = analysis.run(model,forecast,periods=30)
 
 			frame = pandas.concat([frame,minor])
 
-			bar2.progress(value=index/len(models),text=progress_text)
+			bar2.progress(value=index/len(models),text=forecast_text)
 
 		time.sleep(1)
 
 		output = frame.to_csv(index=False).encode('utf-8')
 
 		components.html(
-			dc.Update.download(output,filename),
+			dc.Update.load_download(output,filename),
 			height=0,
 		)
 
@@ -250,9 +252,9 @@ with modelColumn:
 
 	DownloadButton = st.button(
 		label = 'Download Forecast',
-		on_click = download_csv,
+		on_click = MyDownload,
 		args = (f"{table.leadhead}_forecast.csv",),
-		help = "Download rates for all group items.",
+		help = "Download predicted rates for all group items.",
 		use_container_width = True,
 		)
 
@@ -262,7 +264,7 @@ with displayColumn:
 
 		st.header(f'{itemname} Rates')
 
-		fig1 = go.Figure()
+		figMajor = go.Figure()
 
 		observed_plot = go.Scatter(
 			x = view.frame[datehead],
@@ -271,41 +273,41 @@ with displayColumn:
 			marker = dict(opacity=opacity),
 			)
 
-		fig1.add_trace(observed_plot)
+		figMajor.add_trace(observed_plot)
 
 		if estimate_curve is not None:
 
 			estimate_plot = go.Scatter(
-				x = estimate_curve['dates'],
-				y = estimate_curve['predicted'],
+				x = estimate_curve['Dates'],
+				y = estimate_curve['Rates'],
 				mode = 'lines',
 				line = dict(color="black"),
 				)
 
-			fig1.add_trace(estimate_plot)
+			figMajor.add_trace(estimate_plot)
 
 		if forecast_show and forecast_curve is not None:
 			forecast_plot = go.Scatter(
-				x = forecast_curve['dates'],
-				y = forecast_curve['predicted'],
+				x = forecast_curve['Dates'],
+				y = forecast_curve['Rates'],
 				mode = 'lines',
 				line = dict(color="red"),
 				)
 
-			fig1.add_trace(forecast_plot)
+			figMajor.add_trace(forecast_plot)
 
-		fig1.update_xaxes(range=xaxis_range)
+		figMajor.update_xaxes(range=xaxis_range)
 
-		fig1.update_layout(
+		figMajor.update_layout(
 			title = f'{st.session_state.ratehead}',
 			showlegend = False,
 	        )
 
-		st.plotly_chart(fig1,use_container_width=True)
+		st.plotly_chart(figMajor,use_container_width=True)
 
 		for ratename in viewlist:
 
-			figI = go.Figure()
+			figMinor = go.Figure()
 
 			data_vis = go.Scatter(
 				x = view.frame[datehead],
@@ -314,12 +316,12 @@ with displayColumn:
 				marker = dict(opacity=opacity),
 				)
 
-			figI.add_trace(data_vis)
+			figMinor.add_trace(data_vis)
 
-			figI.update_xaxes(range=xaxis_range)
+			figMinor.update_xaxes(range=xaxis_range)
 
-			figI.update_layout(
+			figMinor.update_layout(
 				title = ratename,
 				)
 
-			st.plotly_chart(figI,use_container_width=True)
+			st.plotly_chart(figMinor,use_container_width=True)

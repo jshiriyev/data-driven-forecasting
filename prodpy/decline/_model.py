@@ -44,7 +44,8 @@ class Model:
 		"""Assigns corrected mode and exponent values."""
 
 		mode,exponent = self.get_option(
-			self.mode,self.exponent)
+			self.mode,self.exponent
+			)
 
 		rate0 = self.get_rate0(self.rate0)
 

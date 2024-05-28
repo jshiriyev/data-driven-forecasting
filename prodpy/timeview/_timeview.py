@@ -74,7 +74,7 @@ class TimeView():
         if self.dates.empty:
             return self._mindate
 
-        return self.dates.min().date()-datetime.timedelta(days=30)
+        return self.dates.min().date()-datetime.timedelta(days=45)
 
     @property
     def maxdate(self):
@@ -82,7 +82,7 @@ class TimeView():
         if self.dates.empty:
             return self._maxdate
 
-        return self.dates.max().date()+datetime.timedelta(days=30)
+        return self.dates.max().date()+datetime.timedelta(days=45)
 
     @property
     def limit(self):

@@ -1,6 +1,5 @@
 import datetime
 
-import numpy
 import pandas
 
 from ._model import Model
@@ -30,7 +29,7 @@ class Analysis():
 
 	@property
 	def keys(self):
-		return [self._datehead,self._ratehead]
+		return list((self._datehead,self._ratehead))
 
 	def __call__(self,frame):
 
@@ -54,21 +53,14 @@ class Analysis():
 		"""Returns optimized model that fits the rates."""
 
 		bools = self.span.iswithin(*args)
-
-		span = TimeSpan(self.dates[bools])
+		
+		span = self.span[bools]
 
 		rates = self.rates[bools].to_numpy()
 
 		date0 = span.mindate if date0 is None else date0
 
-		days = span.days(date0)
-
-		return self.optimize(days,rates,date0,**kwargs)
-
-	@staticmethod
-	def optimize(days:numpy.ndarray,rates:numpy.ndarray,date0:datetime.date=None,**kwargs):
-
-		return Optimize(**kwargs).fit(days,rates,date0)
+		return Optimize(**kwargs).fit(span.days(date0),rates,date0)
 
 	@staticmethod
 	def run(model:Model,*args,**kwargs):
@@ -78,7 +70,7 @@ class Analysis():
 		
 		days = span.days(model.date0)
 
-		rates = Analysis.predict(model,days)
+		rates = Forward(model).run(days)
 		
 		dictionary = {
 			"Dates": span.series,
@@ -98,7 +90,7 @@ class Analysis():
 
 			days = span.days(model.date0)
 
-			rates = Analysis.predict(model,days)
+			rates = Forward(model).run(days)
 
 			dictionary = {
 				"Names" : name,
@@ -111,16 +103,6 @@ class Analysis():
 			frame = pandas.concat([frame,minor])
 
 		return frame.reset_index(drop=True)
-
-	@staticmethod
-	def predict(model:Model,days:numpy.ndarray):
-
-		return Forward(model).run(days)
-
-	@staticmethod
-	def toframe(dictionary):
-
-		return pandas.DataFrame(dictionary)
 
 if __name__ == "__main__":
 

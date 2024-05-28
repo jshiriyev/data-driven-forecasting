@@ -2,14 +2,15 @@ import base64
 
 from ._model import Model
 
-from ._timespan import TimeSpan
 from ._analysis import Analysis
 
 class Update():
 
-
 	@staticmethod
 	def load_analysis(state):
+
+		if Update.flag(state,'datehead','ratehead'):
+			return
 
 		return Analysis(state.datehead,state.ratehead)
 
@@ -25,9 +26,7 @@ class Update():
 		if analysis.frame.empty:
 			return
 
-		span = TimeSpan(analysis.dates)
-
-		bools = span.iswithin(state.estimate)
+		bools = analysis.span.iswithin(state.estimate)
 
 		return bools*0.7+0.3
 
@@ -44,7 +43,7 @@ class Update():
 		state['optimize'] = True
 
 	@staticmethod
-	def best_model(state,analysis):
+	def load_best_model(state,analysis):
 
 		if analysis.frame.empty:
 			return
@@ -56,17 +55,19 @@ class Update():
 			date0=state.date0,mode=state.mode,exponent=state.exponent)
 
 	@staticmethod
-	def load_model(state,analysis):
+	def model(state,analysis):
 
 		if not state.optimize:
 			return
 
-		model = Update.best_model(state,analysis)
+		model = Update.load_best_model(state,analysis)
 
-		if model is not None:
+		if model is None:
+			return
 		
-			state['rate0'] = f'{model.rate0:f}'
-			state['decline0'] = f'{model.decline0:f}'
+		state['rate0'] = f'{model.rate0:f}'
+
+		state['decline0'] = f'{model.decline0:f}'
 
 	@staticmethod
 	def attributes(state):
@@ -74,7 +75,7 @@ class Update():
 		state['optimize'] = False
 
 	@staticmethod
-	def user_model(state):
+	def load_user_model(state):
 		"""Returns user model based on the frontend selections."""
 
 		if Update.flag(state,'mode','exponent','date0','rate0','decline0'):
@@ -92,7 +93,7 @@ class Update():
 	def load_estimate_curve(state):
 		"""Returns estimated data frame."""
 
-		model = Update.user_model(state)
+		model = Update.load_user_model(state)
 
 		if model is None:
 			return
@@ -103,7 +104,7 @@ class Update():
 	def load_forecast_curve(state):
 		"""Returns forecasted data frame."""
 
-		model = Update.user_model(state)
+		model = Update.load_user_model(state)
 
 		if model is None:
 			return
@@ -111,17 +112,17 @@ class Update():
 		return Analysis.run(model,state.forecast,periods=30)
 
 	@staticmethod
-	def load_forecast_csv(state):
+	def load_forecast_file(state,models):
 		"""Returns group forecasted data frame."""
 
 		frame = Analysis.multirun(
-			state.models,state.forecast,periods=30
+			models,state.forecast,periods=30
 			)
 
 		return frame.to_csv(index=False).encode('utf-8')
 
 	@staticmethod
-	def download(report:str,filename:str):
+	def load_download(report:str,filename:str):
 		"""
 		Generates a link to download the given report.
 		
