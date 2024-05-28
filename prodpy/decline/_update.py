@@ -9,9 +9,6 @@ class Update():
 	@staticmethod
 	def load_analysis(state):
 
-		if Update.flag(state,'datehead','ratehead'):
-			return
-
 		return Analysis(state.datehead,state.ratehead)
 
 	@staticmethod
@@ -55,7 +52,7 @@ class Update():
 			date0=state.date0,mode=state.mode,exponent=state.exponent)
 
 	@staticmethod
-	def model(state,analysis):
+	def model(state,analysis,itemname):
 
 		if not state.optimize:
 			return
@@ -103,6 +100,9 @@ class Update():
 	@staticmethod
 	def load_forecast_curve(state):
 		"""Returns forecasted data frame."""
+
+		if len(state.forecast)!=2:
+			return
 
 		model = Update.load_user_model(state)
 
