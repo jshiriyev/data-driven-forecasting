@@ -80,7 +80,37 @@ class Analysis():
 
 		rates = Analysis.predict(model,days)
 		
-		return Analysis.toframe({"dates":span.series,"predicted":rates})
+		dictionary = {
+			"Dates": span.series,
+			"Rates": rates,
+			}
+
+		return pandas.DataFrame(dictionary)
+
+	@staticmethod
+	def multirun(models:dict,*args,**kwargs):
+
+		span = TimeSpan.get(*args,**kwargs)
+
+		frame = pandas.DataFrame(columns=['Names','Dates','Rates'])
+
+		for name,model in models.items():
+
+			days = span.days(model.date0)
+
+			rates = Analysis.predict(model,days)
+
+			dictionary = {
+				"Names" : name,
+				"Dates" : span.series,
+				"Rates" : rates,
+				}
+
+			minor = pandas.DataFrame(dictionary)
+
+			frame = pandas.concat([frame,minor])
+
+		return frame.reset_index(drop=True)
 
 	@staticmethod
 	def predict(model:Model,days:numpy.ndarray):

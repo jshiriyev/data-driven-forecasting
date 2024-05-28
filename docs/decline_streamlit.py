@@ -7,9 +7,13 @@ sys.path.append(r'C:\Users\3876yl\Documents\prodpy')
 
 import time
 
+import pandas
+
 import plotly.graph_objects as go
 
 import streamlit as st
+
+import streamlit.components.v1 as components
 
 from prodpy import timeview as tv
 
@@ -134,7 +138,7 @@ with modelColumn:
 
 		progress_text = "Optimization in progress. Please wait."
 
-		bar = st.progress(0.,text=progress_text)
+		bar1 = st.progress(0.,text=progress_text)
 		
 		for index,scene in enumerate(table,start=1):
 
@@ -144,11 +148,11 @@ with modelColumn:
 
 			st.session_state.models[scene.items[0]] = model
 
-			bar.progress(value=index/table.num,text=progress_text)
+			bar1.progress(value=index/table.num,text=progress_text)
 
 		time.sleep(1)
 	
-		bar.empty()
+		bar1.empty()
 
 	dc.Update.load_model(st.session_state,analysis(view.frame))
 
@@ -217,37 +221,40 @@ with modelColumn:
 
 	forecast_curve = dc.Update.load_forecast_curve(st.session_state)
 
-	if False:
-		output = dc.Update.load_download(st.session_state)
-	else:
-		output = None
+	def download_csv(filename):
+		
+		progress_text = "Forecast in progress. Please wait."
 
-	DownloadButton = st.download_button(
-		label = 'Download Forecast',
-		data = '',
-		help = "Download rates for all group items.",
-		file_name = f"{table.leadhead}_forecast.csv",
-		mime = 'text/csv',
-		use_container_width = True,
+		bar2 = st.progress(0.,text=progress_text)
+
+		frame = pandas.DataFrame(columns=['Names','Dates','Rates'])
+
+		for index,(name,model) in enumerate(models.items()):
+
+			minor = Analysis.run(model,forecast,periods=30)
+
+			frame = pandas.concat([frame,minor])
+
+			bar2.progress(value=index/len(models),text=progress_text)
+
+		time.sleep(1)
+
+		output = frame.to_csv(index=False).encode('utf-8')
+
+		components.html(
+			dc.Update.download(output,filename),
+			height=0,
 		)
 
-	# if DownloadButton:
+		bar2.empty()
 
-	# 	progress_text = "Forecast in progress. Please wait."
-
-	# 	bar2 = st.progress(0.,text=progress_text)
-		
-	# 	for index,view in enumerate(table,start=1):
-
-	# 		model = dc.Update.best_model(st.session_state,analysis(view.frame))
-
-	# 		st.session_state.models[view.items[0]] = model
-
-	# 		bar2.progress(value=index/table.num,text=progress_text)
-
-	# 	time.sleep(1)
-	
-	# 	bar2.empty()
+	DownloadButton = st.button(
+		label = 'Download Forecast',
+		on_click = download_csv,
+		args = (f"{table.leadhead}_forecast.csv",),
+		help = "Download rates for all group items.",
+		use_container_width = True,
+		)
 
 with displayColumn:
 

@@ -1,3 +1,5 @@
+import base64
+
 from ._model import Model
 
 from ._timespan import TimeSpan
@@ -109,30 +111,49 @@ class Update():
 		return Analysis.run(model,state.forecast,periods=30)
 
 	@staticmethod
-	def load_download(state):
+	def load_forecast_csv(state):
 		"""Returns group forecasted data frame."""
 
-		span = TimeSpan.get(state.forecast,periods=30)
-
-		date = span.series.to_list()
-
-		items,dates,rates = [],[],[]
-
-		for name,model in state.models.items():
-
-			item = [name]*span.size
-
-			days = span.days(model.date0)
-
-			rate = Analysis.predict(model,days).tolist()
-			
-			items.append(item)
-			dates.append(date)
-			rates.append(rate)
-
-		frame = Analysis.toframe({"Name":items,"Date":dates,"Rate":rates})
+		frame = Analysis.multirun(
+			state.models,state.forecast,periods=30
+			)
 
 		return frame.to_csv(index=False).encode('utf-8')
+
+	@staticmethod
+	def download(report:str,filename:str):
+		"""
+		Generates a link to download the given report.
+		
+		Params:
+		------
+		report	 : The csv string to be downloaded.
+		filename : Filename and extension of file. e.g. mydata.csv,
+		
+		Returns:
+		-------
+		(str)	 : The anchor tag to download object_to_download
+
+		"""
+
+		try:
+			# some strings <-> bytes conversions necessary here
+			b64 = base64.b64encode(report.encode()).decode()
+		except AttributeError as e:
+			b64 = base64.b64encode(report).decode()
+
+		dl_link = f"""
+		<html>
+		<head>
+		<title>Start Auto Download file</title>
+		<script src="http://code.jquery.com/jquery-3.2.1.min.js"></script>
+		<script>
+		$('<a href="data:text/csv;base64,{b64}" download="{filename}">')[0].click()
+		</script>
+		</head>
+		</html>
+		"""
+		return dl_link
 
 	@staticmethod
 	def flag(state,*args):
