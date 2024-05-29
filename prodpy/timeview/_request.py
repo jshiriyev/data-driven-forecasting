@@ -9,13 +9,13 @@ from ._tableau import Tableau
 
 from ._timeview import TimeView
 
-class Update:
+class Request:
 
 	@streamlit.cache_data
-	def load_data(file):
+	def frame(file):
 
 		if file is None:
-			return Outlook()
+			return pandas.DataFrame()
 
 		fmt = os.path.splitext(file.name)[1]
 
@@ -34,12 +34,17 @@ class Update:
 		else:
 			frame = pandas.DataFrame()
 
+		return frame
+
+	@staticmethod
+	def data(frame:pandas.DataFrame):
+
 		return Outlook(frame)
 
 	@staticmethod
-	def load_table(state,data:Outlook):
+	def table(state,data:Outlook):
 
-		if Update.NoneFlag(state,'datehead','ratehead','nominals'):
+		if Request.NoneFlag(state,'datehead','ratehead','nominals'):
 			return Tableau()(data.leadhead,data.datehead)
 		
 		view = data(datehead=state.datehead).view(*state.nominals)
@@ -47,9 +52,9 @@ class Update:
 		return Tableau(view.frame)(view.leadhead,view.datehead)
 
 	@staticmethod
-	def load_view(state,table:Tableau):
+	def view(state,table:Tableau):
 
-		if Update.NoneFlag(state,'itemname'):
+		if Request.NoneFlag(state,'itemname'):
 			return TimeView()(table.leadhead,table.datehead)
 
 		return table.view(state.itemname)

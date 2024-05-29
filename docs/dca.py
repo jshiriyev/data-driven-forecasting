@@ -5,15 +5,11 @@ import sys
 sys.path.append(r'C:\Users\3876yl\Documents\prodpy')
 # sys.path.append(r'C:\Users\user\Documents\GitHub\prodpy')
 
-import time
-
 import pandas
 
 import plotly.graph_objects as go
 
 import streamlit as st
-
-import streamlit.components.v1 as components
 
 from prodpy import timeview as tv
 
@@ -24,25 +20,18 @@ st.set_page_config(layout='wide',page_title='Decline Curve Analysis')
 st.session_state = tv.Session(st.session_state).set()
 st.session_state = dc.Session(st.session_state).set()
 
-if "models" not in st.session_state:
-	st.session_state["models"] = {}
-
 with st.sidebar:
 
-	st.header(
-		body = 'Input Data',
-		)
+	st.header(body='Input Data')
 
 	file = st.file_uploader(
 		label = 'Upload your input excel file',
 		type = ['csv','xlsx'],
 		)
 
-	data = tv.Update.load_data(file)
+	data = tv.Request.data(file)
 
-	st.header(
-		body = 'Feature Selection',
-		)
+	st.header(body='Feature Selection')
 
 	datehead = st.selectbox(
 		label = "Choose Date Column:",
@@ -67,11 +56,9 @@ with st.sidebar:
 		key = 'nominals',
 		)
 
-	table = tv.Update.load_table(st.session_state,data)
+	table = tv.Request.table(st.session_state,data)
 
-	st.header(
-		body = 'Item Selection:',
-		)
+	st.header(body='Item Selection:')
 
 	itemname = st.selectbox(
 		label = 'Select Item:',
@@ -80,11 +67,9 @@ with st.sidebar:
 		key = 'itemname'
 		)
 
-	view = tv.Update.load_view(st.session_state,table)
+	view = tv.Request.view(st.session_state,table)
 
-	st.header(
-		body = 'Timeseries View',
-		)
+	st.header(body='Timeseries View')
 
 	viewlist = st.multiselect(
 		label = 'Add to the Plot:',
@@ -98,7 +83,9 @@ with modelColumn:
 
 	st.header('Decline Curve Analysis')
 
-	analysis = dc.Update.load_analysis(st.session_state)
+	analysis = dc.Request.analysis(st.session_state)
+
+	st.subheader(body='Estimation Settings',divider='gray')
 
 	st.slider(
 		label = "Time Interval:",
@@ -109,7 +96,7 @@ with modelColumn:
 		args = (st.session_state,),
 		)
 
-	opacity = dc.Update.load_opacity(st.session_state,analysis(view.frame))
+	opacity = dc.Request.opacity(st.session_state,analysis(view.frame))
 
 	st.selectbox(
 		label = "Decline Mode",
@@ -129,42 +116,15 @@ with modelColumn:
 		args = (st.session_state,),
 		)
 
-	FitGroupButton = st.button(
+	optimize_group_button = st.button(
 		label = "Fit Group",
 		help = "Optimize all group items.",
 		use_container_width = True,
 		)
 
-	if FitGroupButton:
+	model = dc.Request.best_model(st.session_state,analysis(view.frame))
 
-		if table.empty:
-			st.warning("No data to optimize.")
-
-		else:
-
-			st.session_state.models = {}
-
-			optimization_text = "Optimization in progress. Please wait."
-
-			bar1 = st.progress(0.,text=optimization_text)
-			
-			for index,scene in enumerate(table,start=1):
-
-				model = dc.Update.load_best_model(
-					st.session_state,analysis(scene.frame)
-					)
-
-				st.session_state.models[scene.items[0]] = model
-
-				bar1.progress(value=index/table.num,text=optimization_text)
-
-			time.sleep(1)
-		
-			bar1.empty()
-
-			st.success(f"Models for {table.leadhead.replace("_"," ")} are calculated.")
-
-	dc.Update.model(st.session_state,analysis(view.frame),itemname)
+	dc.Update.model(st.session_state,model)
 
 	st.text_input(
 		label = 'Initial Rate',
@@ -180,51 +140,28 @@ with modelColumn:
 		args = (st.session_state,),
 		)
 
-	estimate_curve = dc.Update.load_estimate_curve(st.session_state)
+	estimate_curve = dc.Request.estimate_curve(st.session_state)
 
-	SaveModelEditButton = st.button(
+	save_edits_button = st.button(
 		label = "Save Edits",
 		help = "Save decline attribute edits for the item.",
 		use_container_width = True,
 		)
 
-	if SaveModelEditButton:
-
-		if itemname is None:
-			st.warning("No item is selected.")
-		else:
-			try:
-				st.session_state.models[itemname] = dc.Update.load_user_model(st.session_state)
-			except Exception as message:
-				st.warning(message)
-			else:
-				st.success(f"The model for {itemname} is updated.")
-
-	st.markdown("""---""")
+	st.subheader(body='Forecast Settings',divider='gray')
 
 	forecast_show = st.checkbox(
 		label = "Display Forecasted Rates",
 		)
 
-	if forecast_show:
-		xaxis_range = [
-			min(st.session_state.forecast[0],view.limit[0]),
-			max(st.session_state.forecast[1],view.limit[1])
-			]
-	else:
-		xaxis_range = list(view.limit)
-
 	nextyear = datetime.datetime.now().year+1
 
 	forecast = st.date_input(
-		"Forecast Interval",
+		label = "Forecast Interval",
 		value = (datetime.date(nextyear,1,1),datetime.date(nextyear,12,31)),
 		key = 'forecast',
 		format="MM.DD.YYYY",
 	)
-
-	if len(forecast)!=2:
-		st.warning("Input start and end of the forecast period.")
 
 	forecast_frequency = st.selectbox(
 		label = 'Forecast Frequency:',
@@ -232,51 +169,22 @@ with modelColumn:
 		key = 'frequency'
 		)
 
-	freq = getattr(pandas.offsets,forecast_frequency)._prefix
+	forecast_curve = dc.Request.forecast_curve(st.session_state)
 
-	forecast_curve = dc.Update.load_forecast_curve(st.session_state)
-
-	DownloadButton = st.button(
-		label = 'Download Forecast',
-		help = "Download predicted rates for all group items.",
+	forecast_group_button = st.button(
+		label = 'Run Group Forecast',
+		help = "Calculates predicted rates for all group items.",
 		use_container_width = True,
 		)
 
-	if DownloadButton:
-
-		if len(st.session_state.models)==0:
-			st.warning('No model to forecast.')
-		else:
-
-			forecast_text = "Forecast in progress. Please wait."
-
-			bar2 = st.progress(0.,text=forecast_text)
-
-			for index,(name,model) in enumerate(st.session_state.models.items(),start=1):
-
-				minor = analysis.run(model,forecast,freq=freq)
-
-				minor.insert(0,'Names',name)
-
-				if index==1:
-					frame = minor.copy()
-				else:
-					frame = pandas.concat([frame,minor])
-
-				frame = pandas.concat([frame,minor])
-
-				bar2.progress(value=index/len(st.session_state.models),text=forecast_text)
-
-			time.sleep(1)
-
-			output = frame.to_csv(index=False).encode('utf-8')
-
-			components.html(
-				dc.Update.load_download(output,f"{table.leadhead}_forecast.csv"),
-				height=0,
-			)
-
-			bar2.empty()
+	# download_button = st.download_button(
+	# 	label = "Download Forecast",
+	# 	data = st.session_state.output,
+	# 	help = "Download predicted rates for all group items.",
+	# 	file_name = f"{table.leadhead}_forecast.csv",
+	# 	disabled = disabled,
+	# 	use_container_width = True,
+	# 	)
 
 with displayColumn:
 
@@ -286,7 +194,7 @@ with displayColumn:
 		st.markdown("""
 			### Please upload your data to get started.
 
-			1. **Upload your production test file** using the sidebar.
+			1. **Upload your production test file** using the sidebar to the left.
 			2. **Select the necessary features** for analysis.
 			3. **Generate the forecast** in the analysis column to the right.
 
@@ -303,7 +211,7 @@ with displayColumn:
 
 		# st.video("https://www.youtube.com/watch?v=your_tutorial_video")
 
-	if not view.frame.empty:
+	else:
 
 		st.header(f'{itemname} Rates')
 

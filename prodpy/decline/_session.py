@@ -27,6 +27,7 @@ class Session():
 	def set(self):
 
 		return self.__call__(
+			models   = {},
 			estimate = self.estimate,
 			mode     = self.model.mode,
 			exponent = self.model.exponent,
