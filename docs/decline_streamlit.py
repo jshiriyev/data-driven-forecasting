@@ -2,8 +2,8 @@ import datetime
 
 import sys
 
-# sys.path.append(r'C:\Users\3876yl\Documents\prodpy')
-sys.path.append(r'C:\Users\user\Documents\GitHub\prodpy')
+sys.path.append(r'C:\Users\3876yl\Documents\prodpy')
+# sys.path.append(r'C:\Users\user\Documents\GitHub\prodpy')
 
 import time
 
@@ -279,6 +279,29 @@ with modelColumn:
 			bar2.empty()
 
 with displayColumn:
+
+	if view.frame.empty:
+
+		st.title("Welcome to the Decline Curve Analysis App.")
+		st.markdown("""
+			### Please upload your data to get started.
+
+			1. **Upload your production test file** using the sidebar.
+			2. **Select the necessary features** for analysis.
+			3. **Generate the forecast** in the analysis column to the right.
+
+			### Tips for Best Results:
+			- Select relevant features that significantly impact your analysis.
+
+			### Need Help?
+			- Contact me at shiriyevcavid@gmail.com.
+
+			""")
+
+			# - Check out the [sample dataset](sample_dataset.xlsx) to try the app.
+			# - Watch the tutorial video below.
+
+		# st.video("https://www.youtube.com/watch?v=your_tutorial_video")
 
 	if not view.frame.empty:
 
