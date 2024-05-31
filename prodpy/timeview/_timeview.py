@@ -10,10 +10,7 @@ class TimeView():
     _datehead = None
     _leadhead = None
 
-    def __init__(self,frame:pandas.DataFrame=None):
-
-        if frame is None:
-            frame = pandas.DataFrame()
+    def __init__(self,frame:pandas.DataFrame):
 
         self._frame = frame
 
@@ -31,6 +28,11 @@ class TimeView():
         self._datehead = datehead
 
         return self
+
+    def __iter__(self):
+
+        for item in self.items:
+            yield item,self.filter(item)
 
     def get(self,key,default='DataFrame'):
 
@@ -50,9 +52,6 @@ class TimeView():
     @property
     def leads(self):
         """Returns Series of leads in the given frame."""
-        if self.leadhead is None or self.empty:
-            return pandas.Series()
-
         return self.get(self.leadhead,'Series')
 
     @property
@@ -61,11 +60,12 @@ class TimeView():
         return self.leads.unique().tolist()
 
     @property
+    def nunique(self):
+        return len(self.items)
+
+    @property
     def dates(self):
         """Returns the datetime column selected by datehead."""
-        if self.datehead is None or self.empty:
-            return pandas.Series()
-
         return self.get(self.datehead,'Series')
     
     @property
@@ -88,6 +88,10 @@ class TimeView():
     def limit(self):
         """Returns the datetime.date limits observed in the date column."""
         return (self.mindate,self.maxdate)
+
+    def filter(self,item):
+        """Filters and returns frame based on the item in the heading column."""
+        return self.get(self.leads==item).reset_index(drop=True)
 
 if __name__ == "__main__":
 

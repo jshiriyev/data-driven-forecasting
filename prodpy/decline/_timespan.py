@@ -7,7 +7,7 @@ class TimeSpan:
 
 	def __init__(self,series:pandas.Series):
 
-		self._series = series
+		self._series = series # must be sorted
 
 	@property
 	def series(self):

@@ -30,79 +30,66 @@ class Analysis():
 	@property
 	def keys(self):
 		return list((self._datehead,self._ratehead))
-
-	def __call__(self,frame):
-
-		self.frame = frame
-
-		return self
-
-	@property
-	def dates(self):
-		return self.frame[self._datehead]
-
-	@property
-	def span(self):
-		return TimeSpan(self.dates)
-
-	@property
-	def rates(self):
-		return self.frame[self._ratehead]
 	
-	def fit(self,*args,date0:datetime.date=None,**kwargs):
-		"""Returns optimized model that fits the rates."""
+	def fit(self,frame:pandas.DataFrame,*args,**kwargs):
+		"""Returns optimized model that fits the frame."""
+		return self.ufit(frame,*self.keys,*args,**kwargs)
 
-		bools = self.span.iswithin(*args)
-		
-		span = self.span[bools]
-
-		rates = self.rates[bools].to_numpy()
-
-		date0 = span.mindate if date0 is None else date0
-
-		return Optimize(**kwargs).fit(span.days(date0),rates,date0)
-
-	@staticmethod
-	def run(model:Model,*args,**kwargs):
+	def run(self,model:Model,*args,**kwargs):
 		"""Forecasts the rates based on the model, and for the pandas.date_range parameters."""
 
-		span = TimeSpan.get(*args,**kwargs)
-		
-		days = span.days(model.date0)
+		dates = TimeSpan.get(*args,**kwargs)
 
-		rates = Forward(model).run(days)
-		
+		return self.urun(dates.series,model)
+
+	def mfit(self,view,*args,**kwargs):
+		"""Returns optimized model dictionary that fits the frames."""
+		return {item:self.ufit(frame,*self.keys,*args,**kwargs) for item,frame in view}
+
+	def mrun(self,models:dict,*args,**kwargs):
+
+		dates = TimeSpan.get(*args,**kwargs)
+
+		for index,(name,model) in enumerate(models.items(),start=1):
+
+			minor = self.urun(dates.series,model)
+
+			minor.insert(0,'Names',name)
+
+			frame = minor.copy() if index==1 else pandas.concat([frame,minor])
+
+		return frame.reset_index(drop=True)
+
+	@staticmethod
+	def ufit(frame:pandas.DataFrame,datehead:str,ratehead:str,*args,**kwargs):
+
+		dates = TimeSpan(frame[datehead])
+		rates = frame[ratehead].to_numpy()
+
+		bools = dates.iswithin(*args)
+
+		dates = dates[bools]
+		rates = rates[bools]
+
+		date0 = dates.mindate if kwargs.get('date0') is None else kwargs.pop('date0')
+
+		_days = dates.days(date0)
+
+		return Optimize(**kwargs).fit(_days,rates,date0)
+
+	@staticmethod
+	def urun(dates:pandas.Series,model:Model):
+
+		_days = TimeSpan(dates).days(model.date0)
+
+		rates = pandas.Series(Forward(model).run(_days))
+
 		dictionary = {
-			"Dates": span.series,
+			"Dates": dates,
 			"Rates": rates,
 			}
 
 		return pandas.DataFrame(dictionary)
-
-	@staticmethod
-	def multirun(models:dict,*args,**kwargs):
-
-		span = TimeSpan.get(*args,**kwargs)
-
-		frame = pandas.DataFrame(columns=['Names','Dates','Rates'])
-
-		for name,model in models.items():
-
-			days = span.days(model.date0)
-
-			rates = Forward(model).run(days)
-
-			dictionary = {
-				"Names" : name,
-				"Dates" : span.series,
-				"Rates" : rates,
-				}
-
-			minor = pandas.DataFrame(dictionary)
-
-			frame = pandas.concat([frame,minor])
-
-		return frame.reset_index(drop=True)
 
 if __name__ == "__main__":
 
