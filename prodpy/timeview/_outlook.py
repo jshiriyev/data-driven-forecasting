@@ -5,118 +5,77 @@ class Outlook(TimeView):
 	def __init__(self,*args,**kwargs):
 		super().__init__(*args,**kwargs)
 
-	def heads(self,*args,include=None,exclude=None):
-		"""Returns the list of heads including the dtypes in include, excluding the
-		dtypes in exclude and safely dropping heads in args."""
+	def heads(self,*args,**kwargs):
+		return list(set(self.dheads(*args)+self.dtypes(**kwargs)))
 
-		dtypes = self._frame.select_dtypes(
-			include = include,
-			exclude = exclude,
-			)
+	def dheads(self,*args):
+		"""Returns the list of arguments ensuring that they are in the DataFrame."""
+		return [head for head in args if head in self._frame.columns]
 
-		heads = dtypes.columns
+	def dtypes(self,include=None,exclude=None):
+		"""Returns the list of heads including the dtypes in include,
+		excluding the dtypes in exclude"""
+		return [] if include is None and exclude is None else self._frame.select_dtypes(
+			include=include,exclude=exclude).columns.tolist()
 
-		for head in args:
-			try:
-				heads = heads.drop(head)
-			except KeyError:
-				pass
+	def pull(self,*args,**kwargs):
+		"""Returns a frame given in the args and included and excluded dtypes."""
+		return self._frame[self.heads(*args,**kwargs)]
 
-		return heads.tolist()
+	def drop(self,*args,**kwargs):
+		"""Returns a frame after dropping args and included and excluded dypes."""
+		return self._frame.drop(self.heads(*args,**kwargs),axis=1)
 
 	@property
 	def datetimes(self):
 		"""Returns the list of column names with datetime format."""
-		return self.heads(include=('datetime64',))
+		return self.dtypes(include=('datetime64',))
 
 	@property
 	def numbers(self):
 		"""Returns the list of column names with number format."""
-		return self.heads(include=('number',))
-	
+		return self.dtypes(include=('number',))
+
 	@property
 	def nominals(self):
 		"""Returns the list of column names that are categorical by nature."""
-		return self.heads(exclude=('number','datetime64'))
-
-	def minors(self,*args):
-		"""Return the list of column names with number format, excluding the columns of args."""
-		return self.heads(*args,include=('number',))
+		return self.dtypes(exclude=('number','datetime64'))
 
 	def leadhead(self,*args):
 		"""by ensure that the provided heads are in the DataFrame"""
-		return " ".join([head for head in args if head in self.frame.columns])
+		return " ".join(self.dheads(*args))
 
 	def leads(self,*args):
 		"""Returns series of items for the given groupkeys."""
-		return self.get(list(args)).astype("str").agg(" ".join,axis=1)
+
+		heads = self.heads(*args)
+
+		if len(heads)==0:
+			return pandas.Series(['Amount']*self._frame.shape[0],name='Aggregate')
+
+		series = self.pull(*args).astype("str").agg(" ".join,axis=1)
+
+		series.name = self.leadhead(*args)
+
+		return series
 
 	def items(self,*args):
 		"""Returns the list of unique leads for the given column names."""
 		return self.leads(*args).unique().tolist()
 
-	def _toview(self,*args):
-		"""Returns a new frame with the given groupkey (merged args) in the first column,
-		date in the second column, and number columns in the rest."""
-
-		frame = self.get([self.datehead,*self.numbers])
-
-		if frame.empty:
-			return TimeView(frame)
-
-		if len(args)==0:
-
-			group = frame.groupby([self.datehead])
-			frame = group.sum(self.numbers)
-			frame = frame.reset_index()
-
-			return TimeView(frame)("Cum.",self.datehead)
+	def toview(self,*args):
+		"""Returns TimeView instance where the leadhead and datehead are defined."""
 
 		leads = self.leads(*args)
 
-		if leads.empty:
-			return TimeView()
+		frame = self.pull(self._datehead,include=('number',))
+		frame.insert(0,leads.name,leads.values)
 
-		leadhead = " ".join(args)
+		group = frame.groupby([leads.name,self._datehead])
 
-		frame.loc[:,(leadhead,)] = leads
+		frame = group.sum(frame.columns[2:].tolist())
 
-		group = frame.groupby([leadhead,self.datehead])
-		frame = group.sum(self.numbers)
-		frame = frame.reset_index()
-
-		return TimeView(frame)(leadhead,self.datehead)
-
-	def toview(self,*args):
-
-		heads = [head for head in args if head in self.frame.columns]
-
-		leadhead = " ".join(heads)
-
-		leadhead = list(leadhead if len(leadhead)==0 else [leadhead])
-		datehead = list([self.datehead])
-
-		leads =  self.frame[heads].astype("str").agg(" ".join,axis=1)
-
-		# Select numeric columns
-		numheads = frame.select_dtypes(include=['number']).columns.tolist()
-
-		if len(leadhead)>0:
-			frame.insert(0,leadhead[0],leads)
-
-		sidehead = leadhead+datehead
-
-		keephead = sidehead+numheads
-
-		# Select combined heads and numeric columns, ensuring no duplicates
-		frame = frame[keephead]
-
-		# Group the frame based on heads
-		group = frame.groupby(sidehead)
-
-		frame = group.sum(numheads)
-
-		return TimeView(frame.reset_index())(leadhead[0],datehead[0])
+		return TimeView(frame.reset_index())(leads.name,self._datehead)
 
 if __name__ == "__main__":
 
