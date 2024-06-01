@@ -6,6 +6,7 @@ class Outlook(TimeView):
 		super().__init__(*args,**kwargs)
 
 	def heads(self,*args,**kwargs):
+		"""Returns the heads that are in the frame and uses select_dtype arguments."""
 		return list(set(self.dheads(*args)+self.dtypes(**kwargs)))
 
 	def dheads(self,*args):
@@ -14,7 +15,7 @@ class Outlook(TimeView):
 
 	def dtypes(self,include=None,exclude=None):
 		"""Returns the list of heads including the dtypes in include,
-		excluding the dtypes in exclude"""
+		excluding the dtypes in exclude."""
 		return [] if include is None and exclude is None else self._frame.select_dtypes(
 			include=include,exclude=exclude).columns.tolist()
 
@@ -23,7 +24,7 @@ class Outlook(TimeView):
 		return self._frame[self.heads(*args,**kwargs)]
 
 	def drop(self,*args,**kwargs):
-		"""Returns a frame after dropping args and included and excluded dypes."""
+		"""Returns a frame after dropping args, including and excluding dtypes."""
 		return self._frame.drop(self.heads(*args,**kwargs),axis=1)
 
 	@property
@@ -41,23 +42,16 @@ class Outlook(TimeView):
 		"""Returns the list of column names that are categorical by nature."""
 		return self.dtypes(exclude=('number','datetime64'))
 
-	def leadhead(self,*args):
-		"""by ensure that the provided heads are in the DataFrame"""
-		return " ".join(self.dheads(*args))
-
 	def leads(self,*args):
-		"""Returns series of items for the given groupkeys."""
+		"""Returns the leadhead and leads."""
+		dheads = self.dheads(*args)
 
-		heads = self.heads(*args)
+		column = 'Aggregate' if len(dheads) == 0 else " ".join(dheads)
+		
+		series = self.frame[dheads].astype("str")
+		series = series.agg(" ".join,axis=1)
 
-		if len(heads)==0:
-			return pandas.Series(['Amount']*self._frame.shape[0],name='Aggregate')
-
-		series = self.pull(*args).astype("str").agg(" ".join,axis=1)
-
-		series.name = self.leadhead(*args)
-
-		return series
+		return column,series
 
 	def items(self,*args):
 		"""Returns the list of unique leads for the given column names."""
@@ -66,16 +60,18 @@ class Outlook(TimeView):
 	def toview(self,*args):
 		"""Returns TimeView instance where the leadhead and datehead are defined."""
 
-		leads = self.leads(*args)
+		column,series = self.leads(*args)
 
 		frame = self.pull(self._datehead,include=('number',))
-		frame.insert(0,leads.name,leads.values)
+		frame.insert(0,column,series)
 
-		group = frame.groupby([leads.name,self._datehead])
+		group = frame.groupby([column,self._datehead])
 
 		frame = group.sum(frame.columns[2:].tolist())
 
-		return TimeView(frame.reset_index())(leads.name,self._datehead)
+		timeview = TimeView(frame.reset_index())
+
+		return timeview(column,self._datehead)
 
 if __name__ == "__main__":
 
