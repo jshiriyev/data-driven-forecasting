@@ -3,6 +3,7 @@ from ._timeview import TimeView
 class Outlook(TimeView):
 
 	def __init__(self,*args,**kwargs):
+		"""Initializes the parent class TimeView."""
 		super().__init__(*args,**kwargs)
 
 	def heads(self,*args,**kwargs):
@@ -14,8 +15,7 @@ class Outlook(TimeView):
 		return [head for head in args if head in self._frame.columns]
 
 	def dtypes(self,include=None,exclude=None):
-		"""Returns the list of heads including the dtypes in include,
-		excluding the dtypes in exclude."""
+		"""Returns the list of heads by including & excluding the dtypes."""
 		return [] if include is None and exclude is None else self._frame.select_dtypes(
 			include=include,exclude=exclude).columns.tolist()
 
@@ -42,16 +42,23 @@ class Outlook(TimeView):
 		"""Returns the list of column names that are categorical by nature."""
 		return self.dtypes(exclude=('number','datetime64'))
 
+	def leadhead(self,*args):
+		"""Returns the leadhead based on arguments."""
+		dataheads = self.dheads(*args)
+
+		if len(dataheads)==0:
+			return super().leadhead
+
+		return " ".join(dataheads)
+
 	def leads(self,*args):
-		"""Returns the leadhead and leads."""
-		dheads = self.dheads(*args)
+		"""Returns the leads based on arguments."""
+		dataheads = self.dheads(*args)
 
-		column = 'Aggregate' if len(dheads) == 0 else " ".join(dheads)
-		
-		series = self.frame[dheads].astype("str")
-		series = series.agg(" ".join,axis=1)
+		if len(dataheads)==0:
+			return super().leads
 
-		return column,series
+		return self._frame[dataheads].astype("str").agg(" ".join,axis=1)
 
 	def items(self,*args):
 		"""Returns the list of unique leads for the given column names."""
@@ -60,18 +67,23 @@ class Outlook(TimeView):
 	def toview(self,*args):
 		"""Returns TimeView instance where the leadhead and datehead are defined."""
 
-		column,series = self.leads(*args)
+		if self._datehead is None:
+			raise KeyError('Datehead has not been defined!')
 
-		frame = self.pull(self._datehead,include=('number',))
-		frame.insert(0,column,series)
+		datehead = self._datehead
 
-		group = frame.groupby([column,self._datehead])
+		frame = self.pull(datehead,include=('number',))
 
-		frame = group.sum(frame.columns[2:].tolist())
+		leadhead,leads = self.leadhead(*args),self.leads(*args)
 
-		timeview = TimeView(frame.reset_index())
+		if leadhead is None and leads.empty:
+			leadhead,leads = "Aggregate",""
 
-		return timeview(column,self._datehead)
+		frame.insert(0,leadhead,leads)
+
+		frame = frame.groupby([leadhead,datehead]).sum(self.numbers).reset_index()
+
+		return TimeView(frame,leadhead=leadhead,datehead=datehead)
 
 if __name__ == "__main__":
 

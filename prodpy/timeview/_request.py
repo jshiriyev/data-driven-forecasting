@@ -5,7 +5,6 @@ import pandas
 import streamlit
 
 from ._outlook import Outlook
-from ._tableau import Tableau
 
 from ._timeview import TimeView
 
@@ -52,7 +51,7 @@ class Request:
 		return Tableau(view.frame)(view.leadhead,view.datehead)
 
 	@staticmethod
-	def view(state,table:Tableau):
+	def view(state,table):
 
 		if Request.NoneFlag(state,'itemname'):
 			return TimeView()(table.leadhead,table.datehead)

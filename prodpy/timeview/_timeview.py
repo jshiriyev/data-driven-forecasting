@@ -10,9 +10,11 @@ class TimeView():
     _datehead = None
     _leadhead = None
 
-    def __init__(self,frame:pandas.DataFrame):
+    def __init__(self,frame:pandas.DataFrame,**kwargs):
 
         self._frame = frame
+
+        self(**kwargs)
 
     @property
     def frame(self):
@@ -34,13 +36,6 @@ class TimeView():
         for item in self.items:
             yield item,self.filter(item)
 
-    def get(self,key,default='DataFrame'):
-
-        try:
-            return self._frame[key]
-        except KeyError:
-            return getattr(pandas,default)()
-
     @property
     def leadhead(self):
         return self._leadhead
@@ -52,7 +47,7 @@ class TimeView():
     @property
     def leads(self):
         """Returns Series of leads in the given frame."""
-        return self.get(self.leadhead,'Series')
+        return pandas.Series() if self._leadhead is None else self._frame[self._leadhead]
 
     @property
     def items(self):
@@ -66,7 +61,7 @@ class TimeView():
     @property
     def dates(self):
         """Returns the datetime column selected by datehead."""
-        return self.get(self.datehead,'Series')
+        return pandas.Series() if self._datehead is None else self._frame[self._datehead]
     
     @property
     def mindate(self):
@@ -91,7 +86,7 @@ class TimeView():
 
     def filter(self,item):
         """Filters and returns frame based on the item in the heading column."""
-        return self.get(self.leads==item).reset_index(drop=True)
+        return self._frame if self.leads.empty else self._frame[self.leads==item].reset_index(drop=True)
 
 if __name__ == "__main__":
 
