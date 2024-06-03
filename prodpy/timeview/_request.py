@@ -2,7 +2,7 @@ import os
 
 import pandas
 
-import streamlit
+import streamlit as st
 
 from ._outlook import Outlook
 
@@ -10,53 +10,42 @@ from ._timeview import TimeView
 
 class Request:
 
-	@streamlit.cache_data
-	def frame(file):
+	@staticmethod
+	def extension(file):
 
 		if file is None:
-			return pandas.DataFrame()
+			return
 
-		fmt = os.path.splitext(file.name)[1]
+		return os.path.splitext(file.name)[1]
 
-		if fmt == '.xlsx':
-			frame = pandas.read_excel(file,sheet_name=0)
-		elif fmt == '.csv':
-			frame = pandas.read_csv(file)
-		elif fmt == '.json':
-			frame = pandas.read_json(file)
-		elif fmt == '.txt':
-			frame = pandas.read_fwf(file,widths=col_widths,header=None)
-		elif fmt == '.dta':
-			frame = pandas.read_stata(file)
-		elif fmt == '.orc':
-			frame = pandas.read_orc(file)
-		else:
-			frame = pandas.DataFrame()
+	@st.cache_data
+	def frame(file,reader='read_csv',**kwargs):
 
-		return frame
+		if file is None:
+			return
+
+		return getattr(pandas,reader)(file,**kwargs)
 
 	@staticmethod
 	def data(frame:pandas.DataFrame):
+
+		if frame is None:
+			frame = pandas.DataFrame()
 
 		return Outlook(frame)
 
 	@staticmethod
 	def table(state,data:Outlook):
 
-		if Request.NoneFlag(state,'datehead','ratehead','nominals'):
-			return Tableau()(data.leadhead,data.datehead)
-		
-		view = data(datehead=state.datehead).view(*state.nominals)
+		if state.datehead is None:
+			return TimeView(pandas.DataFrame())
 
-		return Tableau(view.frame)(view.leadhead,view.datehead)
+		return data(datehead=state.datehead).toview(*state.nominals)
 
 	@staticmethod
-	def view(state,table):
+	def view(state,view):
 
-		if Request.NoneFlag(state,'itemname'):
-			return TimeView()(table.leadhead,table.datehead)
-
-		return table.view(state.itemname)
+		return view.filter(state.itemname)
 
 	@staticmethod
 	def NoneFlag(state,*args):

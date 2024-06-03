@@ -84,9 +84,9 @@ class TimeView():
         """Returns the datetime.date limits observed in the date column."""
         return (self.mindate,self.maxdate)
 
-    def filter(self,item):
-        """Filters and returns frame based on the item in the heading column."""
-        return self._frame if self.leads.empty else self._frame[self.leads==item].reset_index(drop=True)
+    def filter(self,*args):
+        """Filters and returns frame based on the item in the lead column."""
+        return self._frame if self.leads.empty else self._frame[self.leads.isin(args)].reset_index(drop=True)
 
 if __name__ == "__main__":
 

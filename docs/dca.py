@@ -29,53 +29,97 @@ with st.sidebar:
 		type = ['csv','xlsx'],
 		)
 
-	data = tv.Request.data(file)
+	extension = tv.Request.extension(file)
 
-	st.header(body='Feature Selection')
+	kwargs = {}
 
-	datehead = st.selectbox(
-		label = "Choose Date Column:",
-		options = data.datetimes,
-		index = None,
-		key = 'datehead',
-		)
+	if extension == '.xlsx':
 
-	if datehead is not None:
-		data = data(datehead=datehead)
+		excelfile = pandas.ExcelFile(file)
 
-	ratehead = st.selectbox(
-		label = 'Choose Rate Column:',
-		options = data.numbers,
-		index = None,
-		key = 'ratehead',
-		)
+		sheet_name = st.selectbox(
+			label = "Choose Sheet Name:",
+			options = excelfile.sheet_names,
+			key = 'sheetname',
+			index = None,
+			)
 
-	nominals = st.multiselect(
-		label = "Choose Groupby Columns:",
-		options = data.nominals,
-		key = 'nominals',
-		)
+		kwargs['sheet_name'] = sheet_name
+		kwargs['reader'] = 'read_excel'
 
-	table = tv.Request.table(st.session_state,data)
+	elif extension == '.csv':
 
-	st.header(body='Item Selection:')
+		kwargs['reader'] = 'read_csv'
 
-	itemname = st.selectbox(
-		label = 'Select Item:',
-		options = table.items,
-		index = None,
-		key = 'itemname'
-		)
+	elif extension is not None:
 
-	view = tv.Request.view(st.session_state,table)
+		st.warning(f"{extenion} cannot be read at the moment!")
 
-	st.header(body='Timeseries View')
 
-	viewlist = st.multiselect(
-		label = 'Add to the Plot:',
-		options = data.minors(st.session_state.ratehead),
-		key = 'viewlist',
-		)
+	if extension == '.xlsx' and kwargs['sheet_name'] is not None:
+
+		frame = tv.Request.frame(file,**kwargs)
+
+	elif extension == '.csv':
+
+		frame = tv.Request.frame(file,**kwargs)
+
+	else:
+
+		frame = None
+
+	st.header(body='Data Preparation')
+
+	with st.expander("Feature Selection",expanded=True):
+
+		datehead = st.selectbox(
+			label = "Choose Date Column:",
+			options = [],#data.datetimes,
+			index = None,
+			key = 'datehead',
+			)
+
+		# if datehead is not None:
+		# 	data = data(datehead=datehead)
+
+		ratehead = st.selectbox(
+			label = 'Choose Rate Column:',
+			options = [],#data.numbers,
+			index = None,
+			key = 'ratehead',
+			)
+
+	with st.expander("Grouping and Filtering",expanded=False):
+
+		leadlist = st.multiselect(
+			label = "Choose Group-by Item:",
+			options = [],#data.nominals,
+			key = 'leadlist',
+			)
+
+		# table = tv.Request.table(st.session_state,data)
+
+		# st.header(body='Item Selection:')
+
+		itemlist = st.multiselect(
+			label = 'Choose Filter Item:',
+			options = [],#table.items,
+			key = 'itemlist'
+			)
+
+	# view = tv.Request.view(st.session_state,table)
+
+	view = tv.TimeView(pandas.DataFrame())
+
+	st.header(body='Display Options')
+
+	with st.expander("Timeseries Display",expanded=True):
+
+		viewlist = st.multiselect(
+			label = 'Add to the Plot:',
+			options = [],#data.minors(st.session_state.ratehead),
+			key = 'viewlist',
+			)
 
 displayColumn, modelColumn = st.columns([0.7,0.3],gap='large')
 
@@ -83,114 +127,119 @@ with modelColumn:
 
 	st.header('Decline Curve Analysis')
 
-	analysis = dc.Request.analysis(st.session_state)
+	# analysis = dc.Request.analysis(st.session_state)
 
-	st.subheader(body='Estimation Settings',divider='gray')
+	# st.subheader(body='Estimation Settings',divider='gray')
 
-	st.slider(
-		label = "Time Interval:",
-		min_value = view.limit[0],
-		max_value = view.limit[1],
-		key = 'estimate',
-		on_change = dc.Update.slider,
-		args = (st.session_state,),
+	with st.expander("Estimation Settings",expanded=True):
+
+		st.slider(
+			label = "Time Interval:",
+			min_value = view.limit[0],
+			max_value = view.limit[1],
+			key = 'estimate',
+			on_change = dc.Update.slider,
+			args = (st.session_state,),
+			)
+
+		# opacity = dc.Request.opacity(st.session_state,analysis(view.frame))
+
+		st.selectbox(
+			label = "Decline Mode",
+			options = dc.Model.options,
+			key = 'mode',
+			on_change = dc.Update.mode,
+			args = (st.session_state,),
+			)
+
+		st.number_input(
+			label = 'Decline Exponent %',
+			min_value = 0,
+			max_value = 100,
+			key = 'exponent',
+			step = 5,
+			on_change = dc.Update.exponent,
+			args = (st.session_state,),
+			)
+
+		optimize_group_button = st.button(
+			label = "Fit Group",
+			help = "Optimize all group items.",
+			use_container_width = True,
+			)
+
+		# model = dc.Request.best_model(st.session_state,analysis(view.frame))
+		model = dc.Model()
+
+		# dc.Update.model(st.session_state,model)
+
+		st.text_input(
+			label = 'Initial Rate',
+			key = 'rate0',
+			on_change = dc.Update.attributes,
+			args = (st.session_state,),
+			)
+
+		st.text_input(
+			label = 'Initial Decline Rate',
+			key = 'decline0',
+			on_change = dc.Update.attributes,
+			args = (st.session_state,),
+			)
+
+		# estimate_curve = dc.Request.estimate_curve(st.session_state)
+
+		save_edits_button = st.button(
+			label = "Save Edits",
+			help = "Save decline attribute edits for the item.",
+			use_container_width = True,
+			)
+
+	# st.subheader(body='Forecast Settings',divider='gray')
+
+	with st.expander("Forecast Settings"):
+
+		forecast_show = st.checkbox(
+			label = "Display Forecasted Rates",
+			)
+
+		nextyear = datetime.datetime.now().year+1
+
+		forecast = st.date_input(
+			label = "Forecast Interval",
+			value = (datetime.date(nextyear,1,1),datetime.date(nextyear,12,31)),
+			key = 'forecast',
+			format="MM.DD.YYYY",
 		)
 
-	opacity = dc.Request.opacity(st.session_state,analysis(view.frame))
+		forecast_frequency = st.selectbox(
+			label = 'Forecast Frequency:',
+			options = pandas.offsets.__all__,
+			key = 'frequency'
+			)
 
-	st.selectbox(
-		label = "Decline Mode",
-		options = dc.Model.options,
-		key = 'mode',
-		on_change = dc.Update.mode,
-		args = (st.session_state,),
-		)
+		# forecast_curve = dc.Request.forecast_curve(st.session_state)
 
-	st.number_input(
-		label = 'Decline Exponent %',
-		min_value = 0,
-		max_value = 100,
-		key = 'exponent',
-		step = 5,
-		on_change = dc.Update.exponent,
-		args = (st.session_state,),
-		)
+		forecast_group_button = st.button(
+			label = 'Run Group Forecast',
+			help = "Calculates predicted rates for all group items.",
+			use_container_width = True,
+			)
 
-	optimize_group_button = st.button(
-		label = "Fit Group",
-		help = "Optimize all group items.",
-		use_container_width = True,
-		)
-
-	model = dc.Request.best_model(st.session_state,analysis(view.frame))
-
-	dc.Update.model(st.session_state,model)
-
-	st.text_input(
-		label = 'Initial Rate',
-		key = 'rate0',
-		on_change = dc.Update.attributes,
-		args = (st.session_state,),
-		)
-
-	st.text_input(
-		label = 'Initial Decline Rate',
-		key = 'decline0',
-		on_change = dc.Update.attributes,
-		args = (st.session_state,),
-		)
-
-	estimate_curve = dc.Request.estimate_curve(st.session_state)
-
-	save_edits_button = st.button(
-		label = "Save Edits",
-		help = "Save decline attribute edits for the item.",
-		use_container_width = True,
-		)
-
-	st.subheader(body='Forecast Settings',divider='gray')
-
-	forecast_show = st.checkbox(
-		label = "Display Forecasted Rates",
-		)
-
-	nextyear = datetime.datetime.now().year+1
-
-	forecast = st.date_input(
-		label = "Forecast Interval",
-		value = (datetime.date(nextyear,1,1),datetime.date(nextyear,12,31)),
-		key = 'forecast',
-		format="MM.DD.YYYY",
-	)
-
-	forecast_frequency = st.selectbox(
-		label = 'Forecast Frequency:',
-		options = pandas.offsets.__all__,
-		key = 'frequency'
-		)
-
-	forecast_curve = dc.Request.forecast_curve(st.session_state)
-
-	forecast_group_button = st.button(
-		label = 'Run Group Forecast',
-		help = "Calculates predicted rates for all group items.",
-		use_container_width = True,
-		)
-
-	# download_button = st.download_button(
-	# 	label = "Download Forecast",
-	# 	data = st.session_state.output,
-	# 	help = "Download predicted rates for all group items.",
-	# 	file_name = f"{table.leadhead}_forecast.csv",
-	# 	disabled = disabled,
-	# 	use_container_width = True,
-	# 	)
+		download_button = st.download_button(
+			label = "Download Forecast",
+			data = pandas.DataFrame().to_csv().encode("utf-8"),#st.session_state.output,
+			help = "Download predicted rates for all group items.",
+			# file_name = f"{table.leadhead}_forecast.csv",
+			disabled = True, #disabled
+			use_container_width = True,
+			)
 
 with displayColumn:
 
 	if view.frame.empty:
 
-		st.title("Welcome to the Decline Curve Analysis App.")
+		st.title("Welcome to the Production Data Analysis App.")
 		st.markdown("""
 			### Please upload your data to get started.
 
@@ -221,7 +270,7 @@ with displayColumn:
 			x = view.frame[datehead],
 			y = view.frame[ratehead],
 			mode = 'markers',
-			marker = dict(opacity=opacity),
+			# marker = dict(opacity=opacity),
 			)
 
 		figMajor.add_trace(observed_plot)
@@ -264,7 +313,7 @@ with displayColumn:
 				x = view.frame[datehead],
 				y = view.frame[ratename],
 				mode = 'markers',
-				marker = dict(opacity=opacity),
+				# marker = dict(opacity=opacity),
 				)
 
 			figMinor.add_trace(data_vis)
