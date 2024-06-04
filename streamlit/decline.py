@@ -17,56 +17,21 @@ from prodpy import decline as dc
 
 st.set_page_config(layout='wide',page_title='Decline Curve Analysis')
 
-st.session_state = tv.Session(st.session_state).set()
+# st.session_state = tv.Session(st.session_state).set()
 st.session_state = dc.Session(st.session_state).set()
 
 with st.sidebar:
 
-	st.header(body='Input Data')
+	st.header(body='Data Input')
 
-	file = st.file_uploader(
-		label = 'Upload your input excel file',
-		type = ['csv','xlsx'],
-		)
+	with st.expander("Upload File",expanded=True):
 
-	extension = tv.Request.extension(file)
-
-	kwargs = {}
-
-	if extension == '.xlsx':
-
-		excelfile = pandas.ExcelFile(file)
-
-		sheet_name = st.selectbox(
-			label = "Choose Sheet Name:",
-			options = excelfile.sheet_names,
-			key = 'sheetname',
-			index = None,
+		file = st.file_uploader(
+			label = "Input csv or excel file",
+			type = ['csv','xlsx'],
 			)
-
-		kwargs['sheet_name'] = sheet_name
-		kwargs['reader'] = 'read_excel'
-
-	elif extension == '.csv':
-
-		kwargs['reader'] = 'read_csv'
-
-	elif extension is not None:
-
-		st.warning(f"{extenion} cannot be read at the moment!")
-
-
-	if extension == '.xlsx' and kwargs['sheet_name'] is not None:
-
-		frame = tv.Request.frame(file,**kwargs)
-
-	elif extension == '.csv':
-
-		frame = tv.Request.frame(file,**kwargs)
-
-	else:
-
-		frame = None
+	
+		data = tv.Request.data(file)
 
 	st.header(body='Data Preparation')
 
@@ -74,17 +39,16 @@ with st.sidebar:
 
 		datehead = st.selectbox(
 			label = "Choose Date Column:",
-			options = [],#data.datetimes,
+			options = data.datetimes,
 			index = None,
 			key = 'datehead',
 			)
 
-		# if datehead is not None:
-		# 	data = data(datehead=datehead)
-
+		data = data(datehead=datehead)
+		
 		ratehead = st.selectbox(
 			label = 'Choose Rate Column:',
-			options = [],#data.numbers,
+			options = data.numbers,
 			index = None,
 			key = 'ratehead',
 			)
@@ -93,23 +57,17 @@ with st.sidebar:
 
 		leadlist = st.multiselect(
 			label = "Choose Group-by Item:",
-			options = [],#data.nominals,
+			options = data.nominals,
 			key = 'leadlist',
 			)
 
-		# table = tv.Request.table(st.session_state,data)
-
-		# st.header(body='Item Selection:')
-
 		itemlist = st.multiselect(
 			label = 'Choose Filter Item:',
-			options = [],#table.items,
+			options = data.items(*leadlist),
 			key = 'itemlist'
 			)
 
-	# view = tv.Request.view(st.session_state,table)
-
-	view = tv.TimeView(pandas.DataFrame())
+		view = tv.Request.view(data,*leadlist)
 
 	st.header(body='Display Options')
 
@@ -117,7 +75,7 @@ with st.sidebar:
 
 		viewlist = st.multiselect(
 			label = 'Add to the Plot:',
-			options = [],#data.minors(st.session_state.ratehead),
+			options = data.heads(st.session_state.ratehead),
 			key = 'viewlist',
 			)
 
