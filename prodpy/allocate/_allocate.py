@@ -2,7 +2,7 @@ import numpy
 
 import lasio
 
-class allocate():
+class Allocate():
 
 	def __init__(self,lasfile=None):
 

@@ -2,9 +2,26 @@ from ._timeview import TimeView
 
 class Outlook(TimeView):
 
-	def __init__(self,*args,**kwargs):
+	def __init__(self,*args,leadhead:str=None,datehead:str=None,**kwargs):
 		"""Initializes the parent class TimeView."""
 		super().__init__(*args,**kwargs)
+
+		self(leadhead=leadhead,datehead=datehead)
+
+	def __call__(self,*,leadhead:str=None,datehead:str=None):
+
+		self._leadhead = leadhead
+		self._datehead = datehead
+
+		return self
+
+	@property
+	def leadhead(self):
+		return self._leadhead
+
+	@property
+	def datehead(self):
+		return self._datehead
 
 	def heads(self,*args,**kwargs):
 		"""Returns the heads that are in the frame and uses select_dtype arguments."""
@@ -42,27 +59,9 @@ class Outlook(TimeView):
 		"""Returns the list of column names that are categorical by nature."""
 		return self.dtypes(exclude=('number','datetime64'))
 
-	def leadhead(self,*args):
-		"""Returns the leadhead based on arguments."""
-		dataheads = self.dheads(*args)
-
-		if len(dataheads)==0:
-			return super().leadhead
-
-		return " ".join(dataheads)
-
-	def leads(self,*args):
-		"""Returns the leads based on arguments."""
-		dataheads = self.dheads(*args)
-
-		if len(dataheads)==0:
-			return super().leads
-
-		return self._frame[dataheads].astype("str").agg(" ".join,axis=1)
-
-	def items(self,*args):
+	def unique(self,*args):
 		"""Returns the list of unique leads for the given column names."""
-		return self.leads(*args).unique().tolist()
+		return self.__leads(*args).unique().tolist()
 
 	def toview(self,*args):
 		"""Returns TimeView instance where the leadhead and datehead are defined."""
@@ -70,20 +69,43 @@ class Outlook(TimeView):
 		if self._datehead is None:
 			raise KeyError('Datehead has not been defined!')
 
-		datehead = self._datehead
+	def __leadcolumn(self,*args):
+		"""Returns leadhead and leads for the given heads in args."""
+		leadhead,leads = self.__leadhead(*args),self.__leads(*args)
 
-		frame = self.pull(datehead,include=('number',))
+		return "Aggregate","" if leadhead is None and leads.empty else leadhead,leads
 
-		leadhead,leads = self.leadhead(*args),self.leads(*args)
+	def __leadhead(self,*args):
+		"""Returns the leadhead based on arguments."""
+		dataheads = self.dheads(*args)
 
-		if leadhead is None and leads.empty:
-			leadhead,leads = "Aggregate",""
+		if len(dataheads)==0:
+			return
 
-		frame.insert(0,leadhead,leads)
+		return " ".join(dataheads)
 
-		frame = frame.groupby([leadhead,datehead]).sum(self.numbers).reset_index()
+	def __leads(self,*args):
+		"""Returns the leads based on arguments."""
+		dataheads = self.dheads(*args)
 
-		return TimeView(frame,leadhead=leadhead,datehead=datehead)
+		if len(dataheads)==0:
+			return self.__series()
+
+		return self._frame[dataheads].astype("str").agg(" ".join,axis=1)
+
+	def __toview(self,*args):
+		"""Returns TimeView instance where the leadhead and datehead are defined."""
+		frame = self.pull(self._datehead,include=('number',))
+
+		column = self.__leadcolumn(*args)
+
+		frame.insert(0,*column)
+
+		group = frame.groupby([column[0],self._datehead])
+
+		frame = group.sum(self.numbers).reset_index()
+
+		return TimeView(frame,leadhead=column[0],datehead=self._datehead)
 
 if __name__ == "__main__":
 
@@ -100,8 +122,8 @@ if __name__ == "__main__":
 
 	# print(view.mindate('Date').date())
 
-	# print(Outlook.items(df,'Field'))
-	# print(type(Outlook.items(df,'Field').tolist()))
+	# print(Outlook.unique(df,'Field'))
+	# print(type(Outlook.unique(df,'Field').tolist()))
 
 
 
