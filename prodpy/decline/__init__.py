@@ -1,6 +1,6 @@
 from ._model import Model
 
-from ._forward import Forward
+from ._forward import Curve
 
 from ._optimize import Optimize
 

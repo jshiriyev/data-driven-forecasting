@@ -2,7 +2,7 @@ import numpy
 
 from ._model import Model
 
-class Forward():
+class Curve():
 
 	def __init__(self,model:Model):
 		self._model = model
@@ -39,9 +39,9 @@ if __name__ == "__main__":
 
 	model = Model()
 
-	print(Forward(model).run([1,2,3]))
+	print(Curve(model).run([1,2,3]))
 
-	fw = Forward(model)
+	fw = Curve(model)
 
 	for d in dir(fw):
 		print(d)

@@ -19,5 +19,5 @@ prodpy/decline/_optimize.py
 prodpy/decline/_timespan.py
 prodpy/timeview/__init__.py
 prodpy/timeview/_outlook.py
-prodpy/timeview/_timeview.py
+prodpy/timeview/_template.py
 tests/test_xlsheet.py

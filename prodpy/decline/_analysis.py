@@ -6,7 +6,7 @@ from ._model import Model
 
 from ._timespan import TimeSpan
 
-from ._forward import Forward
+from ._forward import Curve
 
 from ._optimize import Optimize
 
@@ -82,7 +82,7 @@ class Analysis():
 
 		_days = TimeSpan(dates).days(model.date0)
 
-		rates = pandas.Series(Forward(model).run(_days))
+		rates = pandas.Series(Curve(model).run(_days))
 
 		dictionary = {
 			"Dates": dates,
@@ -116,13 +116,13 @@ if __name__ == "__main__":
 	# print(dir(df))
 
 	# print(
-	# 	Forward.days(5)
+	# 	Curve.days(5)
 	# 	)
 
 	# print(
-	# 	Forward.days(datetime.date(2022,2,3),datetime.date(2022,2,7))
+	# 	Curve.days(datetime.date(2022,2,3),datetime.date(2022,2,7))
 	# 	)
 
 	# print(
-	# 	Forward.days(datetime.date(2022,2,3),datetime.date(2022,2,7),12)
+	# 	Curve.days(datetime.date(2022,2,3),datetime.date(2022,2,7),12)
 	# 	)

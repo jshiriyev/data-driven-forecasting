@@ -1,9 +1,9 @@
-from ._timeview import TimeView
+from ._template import Template
 
-class Outlook(TimeView):
+class Outlook(Template):
 
 	def __init__(self,*args,leadhead:str=None,datehead:str=None,**kwargs):
-		"""Initializes the parent class TimeView."""
+		"""Initializes the parent class Template."""
 		super().__init__(*args,**kwargs)
 
 		self(leadhead=leadhead,datehead=datehead)
@@ -64,7 +64,7 @@ class Outlook(TimeView):
 		return self.__leads(*args).unique().tolist()
 
 	def toview(self,*args):
-		"""Returns TimeView instance where the leadhead and datehead are defined."""
+		"""Returns Template instance where the leadhead and datehead are defined."""
 
 		if self._datehead is None:
 			raise KeyError('Datehead has not been defined!')
@@ -94,7 +94,7 @@ class Outlook(TimeView):
 		return self._frame[dataheads].astype("str").agg(" ".join,axis=1)
 
 	def __toview(self,*args):
-		"""Returns TimeView instance where the leadhead and datehead are defined."""
+		"""Returns Template instance where the leadhead and datehead are defined."""
 		frame = self.pull(self._datehead,include=('number',))
 
 		column = self.__leadcolumn(*args)
@@ -105,7 +105,7 @@ class Outlook(TimeView):
 
 		frame = group.sum(self.numbers).reset_index()
 
-		return TimeView(frame,leadhead=column[0],datehead=self._datehead)
+		return Template(frame,leadhead=column[0],datehead=self._datehead)
 
 if __name__ == "__main__":
 

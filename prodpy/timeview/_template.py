@@ -2,7 +2,7 @@ import datetime
 
 import pandas
 
-class TimeView():
+class Template():
 
     _mindate = datetime.date(2020,1,1)
     _maxdate = datetime.date(2030,1,1)
@@ -127,7 +127,7 @@ class TimeView():
 
 if __name__ == "__main__":
 
-    tv = TimeView()
+    tv = Template()
 
     print(tv.frame)
     print(tv.datehead)
@@ -141,7 +141,7 @@ if __name__ == "__main__":
     print(tv.maxdate)
     print(tv.limit)
 
-    tv2 = TimeView(pandas.DataFrame({'d':[1,1]}))
+    tv2 = Template(pandas.DataFrame({'d':[1,1]}))
 
     print(tv2.frame)
 
