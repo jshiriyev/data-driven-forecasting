@@ -1,6 +1,6 @@
 # prodpy
 
-prodpy is a Python package for oil and gas production data analysis, decline curve analysis, and other timeseries analysis. The package is designed to handle data typically found in Excel files, providing tools and functions to streamline the analysis process.
+This is a Python package for oil and gas production data analysis including decline curve analysis, and other timeseries analysis. The package is designed to handle data typically found in Excel files, providing tools and functions to streamline the analysis process.
 
 ## Features
 

@@ -9,7 +9,7 @@ class Outlook(Template):
 		self(leadhead=leadhead,datehead=datehead)
 
 	def __call__(self,*,leadhead:str=None,datehead:str=None):
-
+		"""Assigns the leadhead and datehead."""
 		self._leadhead = leadhead
 		self._datehead = datehead
 
@@ -26,15 +26,6 @@ class Outlook(Template):
 	def heads(self,*args,**kwargs):
 		"""Returns the heads that are in the frame and uses select_dtype arguments."""
 		return list(set(self.dheads(*args)+self.dtypes(**kwargs)))
-
-	def dheads(self,*args):
-		"""Returns the list of arguments ensuring that they are in the DataFrame."""
-		return [head for head in args if head in self._frame.columns]
-
-	def dtypes(self,include=None,exclude=None):
-		"""Returns the list of heads by including & excluding the dtypes."""
-		return [] if include is None and exclude is None else self._frame.select_dtypes(
-			include=include,exclude=exclude).columns.tolist()
 
 	def pull(self,*args,**kwargs):
 		"""Returns a frame given in the args and included and excluded dtypes."""
@@ -63,37 +54,15 @@ class Outlook(Template):
 		"""Returns the list of unique leads for the given column names."""
 		return self.__leads(*args).unique().tolist()
 
-	def toview(self,*args):
+	def view(self,*args):
 		"""Returns Template instance where the leadhead and datehead are defined."""
 
 		if self._datehead is None:
 			raise KeyError('Datehead has not been defined!')
 
-	def __leadcolumn(self,*args):
-		"""Returns leadhead and leads for the given heads in args."""
-		leadhead,leads = self.__leadhead(*args),self.__leads(*args)
+		return self.__view(*args)
 
-		return "Aggregate","" if leadhead is None and leads.empty else leadhead,leads
-
-	def __leadhead(self,*args):
-		"""Returns the leadhead based on arguments."""
-		dataheads = self.dheads(*args)
-
-		if len(dataheads)==0:
-			return
-
-		return " ".join(dataheads)
-
-	def __leads(self,*args):
-		"""Returns the leads based on arguments."""
-		dataheads = self.dheads(*args)
-
-		if len(dataheads)==0:
-			return self.__series()
-
-		return self._frame[dataheads].astype("str").agg(" ".join,axis=1)
-
-	def __toview(self,*args):
+	def __view(self,*args):
 		"""Returns Template instance where the leadhead and datehead are defined."""
 		frame = self.pull(self._datehead,include=('number',))
 
