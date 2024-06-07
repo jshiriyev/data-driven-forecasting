@@ -28,3 +28,5 @@ class TestXlBatch(unittest.TestCase):
 if __name__ == "__main__":
 
     unittest.main()
+
+    # Test the commitments (python -m unittest discover -v)
