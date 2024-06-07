@@ -15,5 +15,3 @@ You can install prodpy using pip:
 
 ```bash
 pip install prodpy
-
-
