@@ -4,10 +4,10 @@ This is a Python package for oil and gas production data analysis including decl
 
 ## Features
 
+- **Excel Integration**: Seamless handling of data stored in Excel files.
 - **Production Data Analysis**: Tools to analyze oil and gas production data.
 - **Decline Curve Analysis**: Functions to perform decline curve analysis using various models.
 - **Timeseries Analysis**: Utilities for timeseries analysis of production data.
-- **Excel Integration**: Seamless handling of data stored in Excel files.
 
 ## Installation
 
