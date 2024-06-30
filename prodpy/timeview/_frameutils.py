@@ -45,7 +45,7 @@ class FrameUtils():
 
 		return list(set(head_list))
 
-	def join(self,*args,**kwargs)->pandas.DataFrame:
+	def join(self,*args,separator=None,**kwargs)->pandas.DataFrame:
 		"""
 		Joins the frame columns specified by the args and kwargs and
 		returns a new joined frame.
@@ -60,11 +60,13 @@ class FrameUtils():
 		The joined frame.
 		"""
 
-		heads = FrameUtils.heads(self.frame,*args,**kwargs)
+		heads = self.heads(*args,**kwargs)
 
-		value = self.frame[heads].astype("str").agg(" ".join,axis=1)
+		separator = " " if separator is None else separator
 
-		return pandas.DataFrame({" ".join(heads):value})
+		value = self.frame[heads].astype("str").agg(separator.join,axis=1)
+
+		return pandas.DataFrame({separator.join(heads):value})
 
 	def filter(self,column:str,*args)->pandas.DataFrame:
 		"""
@@ -85,7 +87,7 @@ class FrameUtils():
 
 		return self.frame[bools].reset_index(drop=True)
 
-	def groupsum(self,column:str,*args):
+	def groupsum(self,column:str,*args,separator=None):
 		"""
 		Groups the non-empty input frame based on column and
 		returns a new frame after summing the other columns.
@@ -93,6 +95,7 @@ class FrameUtils():
 		Parameters:
 
 		column   : Column name which to group
+		*args    : Positional values to keep in the column series.
 
 		Returns:
 
@@ -101,10 +104,34 @@ class FrameUtils():
 
 		frame = self.filter(column,*args)
 
-		leads = " ".join(frame[column].unique())
+		separator = " " if separator is None else separator
+
+		frame[column] = separator.join(frame[column].unique())
 
 		frame = frame.groupby(column).sum().reset_index()
 
-		frame[column] = leads
-
 		return frame
+
+if __name__ == "__main__":
+
+	import pandas as pd
+
+	frame = {
+		"name" : ["john","smith","python","john","georgina"],
+		"age"  : [32,47,23,25,23],
+		"rate" : [1.,5.,6.,8.5,9],
+		}
+
+	frame = pd.DataFrame(frame)
+
+	utils = FrameUtils()
+
+	print(frame)
+
+	print(utils(frame).heads('name','age',exclude='number'))
+
+	print(utils(frame).join('name','age',separator="#"))
+
+	print(utils(frame).filter("name","john","georgina"))
+
+	print(utils(frame).groupsum("name","john","georgina"))
