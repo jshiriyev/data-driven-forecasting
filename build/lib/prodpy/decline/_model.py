@@ -40,6 +40,12 @@ class Model:
 			)
 		)
 
+	r2value 	: float = field(
+		repr = False,
+		default = None,
+		)
+
+
 	def __post_init__(self):
 		"""Assigns corrected mode and exponent values."""
 
@@ -124,7 +130,7 @@ if __name__ == "__main__":
 
 	# days = np.linspace(0,100,100)
 
-	model = Model(rate0=5.)
+	model = Model(rate0=5.,r2value=1)
 
 	print(model)
 
@@ -133,6 +139,8 @@ if __name__ == "__main__":
 	print(Model.rate0)
 
 	print(Model.mode)
+
+	print(model.r2value,Model.r2value)
 
 	mode,exponent = Model.get_option(mode='Exponential',exponent=50.)
 

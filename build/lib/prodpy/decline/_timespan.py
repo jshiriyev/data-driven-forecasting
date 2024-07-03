@@ -104,7 +104,7 @@ class TimeSpan:
 			space = pandas.date_range(**kwargs)
 			index = index.append(space)
 
-		return TimeSpan(index.to_series())
+		return TimeSpan(index.to_series().reset_index(drop=True))
 
 if __name__ == "__main__":
 

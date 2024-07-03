@@ -37,10 +37,10 @@ class Optimize():
 
 		Returns decline model with mode, exponent, and initial rate and decline.
 		"""
-		rate0,decline0 = self.minimize(days,rates)
+		rate0,decline0,r2value = self.minimize(days,rates)
 
 		return Model(mode=self.mode,exponent=self.exponent,
-			date0=date0,rate0=rate0,decline0=decline0)
+			date0=date0,rate0=rate0,decline0=decline0,r2value=r2value)
 
 	@property
 	def minimize(self):
@@ -55,9 +55,9 @@ class Optimize():
 		try:
 			sol = linregress(days,numpy.log(rates))
 		except ValueError:
-			return 0.,0.
+			return 0.,0.,0.
 
-		return numpy.exp(sol.intercept),-sol.slope
+		return numpy.exp(sol.intercept),-sol.slope,sol.rvalue**2
 
 	def Hyperbolic(self,days:numpy.ndarray,rates:numpy.ndarray):
 		"""Optimization based on hyperbolic decline model."""
@@ -69,9 +69,9 @@ class Optimize():
 		try:
 			sol = linregress(days,numpy.power(1/rates,exponent))
 		except ValueError:
-			return 0.,0.
+			return 0.,0.,0.
 
-		return sol.intercept**(-1/exponent),sol.slope/sol.intercept/exponent
+		return sol.intercept**(-1/exponent),sol.slope/sol.intercept/exponent,sol.rvalue**2
 
 	def Harmonic(self,days:numpy.ndarray,rates:numpy.ndarray):
 		"""Optimization based on harmonic decline model."""
@@ -81,9 +81,9 @@ class Optimize():
 		try:
 			sol = linregress(days,1/rates)
 		except ValueError:
-			return 0.,0.
+			return 0.,0.,0.
 
-		return sol.intercept**(-1),sol.slope/sol.intercept
+		return sol.intercept**(-1),sol.slope/sol.intercept,sol.rvalue**2
 
 if __name__ == "__main__":
 

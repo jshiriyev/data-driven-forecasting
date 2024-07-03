@@ -2,15 +2,19 @@ import datetime
 
 import pandas
 
+from ._frameutils import FrameUtils
+
 class Template():
 
     _mindate = datetime.date(2020,1,1)
     _maxdate = datetime.date(2030,1,1)
 
-    def __init__(self,*args,**kwargs):
+    def __init__(self,frame:pandas.DataFrame):
         """The frame must contain leads on the first column, dates on the second
         column and numerical values on the remaining columns."""
-        self._frame = self.__frame(*args,**kwargs)
+        self.__utils = FrameUtils()
+
+        self._frame = frame
 
     @property
     def frame(self):
@@ -84,46 +88,11 @@ class Template():
 
     def filter(self,*args):
         """Returns frame after filtering for args on the lead column."""
-        return self.frame if self.empty else self.__filter(*args)
+        return self.frame if self.empty else self.__utils(frame).filter(frame.columns[1])
 
-    def sum(self,*args):
+    def groupsum(self,*args):
         """Returns a new frame after datewise summing the args on the lead column."""
-        return self.frame if self.empty else self.__sum(*args)
-
-    def __filter(self,*args):
-        """Returns frame after filtering for args on the lead column of non-empty frames."""
-        return self.frame[self.leads.isin(args)].reset_index(drop=True)
-
-    def __sum(self,*args):
-        """Returns a new frame after datewise summing the args on the lead column
-        of non-empty frames."""
-        frame = self.__filter(*args)
-        leads = self.__concat_leads(frame)
-        frame = self.__groupby_date(frame)
-
-        frame.iloc[:,0] = leads
-
-        return frame
-
-    @staticmethod
-    def __frame(unknown=None,**kwargs):
-        """Returns an empty pandas.DataFrame if frame is None."""
-        return unknown if isinstance(unknown,pandas.DataFrame) else pandas.DataFrame(unknown,**kwargs)
-
-    @staticmethod
-    def __series(*args,**kwargs):
-        """Return pandas series."""
-        return pandas.Series(*args,**kwargs)
-
-    @staticmethod
-    def __groupby_date(frame):
-        """Returns a new frame after grouping based on date column."""
-        return frame.groupby(frame.columns[1]).sum().reset_index()
-
-    @staticmethod
-    def __concat_leads(frame):
-        """Returns a string after concatenating unique leads."""
-        return " ".join(frame.iloc[:,0].unique())
+        return self.frame if self.empty else self.__utils(frame).groupsum(frame.columns[1])
 
 if __name__ == "__main__":
 
