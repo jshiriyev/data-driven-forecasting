@@ -1,8 +1,12 @@
+from dataclasses import dataclass, field
+
 import numpy
 
 from scipy.stats import linregress
 
 from ._model import Model
+
+from ._forward import Curve
 
 class Optimize():
 
@@ -37,10 +41,10 @@ class Optimize():
 
 		Returns decline model with mode, exponent, and initial rate and decline.
 		"""
-		rate0,decline0,r2value = self.minimize(days,rates)
+		rate0,decline0,score = self.minimize(days,rates)
 
 		return Model(mode=self.mode,exponent=self.exponent,
-			date0=date0,rate0=rate0,decline0=decline0,r2value=r2value.tolist())
+			date0=date0,rate0=rate0,decline0=decline0,score=score)
 
 	@property
 	def minimize(self):
@@ -53,11 +57,15 @@ class Optimize():
 		days,rates = days[rates!=0],rates[rates!=0]
 
 		try:
-			sol = linregress(days,numpy.log(rates))
+			result = linregress(days,numpy.log(rates))
 		except ValueError:
-			return 0.,0.,0.
+			return 0.,0.,None
 
-		return numpy.exp(sol.intercept),-sol.slope,sol.rvalue**2
+		rate0 = numpy.exp(result.intercept)
+
+		decline0 = -result.slope
+
+		return rate0,decline0,result
 
 	def Hyperbolic(self,days:numpy.ndarray,rates:numpy.ndarray):
 		"""Optimization based on hyperbolic decline model."""
@@ -67,11 +75,15 @@ class Optimize():
 		days,rates = days[rates!=0],rates[rates!=0]
 
 		try:
-			sol = linregress(days,numpy.power(1/rates,exponent))
+			result = linregress(days,numpy.power(1/rates,exponent))
 		except ValueError:
-			return 0.,0.,0.
+			return 0.,0.,None
 
-		return sol.intercept**(-1/exponent),sol.slope/sol.intercept/exponent,sol.rvalue**2
+		rate0 = result.intercept**(-1/exponent)
+
+		decline0 = result.slope/result.intercept/exponent
+
+		return rate0,decline0,result
 
 	def Harmonic(self,days:numpy.ndarray,rates:numpy.ndarray):
 		"""Optimization based on harmonic decline model."""
@@ -79,11 +91,25 @@ class Optimize():
 		days,rates = days[rates!=0],rates[rates!=0]
 
 		try:
-			sol = linregress(days,1/rates)
+			result = linregress(days,1/rates)
 		except ValueError:
-			return 0.,0.,0.
+			return 0.,0.,None
 
-		return sol.intercept**(-1),sol.slope/sol.intercept,sol.rvalue**2
+		rate0 = result.intercept**(-1)
+
+		decline0 = result.slope/result.intercept
+
+		return rate0,decline0,result
+
+	@staticmethod
+	def Rsquared(model:Model,days:numpy.ndarray,rates:numpy.ndarray):
+
+		curve = Curve(model).run(days)
+
+		ssres = numpy.nansum((rates-curve)**2)
+		sstot = numpy.nansum((rates-numpy.nanmean(rates))**2)
+
+		return 1-ssres/sstot
 
 if __name__ == "__main__":
 

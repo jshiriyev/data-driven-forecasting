@@ -2,6 +2,8 @@ import datetime
 
 from dataclasses import dataclass, field
 
+from scipy.stats._stats_py import LinregressResult
+
 @dataclass(frozen=True)
 class Model:
 	"""Initializes Decline Curve Model with the decline option and attributes.
@@ -40,11 +42,10 @@ class Model:
 			)
 		)
 
-	r2value 	: float = field(
+	score 		: LinregressResult = field(
 		repr = False,
 		default = None,
 		)
-
 
 	def __post_init__(self):
 		"""Assigns corrected mode and exponent values."""
@@ -61,6 +62,22 @@ class Model:
 		object.__setattr__(self,'exponent',exponent)
 		object.__setattr__(self,'rate0',rate0)
 		object.__setattr__(self,'decline0',decline0)
+
+	def __str__(self):
+
+		string = "\n"
+
+		string += f"Decline mode is {self.mode}, and the exponent is {self.exponent}%.\n"
+
+		string += "\n"
+
+		string += f"Initial date is {self.date0}\n"
+		string += f"Production rate is {self.rate0:.1f}\n"
+		string += f"Annual decline percentage is {self.decline0*365.25*100:.1f}%\n"
+
+		string += "\n"
+
+		return string
 
 	@staticmethod
 	def get_option(mode=None,exponent=None):
@@ -130,7 +147,7 @@ if __name__ == "__main__":
 
 	# days = np.linspace(0,100,100)
 
-	model = Model(rate0=5.,r2value=1)
+	model = Model(rate0=5.)
 
 	print(model)
 
@@ -140,7 +157,7 @@ if __name__ == "__main__":
 
 	print(Model.mode)
 
-	print(model.r2value,Model.r2value)
+	print(model.score,Model.score)
 
 	mode,exponent = Model.get_option(mode='Exponential',exponent=50.)
 
