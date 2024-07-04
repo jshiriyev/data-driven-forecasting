@@ -13,6 +13,7 @@ prodpy/allocate/__init__.py
 prodpy/allocate/_allocate.py
 prodpy/decline/__init__.py
 prodpy/decline/_analysis.py
+prodpy/decline/_diamond.py
 prodpy/decline/_forward.py
 prodpy/decline/_model.py
 prodpy/decline/_optimize.py
