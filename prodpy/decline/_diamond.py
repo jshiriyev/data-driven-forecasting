@@ -4,41 +4,43 @@ import plotly.graph_objects as go
 
 from ._analysis import Analysis
 
-class Diamond():
+class Diamond(Analysis):
 
-	def __init__(self,datehead:str,ratehead:str,score_flag:bool=False):
+	def __init__(self,datehead:str,ratehead:str):
 		"""Initializing the class with date and rate column keys. The date and rate
 		values are used for the optimization and forecasting of pandas.DataFrames."""
 
-		self._datehead = datehead
-		self._ratehead = ratehead
+		super().__init__(datehead,ratehead)
 
-		self._analysis = Analysis(*self.keys)
+	def __call__(self,frame:pandas.DataFrame,figure:go.Figure=None,estimate:tuple=None,forecast:tuple=None,title:str=None,ylabel:str=None,**kwargs):
+		"""Quick summary prints and plots for the quick summary of DCA at notebook."""
 
-		self._analysis.score_flag = score_flag
+		frame  = self.prepare(frame)
+		figure = self.view_measured(frame,figure)
 
-	@property
-	def datehead(self):
-		return self._datehead
+		if estimate is not None:
 
-	@property
-	def ratehead(self):
-		return self._ratehead
+			curve  = self.compute(frame,estimate,forecast,**kwargs)
+			figure = self.view_computed(curve,figure,color="crimson")
 
-	@property
-	def keys(self):
-		return list((self._datehead,self._ratehead))
+		self.layout(figure,title=title,ylabel=ylabel)
 
-	@property
-	def analysis(self):
-		return self._analysis
+	def prepare(self,frame:pandas.DataFrame):
+		"""Returns the columns of the frame related to the computations."""
 
-	def measured(self,figure:go.Figure,frame:pandas.DataFrame,**kwargs):
+		return frame[self.keys].groupby([self.datehead]).sum().reset_index()
+
+	def view_measured(self,frame:pandas.DataFrame,figure:go.Figure=None,**kwargs):
+		"""Adds measured data as a scatter plot to the figure."""
+
+		if figure is None:
+			figure = go.Figure()
 
 		figure.add_trace(
 			go.Scatter(
 				x = frame[self.datehead],
 				y = frame[self.ratehead],
+				name = "Cum. Production",
 				mode = 'markers',
 				marker = kwargs,
 			)
@@ -46,12 +48,26 @@ class Diamond():
 
 		return figure
 
-	def computed(self,figure:go.Figure,frame:pandas.DataFrame,**kwargs):
+	def compute(self,frame:pandas.DataFrame,estimate:tuple,forecast:tuple=None,**kwargs):
+		"""Prints model results and returns fitted curve frame."""
+
+		model = self.fit(frame,estimate,**kwargs); print(model)
+
+		forecast = estimate if forecast is None else forecast
+
+		return self.run(model,forecast)
+
+	def view_computed(self,frame:pandas.DataFrame,figure:go.Figure=None,**kwargs):
+		"""Adds calculated data as a line plot to the figure."""
+
+		if figure is None:
+			figure = go.Figure()
 
 		figure.add_trace(
 			go.Scatter(
 				x = frame[self.datehead],
 				y = frame[self.ratehead],
+				name = "Dec. Curve",
 				mode = 'lines',
 				line = kwargs,
 			)
@@ -59,47 +75,17 @@ class Diamond():
 
 		return figure
 
-	def print(self,frame,estimate_limit=None,forecast_limit=None,frame_title=None,yaxis_title=None,**kwargs):
+	def layout(self,figure:go.Figure,title:str=None,ylabel:str=None,**kwargs):
+		"""Updates the figure layout."""
 
-		frame = frame[self.keys]
-
-		frame = frame.groupby([self.datehead]).sum().reset_index()
-
-		figure = go.Figure()
-
-		figure = self.measured(figure,frame)
-
-		if estimate_limit is not None:
-
-			self.print_forecast(figure,frame,estimate_limit,forecast_limit,**kwargs)
-
-		frame_title = "Hasilat" if frame_title is None else f"{frame_title} - Hasilat"
-
-		yaxis_title = self.ratehead if yaxis_title is None else yaxis_title
+		if len(kwargs)==0:
+			kwargs = dict(l=0,r=50,t=30,b=50,pad=0)
 
 		figure.update_layout(
-			title = frame_title,
-			yaxis_title = yaxis_title,
-			margin = dict(l=0,r=50,t=30,b=50,pad=0),
+			title = "Production" if title is None else f"{title} - Production",
+			yaxis_title = self.ratehead if ylabel is None else ylabel,
+			margin = kwargs,
 			showlegend = False,
 		)
 
 		figure.show()
-
-	def print_forecast(self,figure,frame,estimate_limit,forecast_limit=None,**kwargs):
-
-		model = self._analysis.fit(frame,estimate_limit,**kwargs)
-
-		if self._analysis.score_flag:
-			model,R2value = model
-
-		print(model)
-
-		if self._analysis.score_flag:
-			print(f"R-squared is {R2value:.2f} (from non-linear data)\n\n")
-
-		forecast_limit = estimate_limit if forecast_limit is None else forecast_limit
-
-		curve = self._analysis.run(model,forecast_limit)
-
-		figure = self.computed(figure,curve,color="crimson")

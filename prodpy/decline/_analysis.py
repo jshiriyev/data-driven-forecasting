@@ -12,8 +12,6 @@ from ._optimize import Optimize
 
 class Analysis():
 
-	score_flag = False
-
 	def __init__(self,datehead:str,ratehead:str):
 		"""Initializing the class with date and rate column keys. The date and rate
 		values are used for the optimization and forecasting of pandas.DataFrames."""
@@ -38,7 +36,7 @@ class Analysis():
 
 		return self.ufit(frame,*args,**kwargs)
 
-	def ufit(self,frame:pandas.DataFrame,*args,**kwargs):
+	def ufit(self,frame:pandas.DataFrame,*args,date0:datetime.date=None,**kwargs):
 		"""Returns optimized model that fits the frame and fit-score (optionally)"""
 
 		dates = TimeSpan(frame[self.datehead])
@@ -50,16 +48,11 @@ class Analysis():
 		dates = dates[bools]
 		rates = rates[bools]
 
-		date0 = dates.mindate if kwargs.get('date0') is None else kwargs.pop('date0')
+		date0 = dates.mindate if date0 is None else date0
 
 		days  = dates.days(date0)
 
-		model = Optimize(**kwargs).fit(days,rates,date0)
-
-		if not self.score_flag:
-			return model
-
-		return model,Optimize.Rsquared(model,days,rates)
+		return Optimize(**kwargs).fit(days,rates,date0)
 
 	def mfit(self,view,*args,**kwargs):
 		"""Returns optimized model dictionary that fits the frames."""

@@ -2,7 +2,7 @@ import datetime
 
 from dataclasses import dataclass, field
 
-from scipy.stats._stats_py import LinregressResult
+# from scipy.stats._stats_py import LinregressResult
 
 @dataclass(frozen=True)
 class Model:
@@ -42,9 +42,10 @@ class Model:
 			)
 		)
 
-	score 		: LinregressResult = field(
+	score 		: dict = field(
+		init = False,
 		repr = False,
-		default = None,
+		default_factory = dict,
 		)
 
 	def __post_init__(self):
@@ -71,8 +72,11 @@ class Model:
 
 		string += "\n"
 
-		if self.score is not None:
-			string += f"R-squared is {self.score.rvalue**2:.2f} (from linear regression)\n\n"
+		if self.score.get("LinregressResult") is not None:
+			string += f"Linear regression R-squared is {self.score["LinregressResult"].rvalue**2:.2f}\n"
+
+		if self.score.get("NonlinearRsquared") is not None:
+			string += f"Non-linear fit R-squared is {self.score["NonlinearRsquared"]:.2f}\n\n"
 
 		string += f"Initial date is {self.date0}\n"
 		string += f"Production rate is {self.rate0:.1f}\n"
@@ -160,7 +164,10 @@ if __name__ == "__main__":
 
 	print(Model.mode)
 
-	print(model.score,Model.score)
+	model.score["name"] = "last"
+
+	print(model.score["name"])
+	# print(Model.score)
 
 	mode,exponent = Model.get_option(mode='Exponential',exponent=50.)
 

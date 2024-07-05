@@ -41,14 +41,23 @@ class Optimize():
 
 		Returns decline model with mode, exponent, and initial rate and decline.
 		"""
-		rate0,decline0,score = self.minimize(days,rates)
+		rate0,decline0,LinregressResult = self.minimize(days,rates)
 
-		return Model(mode=self.mode,exponent=self.exponent,
-			date0=date0,rate0=rate0,decline0=decline0,score=score)
+		model = Model(mode=self.mode,exponent=self.exponent,
+			date0=date0,rate0=rate0,decline0=decline0)
+
+		model.score["LinregressResult"] = LinregressResult
+
+		model.score["NonlinearRsquared"] = self.Rsquared(
+			model,days,rates
+			)
+
+		return model
 
 	@property
 	def minimize(self):
 		"""Returns the method based on the class mode."""
+		
 		return getattr(self,f"{self.mode}")
 
 	def Exponential(self,days:numpy.ndarray,rates:numpy.ndarray):
@@ -57,15 +66,15 @@ class Optimize():
 		days,rates = days[rates!=0],rates[rates!=0]
 
 		try:
-			result = linregress(days,numpy.log(rates))
+			LinregressResult = linregress(days,numpy.log(rates))
 		except ValueError:
 			return 0.,0.,None
 
-		rate0 = numpy.exp(result.intercept)
+		rate0 = numpy.exp(LinregressResult.intercept)
 
-		decline0 = -result.slope
+		decline0 = -LinregressResult.slope
 
-		return rate0,decline0,result
+		return rate0,decline0,LinregressResult
 
 	def Hyperbolic(self,days:numpy.ndarray,rates:numpy.ndarray):
 		"""Optimization based on hyperbolic decline model."""
@@ -75,15 +84,15 @@ class Optimize():
 		days,rates = days[rates!=0],rates[rates!=0]
 
 		try:
-			result = linregress(days,numpy.power(1/rates,exponent))
+			LinregressResult = linregress(days,numpy.power(1/rates,exponent))
 		except ValueError:
 			return 0.,0.,None
 
-		rate0 = result.intercept**(-1/exponent)
+		rate0 = LinregressResult.intercept**(-1/exponent)
 
-		decline0 = result.slope/result.intercept/exponent
+		decline0 = LinregressResult.slope/LinregressResult.intercept/exponent
 
-		return rate0,decline0,result
+		return rate0,decline0,LinregressResult
 
 	def Harmonic(self,days:numpy.ndarray,rates:numpy.ndarray):
 		"""Optimization based on harmonic decline model."""
@@ -91,15 +100,15 @@ class Optimize():
 		days,rates = days[rates!=0],rates[rates!=0]
 
 		try:
-			result = linregress(days,1/rates)
+			LinregressResult = linregress(days,1/rates)
 		except ValueError:
 			return 0.,0.,None
 
-		rate0 = result.intercept**(-1)
+		rate0 = LinregressResult.intercept**(-1)
 
-		decline0 = result.slope/result.intercept
+		decline0 = LinregressResult.slope/LinregressResult.intercept
 
-		return rate0,decline0,result
+		return rate0,decline0,LinregressResult
 
 	@staticmethod
 	def Rsquared(model:Model,days:numpy.ndarray,rates:numpy.ndarray):
