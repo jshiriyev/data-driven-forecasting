@@ -12,21 +12,16 @@ class Diamond(Analysis):
 
 		super().__init__(datehead,ratehead)
 
-	@staticmethod
-	def __empty(kwargs:dict):
-
-		return {} if kwargs is None else kwargs
-
 	def __call__(self,frame:pandas.DataFrame,figure:go.Figure=None,marker:dict=None,analysis:dict=None,line:dict=None,layout:dict=None):
 		"""Quick summary prints and plots for the DCA interpretation at notebook."""
 
 		frame  = self.prepare(frame)
-		figure = self.view_measured(frame,figure,**self.__empty(marker))
+		figure = self.view_measured(frame,figure,**self.dictionary(marker))
 
-		curve  = self.compute(frame,**self.__empty(analysis))
-		figure = self.view_computed(curve,figure,**self.__empty(line))
+		curve  = self.compute(frame,**self.dictionary(analysis))
+		figure = self.view_computed(curve,figure,**self.dictionary(line))
 
-		self.layout(figure,**self.__empty(layout))
+		self.layout(figure,**self.dictionary(layout))
 
 	def prepare(self,frame:pandas.DataFrame):
 		"""Returns the columns of the frame related to the estimation and forecasting."""
@@ -39,7 +34,7 @@ class Diamond(Analysis):
 		if figure is None:
 			figure = go.Figure()
 
-		figure.add_trace(
+		figure.add_trace( 
 			go.Scatter(
 				x = frame[self.datehead],
 				y = frame[self.ratehead],
@@ -56,6 +51,9 @@ class Diamond(Analysis):
 
 		if fitlims is None:
 			return
+
+		if frame.shape[0]<2:
+			return pandas.DataFrame({self.datehead:[],self.ratehead:[]})
 
 		model = self.fit(frame,*fitlims,**kwargs) # kwargs = {mode, exponent, and date0}
 
@@ -93,8 +91,12 @@ class Diamond(Analysis):
 		figure.update_layout(
 			title = "Production" if title is None else f"{title} - Production",
 			yaxis_title = self.ratehead if ylabel is None else ylabel,
-			margin = self.__empty(kwargs.get("margin")),
+			margin = self.dictionary(kwargs.get("margin")),
 			showlegend = False,
 		)
 
 		figure.show()
+
+	@staticmethod
+	def dictionary(kwargs:dict):
+		return {} if kwargs is None else kwargs
