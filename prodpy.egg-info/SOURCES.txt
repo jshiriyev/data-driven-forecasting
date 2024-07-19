@@ -1,9 +1,6 @@
 README.md
 setup.py
 prodpy/__init__.py
-prodpy/_completion.py
-prodpy/_production.py
-prodpy/_xlbook.py
 prodpy.egg-info/PKG-INFO
 prodpy.egg-info/SOURCES.txt
 prodpy.egg-info/dependency_links.txt
@@ -18,8 +15,11 @@ prodpy/decline/_forward.py
 prodpy/decline/_model.py
 prodpy/decline/_optimize.py
 prodpy/decline/_timespan.py
-prodpy/timeview/__init__.py
-prodpy/timeview/_frameutils.py
-prodpy/timeview/_outlook.py
-prodpy/timeview/_template.py
+prodpy/pipeline/__init__.py
+prodpy/pipeline/_completion.py
+prodpy/pipeline/_frameutils.py
+prodpy/pipeline/_outlook.py
+prodpy/pipeline/_production.py
+prodpy/pipeline/_template.py
+prodpy/pipeline/_xlbook.py
 tests/test_timeview_frameutils.py
