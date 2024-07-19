@@ -71,7 +71,11 @@ class Analysis():
 
 		curve = Curve(model).run(days)
 
-		return curve.set(dates=dates.series,heads=self.heads)
+		curve.set(dates=dates.series,heads=self.heads)
+
+		print(curve.dates)
+
+		return curve
 
 	def mrun(self,models:dict,*args,**kwargs):
 

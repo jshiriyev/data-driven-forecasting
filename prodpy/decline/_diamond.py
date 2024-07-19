@@ -19,6 +19,9 @@ class Diamond(Analysis):
 		figure = self.view_measured(frame,figure,**self.dictionary(marker))
 
 		curve  = self.compute(frame,**self.dictionary(analysis))
+
+		print(curve)
+
 		figure = self.view_computed(curve.frame,figure,**self.dictionary(line))
 
 		figure = self.layout(figure,**self.dictionary(layout))
@@ -52,7 +55,7 @@ class Diamond(Analysis):
 		"""Prints model results and returns fitted curve frame."""
 
 		if fitlims is None:
-			return
+			fitlims = ((),)
 
 		if frame.shape[0]<2:
 			return pandas.DataFrame({self.datehead:[],self.ratehead:[]})
