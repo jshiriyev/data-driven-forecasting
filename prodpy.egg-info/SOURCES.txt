@@ -22,4 +22,10 @@ prodpy/pipeline/_outlook.py
 prodpy/pipeline/_production.py
 prodpy/pipeline/_template.py
 prodpy/pipeline/_xlbook.py
+prodpy/templix/__init__.py
+prodpy/templix/s1_pie_chart_inactive_wells.py
+prodpy/templix/s1_pie_chart_type_distribution.py
+prodpy/templix/s2_annual_production_layer_contribution.py
+prodpy/templix/s2_annual_production_zone_contribution.py
+prodpy/templix/s3_bubble_maps.py
 tests/test_timeview_frameutils.py

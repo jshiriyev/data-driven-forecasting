@@ -1,222 +1,106 @@
+from dataclasses import dataclass, fields
+
+import datetime
+
 import numpy
 
-# from borepy.gmodel._stock import Stock
+import pandas
+
+@dataclass
+class ProdData:
+    """It is a Production  dictionary for a perf in a well."""
+
+    date    : datetime.date = None
+
+    well    : str = None
+
+    horizon : str = None
+
+    days    : int = None
+
+    optype  : str = "production"
+
+    roil    : float = None
+    rwater  : float = None
+    rgas    : float = None
+
+    toil    : float = None
+    twater  : float = None
+    tgas    : float = None
+
+    @staticmethod
+    def fields() -> list:
+        return [field.name for field in fields(ProdData)]
 
 class Production():
-
-    headersSIM = ["Wells","Date","Days","oil","water","gas","Wi",]
-
-    headersOPT = ["WELL","DATE","DAYS","OPTYPE","ROIL","RWATER","RGAS","TOIL","TWATER","TGAS",]
     
-    def __init__(self,*args,**kwargs):
+    def __init__(self,frame:pandas.DataFrame=None,mapping:dict=None):
+        """
+        Initialize the class with a DataFrame and a column mapping.
 
-        super().__init__(*args,**kwargs)
+        Parameters:
 
-    def get_wellnames(self):
+        frame (pd.DataFrame)    : The input DataFrame.
 
-        pass
+        mapping (dict)          : A dictionary mapping class properties
+                                to DataFrame columns.
+        """
+        self.frame,self.mapping = frame,mapping
 
-    def fill_missing_daily_production(timeO,rateO,timeStart=None,timeEnd=None):
+        self.validate_mapping()
 
-        timeStart = datetime(datetime.today().year,1,1) if timeStart is None else timeStart
+    @property
+    def frame(self):
+        return self._frame
 
-        timeEnd = datetime.today() if timeEnd is None else timeEnd
+    @frame.setter
+    def frame(self,value:pandas.DataFrame):
+        self._frame = pandas.DataFrame(columns=ProdData.fields()) if value is None else value
 
-        delta = timeEnd-timeStart
+    @property
+    def mapping(self):
+        return self._mapping
 
-        timeaxis = np.array([timeStart+timedelta(days=i) for i in range(delta.days)],dtype=np.datetime64)
+    @mapping.setter
+    def mapping(self,value:dict):
+        self._mapping = {key:key for key in ProdData.fields()} if value is None else value
 
-        nonzeroproduction = np.where(timeaxis==timeO.reshape((-1,1)))[1]
+    def validate_mapping(self):
 
-        rateEdited = np.zeros(delta.days)
+        wrong_keys = [key for key in self.mapping.keys() if key not in ProdData.fields()]
 
-        rateEdited[nonzeroproduction] = rateO
+        if wrong_keys:
+            raise ValueError(f"Mapping keys are: {', '.join(ProdData.fields())}")
 
-        return rateEdited
+    def __getattr__(self,key):
 
-    def op_process(self):
+        if key in ProdData.fields():
 
-        warnDNEOM = "{:%d %b %Y} {} date is not the last day of month."
-        warnADGDM = "{:%d %b %Y} {} active days is greater than the days in the month."
-        warnOPHNE = "{:%d %b %Y} {} oil production has negative entry."
-        warnWPHNE = "{:%d %b %Y} {} water production has negative entry."
-        warnGPHNE = "{:%d %b %Y} {} gas production has negative entry."
-        warnWIHNE = "{:%d %b %Y} {} water injection has negative entry."
-        warnHZPAI = "{:%d %b %Y} {} has zero production and injection."
-        warnHBPAI = "{:%d %b %Y} {} has both production and injection data."
+            if key.startswith("t") and key not in self.mapping.keys():
+                return numpy.nancumsum(self.frame[self.mapping["r"+key[1:]]])
 
-        path = os.path.join(self.workdir,self.filename_op+"0")
+            return self.frame[self.mapping[key]]
 
-        prod = frame(filepath=path,skiplines=1)
+        return getattr(self.frame,key)
 
-        prod.texttocolumn(0,deliminator="\t",maxsplit=7)
-        prod.get_columns(headers=self.headers_opraw,inplace=True)
-        prod.sort(header_indices=[1],inplace=True)
+    def __getitem__(self,key):
 
-        prod.astype(header=self.headers_opraw[1],datestring=True)
-        prod.astype(header=self.headers_opraw[2],dtype=np.int64)
-        prod.astype(header=self.headers_opraw[3],dtype=np.float64)
-        prod.astype(header=self.headers_opraw[4],dtype=np.float64)
-        prod.astype(header=self.headers_opraw[5],dtype=np.float64)
-        prod.astype(header=self.headers_opraw[6],dtype=np.float64)
+        if isinstance(key,int):
 
-        vdate1 = np.vectorize(lambda x: x.day!=calendar.monthrange(x.year,x.month)[1])
+            row = self.frame.iloc[key].to_dict()
 
-        if any(vdate1(prod.running[1])):
-            for index in np.where(vdate1(prod.running[1]))[0]:
-                well = prod.running[0][index]
-                date = prod.running[1][index]
-                warnings.warn(warnDNEOM.format(date,well))
+            return ProdData(**{key:row.get(value) for key,value in self.mapping.items()})
 
-        vdate2 = np.vectorize(lambda x,y: x.day<y)
+        return getitem(self.frame,key)
 
-        if any(vdate2(prod.running[1],prod.running[2])):
-            for index in np.where(vdate2(prod.running[1],prod.running[2]))[0]:
-                well = prod.running[0][index]
-                date = prod.running[1][index]
-                warnings.warn(warnADGDM.format(date,well))
+if __name__ == "__main__":
 
-        if any(prod.running[3]<0):
-            for index in np.where(prod.running[3]<0)[0]:
-                well = prod.running[0][index]
-                date = prod.running[1][index]
-                warnings.warn(warnOPHNE.format(date,well))
+    frame = pandas.DataFrame(dict(
+        A=[datetime.date(2020,1,1),datetime.date(2021,1,1),datetime.date(2022,1,1),datetime.date(2023,1,1)],
+        B=[31,30,28,15],
+        C=['production','injection','production','production'],
+        D=[256,569,32,15.]))
 
-        if any(prod.running[4]<0):
-            for index in np.where(prod.running[4]<0)[0]:
-                well = prod.running[0][index]
-                date = prod.running[1][index]
-                warnings.warn(warnWPHNE.format(date,well))
+    prods = Production(frame,dict(date='A',days='B',optype='C',roil='D'))
 
-        if any(prod.running[5]<0):
-            for index in np.where(prod.running[5]<0)[0]:
-                well = prod.running[0][index]
-                date = prod.running[1][index]
-                warnings.warn(warnGPHNE.format(date,well))
-
-        if any(prod.running[6]<0):
-            for index in np.where(prod.running[6]<0)[0]:
-                well = prod.running[0][index]
-                date = prod.running[1][index]
-                warnings.warn(warnWIHNE.format(date,well))
-
-        roil = prod.running[3]
-        rwater = prod.running[4]+prod.running[6]
-        rgas = prod.running[5]
-
-        rprod = prod.running[3]+prod.running[4]+prod.running[5]
-        rinj = prod.running[6]
-
-        rtot = rprod+rinj
-
-        optype = np.empty(prod.running[2].shape,dtype=object)
-
-        optype[rprod>0] = "production"
-        optype[rinj>0] = "injection"
-
-        if any(rtot==0):
-            for index in np.where(rtot==0)[0]:
-                well = prod.running[0][index]
-                date = prod.running[1][index]
-                warnings.warn(warnHZPAI.format(date,well))
-
-        if any(np.logical_and(rprod!=0,rinj!=0)):
-            for index in np.where(np.logical_and(rprod!=0,rinj!=0))[0]:
-                well = prod.running[0][index]
-                date = prod.running[1][index]
-                warnings.warn(warnHBPAI.format(date,well))
-
-        if self.wnamefstr is not None:
-            vname = np.vectorize(lambda x: self.wnamefstr.format(re.sub("[^0-9]","",str(x)).zfill(3)))
-            prod.set_column(vname(prod.running[0]),header_index=0)
-
-        def shifting(x):
-            date = x+relativedelta(months=-1)
-            days = calendar.monthrange(date.year,date.month)[1]
-            return datetime(date.year,date.month,days)
-
-        vdate3 = np.vectorize(lambda x: shifting(x))
-
-        prod.set_column(vdate3(prod.running[1]),header_index=1)
-
-        path = os.path.join(self.workdir,self.filename_op+"1")
-
-        fstring = "{:6s}\t{:%Y-%m-%d}\t{:2d}\t{:.1f}\t{:.1f}\t{:.1f}\t{:.1f}\n"
-
-        prod.write(filepath=path,fstring=fstring)
-
-        prod.set_column(roil,header_new="ROIL")
-        prod.set_column(rwater,header_new="RWATER")
-        prod.set_column(rgas,header_new="RGAS")
-
-        prod.set_column(optype,header_new="OPTYPE")
-
-        prod.set_header(0,self.headers_op[0])
-        prod.set_header(1,self.headers_op[1])
-        prod.set_header(2,self.headers_op[2])
-
-        prod.get_columns(headers=self.headers_op[:7],inplace=True)
-        
-        path = os.path.join(self.workdir,self.filename_op+"2")
-
-        fstring = "{:6s}\t{:%Y-%m-%d}\t{:2d}\t{:10s}\t{:.1f}\t{:.1f}\t{:.1f}\n"
-
-        prod.write(filepath=path,fstring=fstring)
-
-    def op_get(self,filending=None,wellname=None):
-
-        for filename in os.listdir(self.workdir):
-
-            if filename[:len("operation")]=="operation":
-
-                path = os.path.join(self.workdir,filename)
-
-                ending = filename[len("operation"):]
-
-                if filename[:2]+ending in self.attrnames:
-                    continue
-
-                if filending is not None:
-                    if filending!=ending:
-                        continue
-
-                try:
-                    index = int(ending)
-                except ValueError:
-                    index = None
-
-                attrname = filename[:2]+ending
-
-                attrvals = frame(filepath=path,skiplines=1)
-
-                setattr(self,attrname,attrvals)
-
-                getattr(self,attrname).texttocolumn(0,deliminator="\t")
-
-                if index < 2:
-                    getattr(self,attrname).astype(header=self.headers_opraw[1],datestring=True)
-                    getattr(self,attrname).astype(header=self.headers_opraw[2],dtype=int)
-                    getattr(self,attrname).astype(header=self.headers_opraw[3],dtype=np.float64)
-                    getattr(self,attrname).astype(header=self.headers_opraw[4],dtype=np.float64)
-                    getattr(self,attrname).astype(header=self.headers_opraw[5],dtype=np.float64)
-                    getattr(self,attrname).astype(header=self.headers_opraw[6],dtype=np.float64)         
-                elif index < 3:
-                    getattr(self,attrname).astype(header=self.headers_op[1],datestring=True)
-                    getattr(self,attrname).astype(header=self.headers_op[2],dtype=int)
-                    getattr(self,attrname).astype(header=self.headers_op[4],dtype=np.float64)
-                    getattr(self,attrname).astype(header=self.headers_op[5],dtype=np.float64)
-                    getattr(self,attrname).astype(header=self.headers_op[6],dtype=np.float64)
-                elif index == 3:
-                    getattr(self,attrname).astype(header=self.headers_op[1],datestring=True)
-                    getattr(self,attrname).astype(header=self.headers_op[2],dtype=int)
-                    getattr(self,attrname).astype(header=self.headers_op[4],dtype=np.float64)
-                    getattr(self,attrname).astype(header=self.headers_op[5],dtype=np.float64)
-                    getattr(self,attrname).astype(header=self.headers_op[6],dtype=np.float64)
-                    getattr(self,attrname).astype(header=self.headers_op[7],dtype=np.float64)
-                    getattr(self,attrname).astype(header=self.headers_op[8],dtype=np.float64)
-                    getattr(self,attrname).astype(header=self.headers_op[9],dtype=np.float64)
-
-                self.attrnames.append(attrname)
-
-                if wellname is not None:
-                    getattr(self,attrname).filter(0,keywords=[wellname],inplace=False)
+    print(prods.toil)
