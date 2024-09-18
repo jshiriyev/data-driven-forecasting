@@ -2,11 +2,10 @@ import datetime
 
 import pandas
 
-from ._model import Model
+from .elements._model import Model
+from .elements._curve import Curve
 
-from ._timespan import TimeSpan
-
-from ._forward import Curve
+from .elements._timespan import TimeSpan
 
 from ._optimize import Optimize
 

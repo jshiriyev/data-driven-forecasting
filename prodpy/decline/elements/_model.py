@@ -2,7 +2,9 @@ import datetime
 
 from dataclasses import dataclass, field
 
-# from scipy.stats._stats_py import LinregressResult
+from scipy.stats._stats_py import LinregressResult
+
+from ._marshal import Marshal
 
 @dataclass(frozen=True)
 class Model:
@@ -51,18 +53,21 @@ class Model:
 	def __post_init__(self):
 		"""Assigns corrected mode and exponent values."""
 
-		mode,exponent = self.get_option(
-			self.mode,self.exponent
-			)
+		mode,exponent = Marshal.option(self.mode,self.exponent)
 
-		rate0 = self.get_rate0(self.rate0)
+		rate0 = Marshal.rate0(self.rate0)
 
-		decline0 = self.get_decline0(self.decline0)
+		decline0 = Marshal.decline0(self.decline0)
 
 		object.__setattr__(self,'mode',mode)
 		object.__setattr__(self,'exponent',exponent)
 		object.__setattr__(self,'rate0',rate0)
 		object.__setattr__(self,'decline0',decline0)
+
+	@property
+	def params(self):
+		"""Returns the model parameters, q0, d0, and b."""
+		return (self.rate0,self.decline0,self.exponent)
 
 	def __str__(self):
 
@@ -85,66 +90,6 @@ class Model:
 		string += "\n"
 
 		return string
-
-	@staticmethod
-	def get_option(mode=None,exponent=None):
-		"""Returns mode and exponent based on their values."""
-
-		if mode is None and exponent is None:
-			return 'Exponential',0
-
-		if mode is None and exponent is not None:
-			return Model.get_mode(float(exponent)),float(exponent)
-
-		if mode is not None and exponent is None:
-			return mode.capitalize(),Model.get_exponent(mode)
-
-		return Model.get_option(mode=None,exponent=float(exponent))
-
-	@staticmethod
-	def get_mode(exponent:float):
-		"""Returns mode based on the exponent value."""
-
-		if exponent == 0.:
-			return 'Exponential'
-
-		if exponent > 0. and exponent < 100.:
-			return 'Hyperbolic'
-
-		if exponent == 100.:
-			return 'Harmonic'
-
-		raise Warning("Exponent value needs to be in the range of 0 and 100.")
-
-	@staticmethod
-	def get_exponent(mode:str):
-		"""Returns exponent based on the mode."""
-
-		if mode.capitalize() == 'Exponential':
-			return 0.
-
-		if mode.capitalize() == 'Hyperbolic':
-			return 50.
-
-		if mode.capitalize() == 'Harmonic':
-			return 100.
-
-		raise Warning("Available modes are Exponential, Hyperbolic, and Harmonic.")
-
-	@staticmethod
-	def get_rate0(rate0:float):
-
-		return float(rate0)
-
-	@staticmethod
-	def get_decline0(decline0:float):
-
-		decline0 = float(decline0)
-
-		# if decline0 < 0. or decline0 > 1.:
-		# 	raise Warning("Initial decline rate (decline0) needs to be in [0., 1.]")
-
-		return decline0
 
 if __name__ == "__main__":
 

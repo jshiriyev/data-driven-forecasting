@@ -4,9 +4,8 @@ import numpy
 
 from scipy.stats import linregress
 
-from ._model import Model
-
-from ._forward import Curve
+from .elements._model import Model
+from .elements._curve import Curve
 
 class Optimize():
 
@@ -59,66 +58,6 @@ class Optimize():
 		"""Returns the method based on the class mode."""
 		
 		return getattr(self,f"{self.mode}")
-
-	def Exponential(self,days:numpy.ndarray,rates:numpy.ndarray):
-		"""Optimization based on exponential decline model."""
-
-		days,rates = days[rates!=0],rates[rates!=0]
-
-		try:
-			LinregressResult = linregress(days,numpy.log(rates))
-		except ValueError:
-			return 0.,0.,None
-
-		rate0 = numpy.exp(LinregressResult.intercept)
-
-		decline0 = -LinregressResult.slope
-
-		return rate0,decline0,LinregressResult
-
-	def Hyperbolic(self,days:numpy.ndarray,rates:numpy.ndarray):
-		"""Optimization based on hyperbolic decline model."""
-
-		exponent = self.exponent/100.
-
-		days,rates = days[rates!=0],rates[rates!=0]
-
-		try:
-			LinregressResult = linregress(days,numpy.power(1/rates,exponent))
-		except ValueError:
-			return 0.,0.,None
-
-		rate0 = LinregressResult.intercept**(-1/exponent)
-
-		decline0 = LinregressResult.slope/LinregressResult.intercept/exponent
-
-		return rate0,decline0,LinregressResult
-
-	def Harmonic(self,days:numpy.ndarray,rates:numpy.ndarray):
-		"""Optimization based on harmonic decline model."""
-
-		days,rates = days[rates!=0],rates[rates!=0]
-
-		try:
-			LinregressResult = linregress(days,1/rates)
-		except ValueError:
-			return 0.,0.,None
-
-		rate0 = LinregressResult.intercept**(-1)
-
-		decline0 = LinregressResult.slope/LinregressResult.intercept
-
-		return rate0,decline0,LinregressResult
-
-	@staticmethod
-	def Rsquared(model:Model,days:numpy.ndarray,rates:numpy.ndarray):
-
-		curve = Curve(model).run(days)
-
-		ssres = numpy.nansum((rates-curve)**2)
-		sstot = numpy.nansum((rates-numpy.nanmean(rates))**2)
-
-		return 1-ssres/sstot
 
 if __name__ == "__main__":
 
