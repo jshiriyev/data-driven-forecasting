@@ -1,8 +1,8 @@
 import numpy
 
-from ._baseclass import BaseClass
+from ._generic import GenModel
 
-class Hyperbolic(BaseClass):
+class Hyperbolic(GenModel):
 	"""Hyperbolic Decline Model"""
 
 	def __init__(self,*args,**kwargs):

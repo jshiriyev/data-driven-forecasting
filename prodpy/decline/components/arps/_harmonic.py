@@ -1,8 +1,8 @@
 import numpy
 
-from ._baseclass import BaseClass
+from ._generic import GenModel
 
-class Harmonic(BaseClass):
+class Harmonic(GenModel):
 	"""Harmonic Decline Model"""
 
 	def __init__(self,*args,**kwargs):

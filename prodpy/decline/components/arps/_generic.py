@@ -1,6 +1,6 @@
 import numpy
 
-class BaseClass:
+class GenModel:
 	"""Base Class for Decline Models"""
 
 	def __init__(self,rate0:float,decline0:float,exponent:float=None):
@@ -33,6 +33,10 @@ class BaseClass:
 	@property
 	def volume0(self):
 		return self._rate0/self._decline0
+
+	@property
+	def params(self):
+		return (self._rate0,self._decline0,self._exponent)
 	
 	def base(self,days:numpy.ndarray):
 		return self.decline0*numpy.asarray(days)

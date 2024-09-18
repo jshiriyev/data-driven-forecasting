@@ -1,20 +1,16 @@
 import numpy
 
-from ._baseclass import BaseClass
+from ._generic import GenModel
 
 from ._exponential import Exponential
 from ._hyperbolic import Hyperbolic
 from ._harmonic import Harmonic
 
-class Forward(BaseClass):
+class ArpsModel(GenModel):
 
 	def __init__(self,*args,**kwargs):
 
-		super(Forward,self).__init__(*args,**kwargs)
-
-	@property
-	def params(self):
-		return (self.rate0,self.decline0,self.exponent)
+		super(ArpsModel,self).__init__(*args,**kwargs)
 
 	def __model(self):
 
