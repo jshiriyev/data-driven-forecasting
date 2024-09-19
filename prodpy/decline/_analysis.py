@@ -2,12 +2,11 @@ import datetime
 
 import pandas
 
-from .elements._model import Model
-from .elements._curve import Curve
+from .arps._arpmod import Arps
 
-from .elements._timespan import TimeSpan
+from ._model import Model
 
-from ._optimize import Optimize
+from ._timespan import TimeSpan
 
 class Analysis():
 
@@ -71,8 +70,6 @@ class Analysis():
 		curve = Curve(model).run(days)
 
 		curve.set(dates=dates.series,heads=self.heads)
-
-		print(curve.dates)
 
 		return curve
 

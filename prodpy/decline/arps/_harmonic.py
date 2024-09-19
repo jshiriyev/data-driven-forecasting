@@ -15,15 +15,15 @@ class Harmonic(GenModel):
 
 	def ycal(self,x:numpy.ndarray):
 		"""
-		q = q0 / (1+d0*t)
+		q = q0 / (1+D0*t)
 		"""
 		return self.y0/(1+self.base(x))
 
 	def ycum(self,x:numpy.ndarray):
 		"""
-		Np = q0 / d0 * ln(1+d0*t)
+		Np = q0 / D0 * ln(1+D0*t)
 		"""
-		return (self.y0/self.d0)*numpy.log(1+self.base(x))
+		return (self.y0/self.D0)*numpy.log(1+self.base(x))
 
 	def params(self,x:numpy.ndarray,yobs:numpy.ndarray):
 		"""Optimization based on harmonic decline model."""
@@ -37,6 +37,6 @@ class Harmonic(GenModel):
 			return 0.,0.,None
 
 		y0 = LinregressResult.intercept**(-1)
-		d0 = LinregressResult.slope/LinregressResult.intercept
+		D0 = LinregressResult.slope/LinregressResult.intercept
 
-		return y0,d0,LinregressResult
+		return y0,D0,LinregressResult

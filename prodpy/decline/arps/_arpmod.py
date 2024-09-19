@@ -17,11 +17,11 @@ class Arps(GenModel):
 	def __model(self):
 
 		if self.exponent==0.:
-			return Exponential(*self.data)
+			return Exponential(*self.props)
 		elif self.exponent==1.:
-			return Harmonic(*self.data)
+			return Harmonic(*self.props)
 		elif self.exponent>0. and self.exponent<1.:
-			return Hyperbolic(*self.data)
+			return Hyperbolic(*self.props)
 
 	def ycal(self,x:numpy.ndarray):
 
