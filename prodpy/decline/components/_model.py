@@ -65,7 +65,7 @@ class Model:
 		object.__setattr__(self,'decline0',decline0)
 
 	@property
-	def params(self):
+	def data(self):
 		"""Returns the model parameters, q0, d0, and b."""
 		return (self.rate0,self.decline0,self.exponent)
 

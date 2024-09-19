@@ -1,6 +1,8 @@
+import logging
+
 import numpy
 
-from ._generic import GenModel
+from ._genmod import GenModel
 
 class Harmonic(GenModel):
 	"""Harmonic Decline Model"""
@@ -9,32 +11,32 @@ class Harmonic(GenModel):
 
 		super(Harmonic,self).__init__(*args,**kwargs)
 
-		self._exponent = 100.
+		self._exp = 1.
 
-	def rates(self,days:numpy.ndarray):
+	def ycal(self,x:numpy.ndarray):
 		"""
 		q = q0 / (1+d0*t)
 		"""
-		return self.rate0/(1+self.base(days))
+		return self.y0/(1+self.base(x))
 
-	def cums(self,days:numpy.ndarray):
+	def ycum(self,x:numpy.ndarray):
 		"""
 		Np = q0 / d0 * ln(1+d0*t)
 		"""
-		return self.volume0*numpy.log(1+self.base(days))
+		return (self.y0/self.d0)*numpy.log(1+self.base(x))
 
-	def inverse(self,days:numpy.ndarray,rates:numpy.ndarray):
+	def params(self,x:numpy.ndarray,yobs:numpy.ndarray):
 		"""Optimization based on harmonic decline model."""
 
-		days,rates = days[rates!=0],rates[rates!=0]
+		x,yobs = x[yobs!=0],yobs[yobs!=0]
 
 		try:
-			LinregressResult = linregress(days,1/rates)
-		except ValueError:
+			LinregressResult = linregress(x,1/yobs)
+		except Exception as exception:
+			logging.error("Error occurred: %s", exception)
 			return 0.,0.,None
 
-		rate0 = LinregressResult.intercept**(-1)
+		y0 = LinregressResult.intercept**(-1)
+		d0 = LinregressResult.slope/LinregressResult.intercept
 
-		decline0 = LinregressResult.slope/LinregressResult.intercept
-
-		return rate0,decline0,LinregressResult
+		return y0,d0,LinregressResult

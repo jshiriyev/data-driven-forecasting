@@ -1,6 +1,8 @@
+import logging
+
 import numpy
 
-from ._generic import GenModel
+from ._genmod import GenModel
 
 class Exponential(GenModel):
 	"""Exponential Decline Model"""
@@ -9,32 +11,32 @@ class Exponential(GenModel):
 
 		super(Exponential,self).__init__(*args,**kwargs)
 
-		self._exponent = 0.
+		self._exp = 0.
 
-	def rates(self,days:numpy.ndarray):
+	def ycal(self,x:numpy.ndarray):
 		"""
 		q = q0 * exp(-d0*t)
 		"""
-		return self.rate0*numpy.exp(-self.base(days))
+		return self.y0*numpy.exp(-self.base(x))
 
-	def cums(self,days:numpy.ndarray):
+	def ycum(self,x:numpy.ndarray):
 		"""
 		Np = q0 / d0 * (1-exp(-d0*t))
 		"""
-		return self.volume0*(1-numpy.exp(-self.base(days)))
+		return (self.y0/self.d0)*(1-numpy.exp(-self.base(x)))
 
-	def inverse(self,days:numpy.ndarray,rates:numpy.ndarray):
+	def params(self,x:numpy.ndarray,yobs:numpy.ndarray):
 		"""Optimization based on exponential decline model."""
 
-		days,rates = days[rates!=0],rates[rates!=0]
+		x,yobs = x[yobs!=0],yobs[yobs!=0]
 
 		try:
-			LinregressResult = linregress(days,numpy.log(rates))
-		except ValueError:
+			LinregressResult = linregress(x,numpy.log(yobs))
+		except Exception as exception:
+			logging.error("Error occurred: %s", exception)
 			return 0.,0.,None
 
-		rate0 = numpy.exp(LinregressResult.intercept)
+		y0 = numpy.exp(LinregressResult.intercept)
+		d0 = -LinregressResult.slope
 
-		decline0 = -LinregressResult.slope
-
-		return rate0,decline0,LinregressResult
+		return y0,d0,LinregressResult
