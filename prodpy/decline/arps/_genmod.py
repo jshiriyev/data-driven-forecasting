@@ -2,14 +2,21 @@ import numpy
 
 from scipy._lib._bunch import _make_tuple_bunch
 
-Score = _make_tuple_bunch('Score',['linear','nonlinear'])
+NonLinResult = _make_tuple_bunch('NonLinResult',
+	['decline','intercept','rvalue'])
+
+# LinregressResult = _make_tuple_bunch('LinregressResult',
+# 	['slope','intercept','rvalue','pvalue','stderr'],
+# 	extra_field_names=['intercept_stderr'])
+
+Result = _make_tuple_bunch('Result',['linear','nonlinear'])
 
 class GenModel:
 	"""Base class for Arp's decline models: Exponential, 
 	Hyperbolic, and Harmonic; main decline attributes are:
-
-	yi 		: initial y value
+	
 	Di 		: initial decline rate
+	yi 		: initial y value
 
 	The decline exponent defines the mode:
 	
@@ -21,19 +28,19 @@ class GenModel:
 
 	"""
 
-	def __init__(self,yi:float,Di:float,xp:float=None):
+	def __init__(self,Di:float,yi:float,xp:float=None):
 
-		self._yi = yi 
 		self._Di = Di
+		self._yi = yi
 		self._xp = xp
-
-	@property
-	def yi(self):
-		return self._yi
 
 	@property
 	def Di(self):
 		return self._Di
+
+	@property
+	def yi(self):
+		return self._yi
 
 	@property
 	def xp(self):
@@ -41,7 +48,7 @@ class GenModel:
 	
 	@property
 	def args(self):
-		return self._yi,self._Di,self._xp
+		return self.Di,self.yi,self.xp
 	
 	def base(self,x:numpy.ndarray):
 		return self.Di*numpy.asarray(x)
@@ -52,26 +59,21 @@ class GenModel:
 	def ycum(self,x:numpy.ndarray):
 		pass
 
-	def prepare(self,xobs:numpy.ndarray,yobs:numpy.ndarray,xi:float=0):
-		pass
-
-	def regress(self,xobs:numpy.ndarray,yobs:numpy.ndarray):
-		"""Linear regression of xobs and yobs values"""
+	def regress(self,x:numpy.ndarray,yobs:numpy.ndarray):
+		"""Linear regression of x and yobs values"""
 		try:
-			result = linregress(xobs,yobs)
+			result = linregress(x,yobs)
 		except Exception as exception:
 			logging.error("Error occurred: %s", exception)
 		else:
 			return result
 
-	def params(self,x:numpy.ndarray,yobs:numpy.ndarray,x0:float=None):
-		pass
+	def rvalue(self,x:numpy.ndarray,yobs:numpy.ndarray):
 
-	@classmethod
-	def model(cls,x:numpy.ndarray,yobs:numpy.ndarray,x0:float=None):
-		"""Returns an exponential model that fits observation values."""
-		yi,Di,_ = self.params(x,yobs,x0)
-		return cls(yi=yi,Di=Di,xp=0.)
+		ssres = numpy.nansum((yobs-self.ycal(x))**2)
+		sstot = numpy.nansum((yobs-numpy.nanmean(yobs))**2)
+
+		return 1-ssres/sstot
 
 if __name__ == "__main__":
 

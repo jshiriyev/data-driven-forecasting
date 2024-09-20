@@ -2,7 +2,7 @@ import logging
 
 import numpy
 
-from ._genmod import GenModel
+from ._genmod import GenModel,NonLinResult,Result
 
 class Hyperbolic(GenModel):
 	"""Hyperbolic Decline Model"""

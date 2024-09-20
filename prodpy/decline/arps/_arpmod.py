@@ -1,12 +1,7 @@
 import numpy
 
 from ._genmod import GenModel
-
-from ._exponential import Exponential
-
-from ._hyperbolic import Hyperbolic
-
-from ._harmonic import Harmonic
+from ._marshal import Marshal
 
 class Arps(GenModel):
 
@@ -16,12 +11,7 @@ class Arps(GenModel):
 
 	def __model(self):
 
-		if self.exponent==0.:
-			return Exponential(*self.props)
-		elif self.exponent==1.:
-			return Harmonic(*self.props)
-		elif self.exponent>0. and self.exponent<1.:
-			return Hyperbolic(*self.props)
+		return Marshal.model(self.xp)(*self.props)
 
 	def ycal(self,x:numpy.ndarray):
 
@@ -31,18 +21,17 @@ class Arps(GenModel):
 
 		return self.__model.ycum(x)
 
-	def params(self,x:numpy.ndarray,yobs:numpy.ndarray,x0:float=None):
+	def param(self,x:numpy.ndarray,yobs:numpy.ndarray,xi:float=None):
 
-		y0,D0,linear = self.__model.params(x,yobs)
+		yi,Di,linear = self.__model.param(x,yobs)
 
-		nonlinear = NonLinResult(D0,y0,self.rvalue(x,yobs))
+		nonlinear = NonLinResult(Di,yi,self.rvalue(x,yobs))
 
 		return Score(linear,nonlinear)
 
-	def rvalue(self,x:numpy.ndarray,yobs:numpy.ndarray):
-
-		ssres = numpy.nansum((yobs-self.ycal(x))**2)
-		sstot = numpy.nansum((yobs-numpy.nanmean(yobs))**2)
-
-		return 1-ssres/sstot
+	@classmethod
+	def model(cls,x:numpy.ndarray,yobs:numpy.ndarray,xi:float=None):
+		"""Returns an exponential model that fits observation values."""
+		yi,Di,_ = self.param(x,yobs,xi)
+		return cls(yi=yi,Di=Di,xp=0.)
 

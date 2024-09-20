@@ -2,16 +2,7 @@ import logging
 
 import numpy
 
-from scipy._lib._bunch import _make_tuple_bunch
-
-from ._genmod import GenModel
-
-NonLinResult = _make_tuple_bunch('NonLinResult',
-	['decline','intercept','rvalue'])
-
-# LinregressResult = _make_tuple_bunch('LinregressResult',
-# 	['slope','intercept','rvalue','pvalue','stderr'],
-# 	extra_field_names=['intercept_stderr'])
+from ._genmod import GenModel,NonLinResult,Result
 
 class Exponential(GenModel):
 	"""Exponential Decline Model"""
@@ -22,7 +13,7 @@ class Exponential(GenModel):
 
 		self._xp = 0.
 
-	def y(self,x:numpy.ndarray):
+	def ycal(self,x:numpy.ndarray):
 		"""
 		q = qi * exp(-Di*t)
 		"""
@@ -34,33 +25,30 @@ class Exponential(GenModel):
 		"""
 		return (self.yi/self.Di)*(1-numpy.exp(-self.base(x)))
 
-	def params(self,x:numpy.ndarray,yobs:numpy.ndarray,x0:float=None):
+	def regress(self,x:numpy.ndarray,yobs:numpy.ndarray,xi:float=0.):
 
-		return self.__invert(x,yobs,x0)[:2]
-
-	@classmethod
-	def model(cls,x:numpy.ndarray,yobs:numpy.ndarray,x0:float=None):
-		"""Returns an exponential model that fits observation values."""
-
-		yi,Di,linear = self.__invert(x,yobs,x0)
-
-		nonlinear = 
-
-		return cls(yi=yi,Di=Di,expo=0.)
-
-	def regress(self,xobs:numpy.ndarray,yobs:numpy.ndarray,x0:float=0.):
-
+		xobs,yobs = x[x>=xi]-xi,yobs[x>=xi]
 		xobs,yobs = xobs[yobs!=0],yobs[yobs!=0]
 
-		linear = super().regress(xobs-x0,numpy.log(yobs))
+		linear = super().regress(xobs,numpy.log(yobs))
 
 		if linear is None:
-			return Score(None,None)
+			return Result(None,None)
 
-		yi = numpy.exp(linear.intercept)
 		Di = -linear.slope
-		R2 = Exponential(yi,Di).rvalue(xobs-x0,yobs)
+		yi = numpy.exp(linear.intercept)
+		R2 = Exponential(Di,yi).rvalue(xobs,yobs)
 
-		nonlinear = NonLinResult(yi,Di,R2)
+		nonlinear = NonLinResult(Di,yi,R2)
 
-		return Score(linear,nonlinear)
+		return Result(linear,nonlinear)
+
+	def params(self,x:numpy.ndarray,yobs:numpy.ndarray,xi:float=None):
+
+		return self.regress(x,yobs,xi).nonlinear
+
+	@classmethod
+	def model(cls,x:numpy.ndarray,yobs:numpy.ndarray,xi:float=None):
+		"""Returns an exponential model that fits observation values."""
+		nonlinear = self.params(x,yobs,xi)
+		return cls(nonlinear.decline,nonlinear.intercept)

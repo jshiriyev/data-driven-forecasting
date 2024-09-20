@@ -1,3 +1,7 @@
+from ._exponential import Exponential
+from ._harmonic import Harmonic
+from ._hyperbolic import Hyperbolic
+
 class Marshal:
 	"""The class contains methods to get the correct pair of options."""
 
@@ -18,18 +22,15 @@ class Marshal:
 		return Marshal.option(mode=None,exponent=float(exponent))
 
 	@staticmethod
-	def mode(exponent:float):
+	def model(exponent:float):
 		"""Returns mode based on the exponent value."""
 		if exponent == 0.:
-			return 'Exponential'
-
-		if exponent > 0. and exponent < 1.:
-			return 'Hyperbolic'
+			return Exponential
 
 		if exponent == 1.:
-			return 'Harmonic'
+			return Harmonic
 
-		raise Warning("Exponent value needs to be in the range of 0 and 1.")
+		raise Hyperbolic
 
 	@staticmethod
 	def exponent(mode:str):
