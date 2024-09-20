@@ -57,17 +57,17 @@ class GenModel:
 	def base(self,x:numpy.ndarray):
 		return self.Di*numpy.asarray(x)
 
-	def xshift(self,x:numpy.ndarray,yobs:numpy.ndarray,xi:float=None):
+	def preproc(self,x:numpy.ndarray,yobs:numpy.ndarray,xi:float=None):
 		"""Returns shifted x data to get the yi at xi."""
 		return (x, yobs) if xi is None else (x[x>=xi]-xi, yobs[x>=xi])
 
 	def regress(self,x:numpy.ndarray,yobs:numpy.ndarray,xi:float=None):
 		"""Linear regression of x and yobs values."""
 
-		shifted = self.xshift(x,yobs,xi)
+		x,yobs = self.preproc(x,yobs,xi)
 
 		try:
-			result = linregress(*shifted)
+			result = linregress(x,yobs)
 		except Exception as exception:
 			logging.error("Error occurred: %s", exception)
 		else:
@@ -76,7 +76,7 @@ class GenModel:
 	def rsquared(self,x:numpy.ndarray,yobs:numpy.ndarray,xi:float=None):
 		"""Returns R-squared value."""
 
-		x,yobs = self.xshift(x,yobs,xi)
+		x,yobs = self.preproc(x,yobs,xi)
 
 		ssres = numpy.nansum((yobs-self.ycal(x))**2)
 		sstot = numpy.nansum((yobs-numpy.nanmean(yobs))**2)

@@ -1,5 +1,7 @@
 import numpy
 
+from scipy.stats import norm
+
 from ._genmod import GenModel,NonLinResult,Result
 
 class Harmonic(GenModel):
@@ -23,15 +25,21 @@ class Harmonic(GenModel):
 		"""
 		return (self.yi/self.Di)*numpy.log(1+self.base(x))
 
+	def preproc(self,x:numpy.ndarray,yobs:numpy.ndarray,xi:float=None):
+
+		x,yobs = super().preproc(x,yobs,xi)
+		x,yobs = x[yobs!=0],yobs[yobs!=0]
+
+		return (x,yobs)
+
 	def regress(self,x:numpy.ndarray,yobs:numpy.ndarray,xi:float=0.):
 		"""Returns regression results after linearization."""
 
-		x,yobs = self.xshift(x,yobs,xi)
-		x,yobs = x[yobs!=0],yobs[yobs!=0]
+		x,yobs = self.preproc(x,yobs,xi)
 
 		linear = super().regress(x,1/yobs)
 
-		params = (0,0) if linear is None else self.inverse(linear.slope,linear.intercept)
+		params = (0,0) if linear is None else self.inverse(linear)
 
 		R2 = Harmonic(*params).rsquared(x,yobs)
 
@@ -39,12 +47,19 @@ class Harmonic(GenModel):
 
 		return Result(linear,nonlinear)
 
-	def model(self,x:numpy.ndarray,yobs:numpy.ndarray,xi:float=None):
+	def model(self,x:numpy.ndarray,yobs:numpy.ndarray,xi:float=None,pct:float=50.):
 		"""Returns an exponential model that fits observation values."""
-		result = self.regress(x,yobs,xi).nonlinear
-		
-		return Harmonic(result.decline,result.intercept)
+		x,yobs = self.preproc(x,yobs,xi)
 
-	def inverse(self,m,b):
+		linear = super().regress(x,1/yobs)
+
+		params = (0.,0.) if linear is None else self.inverse(linear,pct)
+		
+		return Harmonic(*params)
+
+	def inverse(self,linear,pct:float=50.):
+
+		m = linear.slope+norm.ppf(pct/100.)*linear.stderr
+		b = linear.intercept+norm.ppf(pct/100.)*linear.intercept_stderr
 
 		return (m/b,b**(-1))
