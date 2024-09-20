@@ -25,17 +25,21 @@ class Arps(GenModel):
 
 	def ycal(self,x:numpy.ndarray):
 
-		self.__model.ycal(x)
+		return self.__model.ycal(x)
 
 	def ycum(self,x:numpy.ndarray):
 
-		self.__model.ycum(x)
+		return self.__model.ycum(x)
 
-	def params(self,x:numpy.ndarray,yobs:numpy.ndarray):
+	def params(self,x:numpy.ndarray,yobs:numpy.ndarray,x0:float=None):
 
-		self.__model.params(x,yobs)
+		y0,D0,linear = self.__model.params(x,yobs)
 
-	def rsquared(self,x:numpy.ndarray,yobs:numpy.ndarray):
+		nonlinear = NonLinResult(D0,y0,self.rvalue(x,yobs))
+
+		return Score(linear,nonlinear)
+
+	def rvalue(self,x:numpy.ndarray,yobs:numpy.ndarray):
 
 		ssres = numpy.nansum((yobs-self.ycal(x))**2)
 		sstot = numpy.nansum((yobs-numpy.nanmean(yobs))**2)

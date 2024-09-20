@@ -1,6 +1,8 @@
 class Marshal:
 	"""The class contains methods to get the correct pair of options."""
 
+	modes = 'Exponential','Hyperbolic','Harmonic'
+
 	@staticmethod
 	def option(mode:str=None,exponent:float=None):
 		"""Returns mode and exponent based on their values."""
@@ -46,3 +48,5 @@ class Marshal:
 if __name__ == "__main__":
 
 	print(Marshal.option("Hyperbolic",0.))
+
+	print(type(Marshal.modes))

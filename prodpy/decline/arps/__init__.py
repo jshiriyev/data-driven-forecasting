@@ -5,3 +5,5 @@ from ._hyperbolic import Hyperbolic
 from ._harmonic import Harmonic
 
 from ._arpmod import Arps
+
+from ._marshal import Marshal

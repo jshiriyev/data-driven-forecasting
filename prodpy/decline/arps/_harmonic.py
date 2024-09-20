@@ -11,7 +11,7 @@ class Harmonic(GenModel):
 
 		super(Harmonic,self).__init__(*args,**kwargs)
 
-		self._exp = 1.
+		self._expo = 1.
 
 	def ycal(self,x:numpy.ndarray):
 		"""

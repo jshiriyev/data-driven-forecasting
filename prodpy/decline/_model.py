@@ -4,46 +4,14 @@ from dataclasses import dataclass, field
 
 from scipy.stats._stats_py import LinregressResult
 
-from arps._arpmodel import Arps
+from .arps._arpmod import Arps
 
-from ._marshal import Marshal
+from .arps._marshal import Marshal
 
 @dataclass(frozen=True)
 class Model:
-	"""Initializes Decline Curve Model with the decline option and attributes.
-
-	Decline option is mode-exponent pair, where expo defines the mode:
-
-	expo 	: Arps' decline-curve exponent (b)
-
-		b = 0 		-> mode = 'Exponential'
-		0 < b < 100	-> mode = 'Hyperbolic'
-		b = 100		-> mode = 'Harmonic' 
-
-	Decline attributes are y0 (q0) and D0 (D0):
-
-	y0 			: initial y value
-	D0 			: initial decline rate
-
-	"""
-
-	mode 		: str   = None
-	expo 		: float = None
 
 	d0 			: datetime.date = None
-
-	y0 			: float = 0.
-	D0 			: float = 0.
-
-	options 	: tuple[str] = field(
-		init = False,
-		repr = False,
-		default = (
-			'Exponential',
-			'Hyperbolic',
-			'Harmonic',
-			)
-		)
 
 	score 		: dict = field(
 		init = False,
@@ -61,11 +29,6 @@ class Model:
 
 		object.__setattr__(self,'y0',float(self.y0))
 		object.__setattr__(self,'D0',float(self.D0))
-
-	@property
-	def props(self):
-		"""Returns the model parameters, q0, D0, and b."""
-		return (self.y0,self.D0,self.expo)
 
 	def __str__(self):
 
