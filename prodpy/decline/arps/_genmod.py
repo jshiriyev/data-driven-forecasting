@@ -67,7 +67,7 @@ class GenModel:
 		x,yobs = self.preproc(x,yobs,xi)
 
 		try:
-			result = linregress(x,yobs)
+			result = linregress(x,yobs,alternative="less")
 		except Exception as exception:
 			logging.error("Error occurred: %s", exception)
 		else:

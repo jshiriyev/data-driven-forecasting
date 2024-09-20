@@ -60,8 +60,15 @@ class Exponential(GenModel):
 
 	def inverse(self,linear,pct:float=50.):
 
-		m = linear.slope+norm.ppf(pct/100.)*linear.stderr
-		b = linear.intercept+norm.ppf(pct/100.)*linear.intercept_stderr
+		# m,b = self.__statistics(linear.slope,linear.intercept)
+		# t,v = self.__statistics(linear.stderr,linear.intercept_stderr)
+
+		m = linear.slope+norm.ppf(pct/100.)*linear.stderr*numpy.sqrt(148)
+		b = linear.intercept+norm.ppf(pct/100.)*linear.intercept_stderr*numpy.sqrt(148)
+
+		return (-m,numpy.exp(b))
+
+	def __statistics(self,m,b):
 
 		return (-m,numpy.exp(b))
 

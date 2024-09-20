@@ -1,6 +1,6 @@
-import logging
-
 import numpy
+
+from scipy.stats import norm
 
 from ._genmod import GenModel,NonLinResult,Result
 
