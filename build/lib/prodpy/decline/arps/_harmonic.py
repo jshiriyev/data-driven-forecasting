@@ -31,11 +31,11 @@ class Harmonic(GenModel):
 
 		linear = super().regress(x,1/yobs)
 
-		Di,yi = 0,0 if linear is None else linear.slope/linear.intercept,linear.intercept**(-1)
+		params = (0,0) if linear is None else self.inverse(linear.slope,linear.intercept)
 
-		R2 = Harmonic(Di,yi).rvalue(x,yobs)
+		R2 = Harmonic(*params).rsquared(x,yobs)
 
-		nonlinear = NonLinResult(Di,yi,R2)
+		nonlinear = NonLinResult(*params,R2)
 
 		return Result(linear,nonlinear)
 
@@ -44,3 +44,7 @@ class Harmonic(GenModel):
 		result = self.regress(x,yobs,xi).nonlinear
 		
 		return Harmonic(result.decline,result.intercept)
+
+	def inverse(self,m,b):
+
+		return (m/b,b**(-1))

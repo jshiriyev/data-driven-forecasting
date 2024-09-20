@@ -31,11 +31,11 @@ class Hyperbolic(GenModel):
 
 		linear = super().regress(x,numpy.power(1/yobs,self.xp))
 
-		Di,yi = 0,0 if linear is None else linear.slope/linear.intercept/self.xp,linear.intercept**(-1/self.xp)
+		params = (0,0) if linear is None else self.inverse(linear.slope,linear.intercept)
 
-		R2 = Hyperbolic(Di,yi,self.xp).rvalue(x,yobs)
+		R2 = Hyperbolic(*params,self.xp).rsquared(x,yobs)
 
-		nonlinear = NonLinResult(Di,yi,R2)
+		nonlinear = NonLinResult(*params,R2)
 
 		return Result(linear,nonlinear)
 
@@ -44,3 +44,7 @@ class Hyperbolic(GenModel):
 		result = self.regress(x,yobs,xi).nonlinear
 		
 		return Hyperbolic(result.decline,result.intercept,self.xp)
+
+	def inverse(self,m,b):
+
+		return (m/b/self.xp, b**(-1/self.xp))

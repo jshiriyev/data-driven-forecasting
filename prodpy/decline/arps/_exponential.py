@@ -31,11 +31,11 @@ class Exponential(GenModel):
 
 		linear = super().regress(x,numpy.log(yobs))
 
-		Di,yi = 0.,0. if linear is None else -linear.slope,numpy.exp(linear.intercept)
+		params = (0.,0.) if linear is None else self.inverse(linear.slope,linear.intercept)
 		
-		R2 = Exponential(Di,yi).rvalue(x,yobs)
+		R2 = Exponential(*params).rsquared(x,yobs)
 
-		nonlinear = NonLinResult(Di,yi,R2)
+		nonlinear = NonLinResult(*params,R2)
 
 		return Result(linear,nonlinear)
 
@@ -44,3 +44,7 @@ class Exponential(GenModel):
 		result = self.regress(x,yobs,xi).nonlinear
 
 		return Exponential(result.decline,result.intercept)
+
+	def inverse(self,m,b):
+
+		return (-m,numpy.exp(b))

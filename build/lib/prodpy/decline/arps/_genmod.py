@@ -4,8 +4,10 @@ import numpy
 
 from scipy._lib._bunch import _make_tuple_bunch
 
+from scipy.stats import linregress
+
 NonLinResult = _make_tuple_bunch('NonLinResult',
-	['decline','intercept','rvalue'])
+	['decline','intercept','rsquared'])
 
 LinregressResult = _make_tuple_bunch('LinregressResult',
 	['slope','intercept','rvalue','pvalue','stderr'],
@@ -57,7 +59,7 @@ class GenModel:
 
 	def xshift(self,x:numpy.ndarray,yobs:numpy.ndarray,xi:float=None):
 		"""Returns shifted x data to get the yi at xi."""
-		return x, yobs if xi is None else x[x>=xi]-xi, yobs[x>=xi]
+		return (x, yobs) if xi is None else (x[x>=xi]-xi, yobs[x>=xi])
 
 	def regress(self,x:numpy.ndarray,yobs:numpy.ndarray,xi:float=None):
 		"""Linear regression of x and yobs values."""
@@ -71,7 +73,7 @@ class GenModel:
 		else:
 			return result
 
-	def rvalue(self,x:numpy.ndarray,yobs:numpy.ndarray,xi:float=None):
+	def rsquared(self,x:numpy.ndarray,yobs:numpy.ndarray,xi:float=None):
 		"""Returns R-squared value."""
 
 		x,yobs = self.xshift(x,yobs,xi)
