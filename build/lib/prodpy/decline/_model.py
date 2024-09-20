@@ -2,45 +2,16 @@ import datetime
 
 from dataclasses import dataclass, field
 
-# from scipy.stats._stats_py import LinregressResult
+from scipy.stats._stats_py import LinregressResult
+
+from .arps._arpmod import Arps
+
+from .arps._marshal import Marshal
 
 @dataclass(frozen=True)
 class Model:
-	"""Initializes Decline Curve Model with the decline option and attributes.
 
-	Decline option is mode-exponent pair, where exponent defines the mode:
-
-	exponent 	: Arps' decline-curve exponent (b)
-
-		b = 0 		-> mode = 'Exponential'
-		0 < b < 100	-> mode = 'Hyperbolic'
-		b = 100		-> mode = 'Harmonic' 
-
-	Decline attributes are rate0 (q0) and decline0 (d0):
-
-	rate0 		: initial flow rate
-	decline0 	: initial decline rate, day**-1
-
-	The class contains methods to get the correct pair of options.
-	"""
-
-	mode 		: str   = None
-	exponent 	: float = None
-
-	date0 		: datetime.date = None
-	
-	rate0 		: float = 0.
-	decline0 	: float = 0.
-
-	options 	: tuple[str] = field(
-		init = False,
-		repr = False,
-		default = (
-			'Exponential',
-			'Hyperbolic',
-			'Harmonic',
-			)
-		)
+	d0 			: datetime.date = None
 
 	score 		: dict = field(
 		init = False,
@@ -51,24 +22,19 @@ class Model:
 	def __post_init__(self):
 		"""Assigns corrected mode and exponent values."""
 
-		mode,exponent = self.get_option(
-			self.mode,self.exponent
-			)
-
-		rate0 = self.get_rate0(self.rate0)
-
-		decline0 = self.get_decline0(self.decline0)
+		mode,expo = Marshal.option(self.mode,self.expo)
 
 		object.__setattr__(self,'mode',mode)
-		object.__setattr__(self,'exponent',exponent)
-		object.__setattr__(self,'rate0',rate0)
-		object.__setattr__(self,'decline0',decline0)
+		object.__setattr__(self,'expo',expo)
+
+		object.__setattr__(self,'y0',float(self.y0))
+		object.__setattr__(self,'D0',float(self.D0))
 
 	def __str__(self):
 
 		string = "\n"
 
-		string += f"Decline mode is {self.mode} and the exponent is {self.exponent}%.\n"
+		string += f"Decline mode is {self.mode} and the exponent is {self.expo}%.\n"
 
 		string += "\n"
 
@@ -78,73 +44,28 @@ class Model:
 		if self.score.get("NonlinearRsquared") is not None:
 			string += f"Non-linear fit R-squared is {self.score["NonlinearRsquared"]:.2f}\n\n"
 
-		string += f"Initial date is {self.date0}\n"
-		string += f"Production rate is {self.rate0:.1f}\n"
-		string += f"Annual decline percentage is {self.decline0*365.25*100:.1f}%\n"
+		string += f"Initial date is {self.d0}\n"
+		string += f"Production rate is {self.y0:.1f}\n"
+		string += f"Annual decline percentage is {self.D0*365.25*100:.1f}%\n"
 
 		string += "\n"
 
 		return string
 
-	@staticmethod
-	def get_option(mode=None,exponent=None):
-		"""Returns mode and exponent based on their values."""
+	@classmethod
+	def fit(cls,x:numpy.ndarray,yobs:numpy.ndarray,d0=None):
+		"""Inversely calculates decline model, and returns decline model
+		with mode, expo, d0, y0 and D0.
+		"""
+		y0,D0,LinRegRes = self.minimize(x,)
 
-		if mode is None and exponent is None:
-			return 'Exponential',0
+		model = cls(mode=self.mode,expo=self.expo,d0=d0,y0=y0,D0=D0)
 
-		if mode is None and exponent is not None:
-			return Model.get_mode(float(exponent)),float(exponent)
+		model.score["LinRegressResult"] = LinRegRes
 
-		if mode is not None and exponent is None:
-			return mode.capitalize(),Model.get_exponent(mode)
+		model.score["NonLinRsquared"] = self.Rsquared(model,x)
 
-		return Model.get_option(mode=None,exponent=float(exponent))
-
-	@staticmethod
-	def get_mode(exponent:float):
-		"""Returns mode based on the exponent value."""
-
-		if exponent == 0.:
-			return 'Exponential'
-
-		if exponent > 0. and exponent < 100.:
-			return 'Hyperbolic'
-
-		if exponent == 100.:
-			return 'Harmonic'
-
-		raise Warning("Exponent value needs to be in the range of 0 and 100.")
-
-	@staticmethod
-	def get_exponent(mode:str):
-		"""Returns exponent based on the mode."""
-
-		if mode.capitalize() == 'Exponential':
-			return 0.
-
-		if mode.capitalize() == 'Hyperbolic':
-			return 50.
-
-		if mode.capitalize() == 'Harmonic':
-			return 100.
-
-		raise Warning("Available modes are Exponential, Hyperbolic, and Harmonic.")
-
-	@staticmethod
-	def get_rate0(rate0:float):
-
-		return float(rate0)
-
-	@staticmethod
-	def get_decline0(decline0:float):
-
-		decline0 = float(decline0)
-
-		# if decline0 < 0. or decline0 > 1.:
-		# 	raise Warning("Initial decline rate (decline0) needs to be in [0., 1.]")
-
-		return decline0
+		return model
 
 if __name__ == "__main__":
 
@@ -152,15 +73,15 @@ if __name__ == "__main__":
 
 	# import numpy as np
 
-	# days = np.linspace(0,100,100)
+	# x = np.linspace(0,100,100)
 
-	model = Model(rate0=5.)
+	model = Model(y0=5.)
 
 	print(model)
 
-	print(model.rate0)
+	print(model.y0)
 
-	print(Model.rate0)
+	print(Model.y0)
 
 	print(Model.mode)
 
@@ -169,29 +90,29 @@ if __name__ == "__main__":
 	print(model.score["name"])
 	# print(Model.score)
 
-	mode,exponent = Model.get_option(mode='Exponential',exponent=50.)
+	mode,expo = Model.get_option(mode='Exponential',expo=50.)
 
 	print(mode)
-	print(exponent)
+	print(expo)
 
-	# exp = Model(rate0=10,decline0=0.05)
-	# hyp = Model(rate0=10,decline0=0.05,exponent=40.)
-	# har = Model(rate0=10,decline0=0.05,exponent=100.)
+	# exp = Model(y0=10,D0=0.05)
+	# hyp = Model(y0=10,D0=0.05,expo=40.)
+	# har = Model(y0=10,D0=0.05,expo=100.)
 
 	# print(exp)
 
-	# plt.plot(days,exp(days=days),label='Exponential')
-	# plt.plot(days,hyp(days=days),label='Hyperbolic')
-	# plt.plot(days,har(days=days),label='Harmonic')
+	# plt.plot(x,exp(x=x),label='Exponential')
+	# plt.plot(x,hyp(x=x),label='Hyperbolic')
+	# plt.plot(x,har(x=x),label='Harmonic')
 
 	# plt.legend()
 
 	# plt.show()
 
 	print(Model.mode)
-	print(Model.exponent)
-	print(Model.rate0)
-	print(Model.decline0)
+	print(Model.expo)
+	print(Model.y0)
+	print(Model.D0)
 	print(Model.options)
 
 	print(Model(5,100,5,0.5))

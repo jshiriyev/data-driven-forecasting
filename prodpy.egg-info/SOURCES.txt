@@ -11,10 +11,15 @@ prodpy/allocate/_allocate.py
 prodpy/decline/__init__.py
 prodpy/decline/_analysis.py
 prodpy/decline/_diamond.py
-prodpy/decline/_forward.py
 prodpy/decline/_model.py
-prodpy/decline/_optimize.py
 prodpy/decline/_timespan.py
+prodpy/decline/arps/__init__.py
+prodpy/decline/arps/_arpmod.py
+prodpy/decline/arps/_exponential.py
+prodpy/decline/arps/_genmod.py
+prodpy/decline/arps/_harmonic.py
+prodpy/decline/arps/_hyperbolic.py
+prodpy/decline/arps/_marshal.py
 prodpy/pipeline/__init__.py
 prodpy/pipeline/_completion.py
 prodpy/pipeline/_frameutils.py
