@@ -68,14 +68,69 @@ class Exponential(GenModel):
 
 		return (-m,numpy.exp(b))
 
-	def __statistics(self,m,b):
+class Arps:
 
-		return (-m,numpy.exp(b))
+	def __init__(self,xp=0.):
 
+		self._xp = xp
 
+	@property
+	def xp(self):
+		return self._xp
 
+	def frw(self,Di:float,yi:float):
 
+		pass
 
+	def cum(self,Di:float,yi:float):
 
+		pass
 
+	def inv(self,x:numpy.ndarray,y:numpy.ndarray,pct=None):
 
+		pass
+
+	@staticmethod
+	def frwexp(Di,yi,xp):
+
+		pass
+
+	@staticmethod
+	def frwhyp(Di,yi,xp):
+
+		pass
+
+	@staticmethod
+	def frwhar(Di,yi,xp):
+
+		pass
+
+	@staticmethod
+	def cumexp(Di,yi,xp):
+
+		pass
+
+	@staticmethod
+	def cumhyp(Di,yi,xp):
+
+		pass
+
+	@staticmethod
+	def cumhar():
+
+		pass
+
+	@staticmethod
+	def invexp():
+
+		pass
+
+	@staticmethod
+	def invhyp():
+
+		pass
+
+	@staticmethod
+	def invhar():
+
+		pass

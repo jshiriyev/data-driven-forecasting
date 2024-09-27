@@ -16,12 +16,16 @@ class Arps(GenModel):
 		return Marshal.model(self.xp)
 
 	def ycal(self,x:numpy.ndarray):
-
+		"""Returns rates for the given model"""
 		return self.__model(*self.props).ycal(x)
 
 	def ycum(self,x:numpy.ndarray):
-
+		"""Returns cumulative values for the given model."""
 		return self.__model(*self.props).ycum(x)
+
+	def yinv(self,x:numpy.ndarray,yobs:numpy.ndarray,xi:float=None):
+
+		pass
 
 	def regress(self,x:numpy.ndarray,yobs:numpy.ndarray,xi:float=None):
 		"""Returns regression results after linearization."""
