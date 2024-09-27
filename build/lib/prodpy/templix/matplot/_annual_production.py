@@ -26,7 +26,7 @@ def get_days_in_month(frame,datehead):
     
     return frame
 
-group = gunashly[["MEASUREMENTDATE","HORIZON","Gundelik_neft, t/gun"]].groupby(["MEASUREMENTDATE","HORIZON"])
+group = gunashly[["MEASUREMENTDATE","PLATFORMS","Gundelik_neft, t/gun"]].groupby(["MEASUREMENTDATE","PLATFORMS"])
 
 GUN = group.sum('Gundelik_neft, t/gun').reset_index()
 
@@ -34,30 +34,42 @@ GUN = get_days_in_month(GUN,"MEASUREMENTDATE")
 
 GUN['Monthly Oil Production ton/month'] = GUN['Gundelik_neft, t/gun']*GUN['days_in_month']
 
-replacement_dict = {
-    'III': 'Others',
-    'IV': 'Others',
-    'QA': 'Others',
-    'QÜG': 'Others',
-    'V': 'Others',
-    'VI': 'Others',
-    'VII': 'Others',
-    'VIII': 'Others',
-}
+# replacement_dict = {
+#     'III': 'Others',
+#     'IV': 'Others',
+#     'QA': 'Others',
+#     'QÜG': 'Others',
+#     'V': 'Others',
+#     'VI': 'Others',
+#     'VII': 'Others',
+#     'VIII': 'Others',
+# }
 
-GUN['HORIZON'] = GUN['HORIZON'].replace(replacement_dict)
+# GUN['HORIZON'] = GUN['HORIZON'].replace(replacement_dict)
 
 GUN['Year'] = GUN['MEASUREMENTDATE'].dt.year
 
-annual_horizon_production = GUN.groupby(['Year', 'HORIZON'])['Monthly Oil Production ton/month'].sum().unstack().fillna(0)
+annual_platform_production = GUN.groupby(['Year', 'PLATFORMS'])['Monthly Oil Production ton/month'].sum().unstack().fillna(0)
 
-annual = annual_horizon_production[["SP","X","IX","QÜQ","Others"]]
+annual = annual_platform_production[["0008","0014","0010","0003","0002",
+                                     "0011","0004","0015","0013","0019",
+                                     "0005","0006","0001","0007","0009"]]
 
-annual["SP"] = annual["SP"]/1_000_000
-annual["X"] = annual["X"]/1_000_000
-annual["IX"] = annual["IX"]/1_000_000
-annual["QÜQ"] = annual["QÜQ"]/1_000_000
-annual["Others"] = annual["Others"]/1_000_000
+annual["0001"] = annual["0001"]/1_000_000
+annual["0002"] = annual["0002"]/1_000_000
+annual["0003"] = annual["0003"]/1_000_000
+annual["0004"] = annual["0004"]/1_000_000
+annual["0005"] = annual["0005"]/1_000_000
+annual["0006"] = annual["0006"]/1_000_000
+annual["0007"] = annual["0007"]/1_000_000
+annual["0008"] = annual["0008"]/1_000_000
+annual["0009"] = annual["0009"]/1_000_000
+annual["0010"] = annual["0010"]/1_000_000
+annual["0011"] = annual["0011"]/1_000_000
+annual["0013"] = annual["0013"]/1_000_000
+annual["0014"] = annual["0014"]/1_000_000
+annual["0015"] = annual["0015"]/1_000_000
+annual["0019"] = annual["0019"]/1_000_000
 
 
 plt.figure(figsize=(14, 8))
@@ -67,7 +79,7 @@ sns.set(style="dark")
 sns.set_context("poster", font_scale = 1, rc={"grid.linewidth": 5})
 
 # Create stacked bar plot
-annual.plot(kind='bar', stacked=True, width = 1., colormap='Paired', edgecolor='black', linewidth=1)
+annual.plot(kind='bar', stacked=True, width = 1., colormap='tab20', edgecolor='black', linewidth=1)
 
 plt.gcf().set_size_inches(14, 6)
 
@@ -78,7 +90,7 @@ plt.xlabel('', fontsize=14)
 plt.ylabel('Annual Oil Production, MMTon', fontsize=12)
 
 # Customize legend
-plt.legend(title='Horizon', title_fontsize='12', fontsize='12')
+plt.legend(title='Platform', title_fontsize='12', fontsize='12')
 
 # Rotate x-axis labels for better readability
 plt.xticks(rotation=90, fontsize=12)
