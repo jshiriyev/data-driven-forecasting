@@ -8,7 +8,7 @@ from scipy.stats import linregress
 from scipy.stats import norm
 
 Result = _make_tuple_bunch('Result',
-	['b','Di','yi','xi','rsquared','Di_stderr','yi_stderr','linear'])
+	['b','Di','yi','xi','num','rsquared','Di_stderr','yi_stderr','linear'])
 
 LinregressResult = _make_tuple_bunch('LinregressResult',
 	['slope','intercept','rvalue','pvalue','stderr'],
