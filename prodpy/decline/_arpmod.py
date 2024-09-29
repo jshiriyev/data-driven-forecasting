@@ -6,6 +6,7 @@ from scipy._lib._bunch import _make_tuple_bunch
 
 from scipy.stats import linregress
 from scipy.stats import norm
+from scipy.stats import t as tstat
 
 Result = _make_tuple_bunch('Result',
 	['b','Di','yi','xi','n','R2','Di_error','yi_error','linear'])
