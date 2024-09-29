@@ -8,7 +8,7 @@ from scipy.stats import linregress
 from scipy.stats import norm
 
 Result = _make_tuple_bunch('Result',
-	['b','Di','yi','xi','num','rsquared','Di_stderr','yi_stderr','linear'])
+	['b','Di','yi','xi','n','R2','Di_error','yi_error','linear'])
 
 LinregressResult = _make_tuple_bunch('LinregressResult',
 	['slope','intercept','rvalue','pvalue','stderr'],
@@ -119,58 +119,81 @@ class Arps:
 	def invexp(x:numpy.ndarray,y:numpy.ndarray,xi:float=None):
 		"""Returns exponential regression results after linearization."""
 
-		x,yobs = self.shift(x,yobs,xi)
+		x,y = Arps.shift(x,y,xi)
+		x,y = Arps.nzero(x,y)
 
-		linear = super().regress(x,numpy.log(yobs))
+		n,df = x.size,x.size-2
 
-		params = (0.,0.) if linear is None else self.inverse(linear)
-		
-		R2 = Exponential(*params).rsquared(x,yobs)
+		linear = Arps.regress(x,numpy.log(y))
 
-		nonlinear = NonLinRegrResult(*params,R2)
+		Sxx = numpy.nansum((x-np.nanmean(x))**2)
 
-		# def inverse()
-		# return (-m,numpy.exp(b))
+		Di,yi = -linear.slope,numpy.exp(linear.intercept)
 
-		return Result(linear,nonlinear)
+		ycal = Arps.frwexp(Di,yi,x)
+
+		R2 = Arps.rsquared(ycal,y)
+
+		s2 = numpy.sum((ycal-y)**2)/df
+
+		Di_error = numpy.sqrt(s2/Sxx)
+		yi_error = numpy.sqrt(s2/n/Sxx*numpy.nansum(x**2))
+
+		return Result(0.,Di,yi,xi,n,R2,Di_error,yi_error,linear)
 
 	@staticmethod
 	def invhyp(x:numpy.ndarray,y:numpy.ndarray,xi:float=None,b:float=0.5):
 		"""Returns hyperbolic regression results after linearization."""
 
-		x,yobs = self.shift(x,yobs,xi)
+		x,y = Arps.shift(x,y,xi)
+		x,y = Arps.nzero(x,y)
 
-		linear = super().regress(x,numpy.power(1/yobs,self.b))
+		n,df = x.size,x.size-2
 
-		params = (0,0) if linear is None else self.inverse(linear)
+		linear = Arps.regress(x,numpy.power(1/y,b))
+
+		Sxx = numpy.nansum((x-np.nanmean(x))**2)
+
+		Di,yi = linear.slope/linear.intercept/b,linear.intercept**(-1/b)
+
+		ycal = Arps.frwhyp(Di,yi,x,b=b)
+
+		R2 = Arps.rsquared(ycal,y)
+
+		s2 = numpy.sum((ycal-y)**2)/df
 
 		R2 = Hyperbolic(*params,self.b).rsquared(x,yobs)
 
-		nonlinear = NonLinRegrResult(*params,R2)
+		Di_error = numpy.sqrt(s2/Sxx)
+		yi_error = numpy.sqrt(s2/n/Sxx*numpy.nansum(x**2))
 
-		# def inverse(self,linear,pct:float=50.):
-		# return (m/b/self.b, b**(-1/self.b))
-
-		return Result(linear,nonlinear)
+		return Result(b,Di,yi,xi,n,R2,Di_error,yi_error,linear)
 
 	@staticmethod
 	def invhar(x:numpy.ndarray,y:numpy.ndarray,xi:float=None):
 		"""Returns harmonic regression results after linearization."""
 
-		x,yobs = self.shift(x,yobs,xi)
+		x,y = Arps.shift(x,y,xi)
+		x,y = Arps.nzero(x,y)
 
-		linear = super().regress(x,1/yobs)
+		n,df = x.size,x.size-2
 
-		params = (0,0) if linear is None else self.inverse(linear)
+		linear = Arps.regress(x,1./y)
 
-		R2 = Harmonic(*params).rsquared(x,yobs)
+		Sxx = numpy.nansum((x-np.nanmean(x))**2)
 
-		nonlinear = NonLinRegrResult(*params,R2)
+		Di,yi = linear.slope/linear.intercept,1/linear.intercept
 
-		# def inverse()
-		# return (m/b,b**(-1))
+		ycal = Arps.frwhar(Di,yi,x)
 
-		return Result(linear,nonlinear)
+		R2 = Arps.rsquared(ycal,y)
+
+		s2 = numpy.sum((ycal-y)**2)/df
+
+		Di_error = numpy.sqrt(s2/Sxx)
+		yi_error = numpy.sqrt(s2/n/Sxx*numpy.nansum(x**2))
+
+		return Result(1.,Di,yi,xi,n,R2,Di_error,yi_error,linear)
 
 	@staticmethod
 	def get_mode(b:float):
@@ -228,9 +251,13 @@ class Arps:
 		return 1-ssres/sstot
 
 	@staticmethod
-	def percentile(mean:float,variance:float,perc:float=0.5):
+	def model(result:Result,perc:float=0.5):
 		"""perc -> percentile, perc=0.5 gives mean values"""
-		return mean+norm.ppf(perc)*numpy.sqrt(variance)
+
+		Di = result.Di+tstat.ppf(prc,result.df)*result.Di_error
+		yi = result.yi+tstat.ppf(prc,result.df)*result.yi_error
+
+		return Di,yi
 
 if __name__ == "__main__":
 
