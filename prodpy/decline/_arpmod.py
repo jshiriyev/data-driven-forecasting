@@ -8,7 +8,7 @@ from scipy.stats import linregress
 from scipy.stats import norm
 
 Result = _make_tuple_bunch('Result',
-	['Di','yi','b','rsquared','Di_stderr','yi_stderr','linear'])
+	['b','Di','yi','xi','rsquared','Di_stderr','yi_stderr','linear'])
 
 LinregressResult = _make_tuple_bunch('LinregressResult',
 	['slope','intercept','rvalue','pvalue','stderr'],
@@ -58,63 +58,63 @@ class Arps:
 
 		return self.option(mode=None,b=b)
 
-	def frw(self,Di:float,yi:float,x:numpy.ndarray):
+	def frw(self,Di:float,yi:float,x:numpy.ndarray,xi:float=0.):
 		"""Returns the result of forward calculations:
 		q = q0 / (1+b*Di*t)**(1/b)
 		"""
 		if self.b==0. or self.b==1.:
-			return getattr(self,f"frw{self.mode}")(Di,yi,x)
+			return getattr(self,f"frw{self.mode}")(Di,yi,x,xi)
 
-		return getattr(self,f"frw{self.mode}")(self.b,Di,yi,x)
+		return getattr(self,f"frw{self.mode}")(self.b,Di,yi,x,xi)
 
 	@staticmethod
-	def frwexp(Di:float,yi:float,x:numpy.ndarray):
+	def frwexp(Di:float,yi:float,x:numpy.ndarray,xi:float=0.):
 		"""
 		q = qi * exp(-Di*t)
 		"""
-		return yi*numpy.exp(-Di*numpy.asarray(x))
+		return yi*numpy.exp(-Di*(numpy.asarray(x)-xi))
 
 	@staticmethod
-	def frwhyp(b:float,Di:float,yi:float,x:numpy.ndarray):
+	def frwhyp(b:float,Di:float,yi:float,x:numpy.ndarray,xi:float=0.):
 		"""
 		q = q0 / (1+b*Di*t)**(1/b)
 		"""
-		return yi/(1+b*Di*numpy.asarray(x))**(1./b)
+		return yi/(1+b*Di*(numpy.asarray(x)-xi))**(1./b)
 
 	@staticmethod
-	def frwhar(Di:float,yi:float,x:numpy.ndarray):
+	def frwhar(Di:float,yi:float,x:numpy.ndarray,xi:float=0.):
 		"""
 		q = q0 / (1+Di*t)
 		"""
-		return yi/(1+Di*numpy.asarray(x))
+		return yi/(1+Di*(numpy.asarray(x)-xi))
 
-	def cum(self,Di:float,yi:float,x:numpy.ndarray):
+	def cum(self,Di:float,yi:float,x:numpy.ndarray,xi:float=0.):
 		"""Returns the result of cumulative calculations."""
 		if self.b==0. or self.b==1.:
-			return getattr(self,f"cum{self.mode}")(Di,yi,x)
+			return getattr(self,f"cum{self.mode}")(Di,yi,x,xi)
 
-		return getattr(self,f"cum{self.mode}")(self.b,Di,yi,x)
+		return getattr(self,f"cum{self.mode}")(self.b,Di,yi,x,xi)
 
 	@staticmethod
-	def cumexp(Di:float,yi:float,x:numpy.ndarray):
+	def cumexp(Di:float,yi:float,x:numpy.ndarray,xi:float=0.):
 		"""
 		Np = qi / Di * (1-exp(-Di*t))
 		"""
-		return (yi/Di)*(1-numpy.exp(-Di*numpy.asarray(x)))
+		return (yi/Di)*(1-numpy.exp(-Di*(numpy.asarray(x)-xi)))
 
 	@staticmethod
-	def cumhyp(b:float,Di:float,yi:float,x:numpy.ndarray):
+	def cumhyp(b:float,Di:float,yi:float,x:numpy.ndarray,xi:float=0.):
 		"""
 		Np = q0 / ((1-b)*Di)*(1-(1+b*Di*t)**(1-1/b))
 		"""
-		return (yi/Di)/(1-b)*(1-(1+b*Di*numpy.asarray(x))**(1-1./b))
+		return (yi/Di)/(1-b)*(1-(1+b*Di*(numpy.asarray(x)-xi))**(1-1./b))
 
 	@staticmethod
-	def cumhar(Di:float,yi:float,x:numpy.ndarray):
+	def cumhar(Di:float,yi:float,x:numpy.ndarray,xi:float=0.):
 		"""
 		Np = q0 / Di * ln(1+Di*t)
 		"""
-		return (yi/Di)*numpy.log(1+Di*numpy.asarray(x))
+		return (yi/Di)*numpy.log(1+Di*(numpy.asarray(x)-xi))
 
 	def inv(self,x:numpy.ndarray,y:numpy.ndarray,xi:float=None):
 		"""Returns the result of inverse calculations."""
@@ -220,11 +220,11 @@ class Arps:
 		"""Linear regression of x and y values."""
 
 		try:
-			result = linregress(x,y,**kwargs)
+			linear = linregress(x,y,**kwargs)
 		except Exception as exception:
 			logging.error("Error occurred: %s", exception)
 		else:
-			return result
+			return linear
 
 	@staticmethod
 	def rsquared(ycal:numpy.ndarray,yobs:numpy.ndarray):
@@ -246,17 +246,17 @@ if __name__ == "__main__":
 
 	x = numpy.linspace(0,500,5000)
 
-	y1 = Arps(0).frw(0.005,3,x)
-	y2 = Arps(0.5).frw(0.005,3,x)
-	y3 = Arps(1).frw(0.005,3,x)
+	y1 = Arps(0).frw(0.005,3,x,xi=50)
+	y2 = Arps(0.5).frw(0.005,3,x,xi=50)
+	y3 = Arps(1).frw(0.005,3,x,xi=50)
 
-	c1 = Arps(0).cum(0.005,3,x)
-	c2 = Arps(0.5).cum(0.005,3,x)
-	c3 = Arps(1).cum(0.005,3,x)
+	# c1 = Arps(0).cum(0.005,3,x)
+	# c2 = Arps(0.5).cum(0.005,3,x)
+	# c3 = Arps(1).cum(0.005,3,x)
 
-	plt.semilogy(c1,y1,label='Exponential')
-	plt.semilogy(c2,y2,label='Hyperbolic')
-	plt.semilogy(c3,y3,label='Harmonic')
+	plt.plot(x,y1,label='Exponential')
+	plt.plot(x,y2,label='Hyperbolic')
+	plt.plot(x,y3,label='Harmonic')
 
 	plt.legend()
 
