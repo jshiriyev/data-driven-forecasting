@@ -43,7 +43,7 @@ class Arps:
 
 	@property
 	def mode(self):
-		return self.getmode(self.b).lower()[:3]
+		return self.get_mode(self.b).lower()[:3]
 
 	def option(self,mode:str=None,b:float=None):
 		"""Returns mode and exponent based on their values."""
@@ -51,21 +51,17 @@ class Arps:
 			return 'Exponential',0
 
 		if mode is None and b is not None:
-			return self.getmode(float(b)),float(b)
+			return self.get_mode(float(b)),float(b)
 
 		if mode is not None and b is None:
-			return mode,self.getb(mode)
+			return mode,self.get_b(mode)
 
 		return self.option(mode=None,b=b)
 
 	def frw(self,Di:float,yi:float,x:numpy.ndarray,xi:float=0.):
-		"""Returns the result of forward calculations:
-		q = q0 / (1+b*Di*t)**(1/b)
-		"""
-		if self.b==0. or self.b==1.:
-			return getattr(self,f"frw{self.mode}")(Di,yi,x,xi)
-
-		return getattr(self,f"frw{self.mode}")(self.b,Di,yi,x,xi)
+		"""Returns the result of forward calculations."""
+		inp = (Di,yi,x,xi) if self.b==0. or self.b==1. else (Di,yi,x,xi,self.b)
+		return getattr(self,f"frw{self.mode}")(*inp)
 
 	@staticmethod
 	def frwexp(Di:float,yi:float,x:numpy.ndarray,xi:float=0.):
@@ -75,7 +71,7 @@ class Arps:
 		return yi*numpy.exp(-Di*(numpy.asarray(x)-xi))
 
 	@staticmethod
-	def frwhyp(b:float,Di:float,yi:float,x:numpy.ndarray,xi:float=0.):
+	def frwhyp(Di:float,yi:float,x:numpy.ndarray,xi:float=0.,b:float=0.5):
 		"""
 		q = q0 / (1+b*Di*t)**(1/b)
 		"""
@@ -90,10 +86,8 @@ class Arps:
 
 	def cum(self,Di:float,yi:float,x:numpy.ndarray,xi:float=0.):
 		"""Returns the result of cumulative calculations."""
-		if self.b==0. or self.b==1.:
-			return getattr(self,f"cum{self.mode}")(Di,yi,x,xi)
-
-		return getattr(self,f"cum{self.mode}")(self.b,Di,yi,x,xi)
+		inp = (Di,yi,x,xi) if self.b==0. or self.b==1. else (Di,yi,x,xi,self.b)
+		return getattr(self,f"cum{self.mode}")(*inp)
 
 	@staticmethod
 	def cumexp(Di:float,yi:float,x:numpy.ndarray,xi:float=0.):
@@ -103,7 +97,7 @@ class Arps:
 		return (yi/Di)*(1-numpy.exp(-Di*(numpy.asarray(x)-xi)))
 
 	@staticmethod
-	def cumhyp(b:float,Di:float,yi:float,x:numpy.ndarray,xi:float=0.):
+	def cumhyp(Di:float,yi:float,x:numpy.ndarray,xi:float=0.,b:float=0.5):
 		"""
 		Np = q0 / ((1-b)*Di)*(1-(1+b*Di*t)**(1-1/b))
 		"""
@@ -117,15 +111,13 @@ class Arps:
 		return (yi/Di)*numpy.log(1+Di*(numpy.asarray(x)-xi))
 
 	def inv(self,x:numpy.ndarray,y:numpy.ndarray,xi:float=None):
-		"""Returns the result of inverse calculations."""
-		if self.b==0. or self.b==1.:
-			return getattr(self,f"inv{self.mode}")(x,y,xi)
-
-		return getattr(self,f"inv{self.mode}")(self.b,x,y,xi)
+		"""Returns regression results after linearization."""
+		inp = (x,y,xi) if self.b==0. or self.b==1. else (x,y,xi,self.b)
+		return getattr(self,f"inv{self.mode}")(*inp)
 
 	@staticmethod
 	def invexp(x:numpy.ndarray,y:numpy.ndarray,xi:float=None):
-		"""Returns regression results after linearization."""
+		"""Returns exponential regression results after linearization."""
 
 		x,yobs = self.shift(x,yobs,xi)
 
@@ -143,8 +135,8 @@ class Arps:
 		return Result(linear,nonlinear)
 
 	@staticmethod
-	def invhyp(b:float,x:numpy.ndarray,y:numpy.ndarray,xi:float=None):
-		"""Returns regression results after linearization."""
+	def invhyp(x:numpy.ndarray,y:numpy.ndarray,xi:float=None,b:float=0.5):
+		"""Returns hyperbolic regression results after linearization."""
 
 		x,yobs = self.shift(x,yobs,xi)
 
@@ -163,7 +155,7 @@ class Arps:
 
 	@staticmethod
 	def invhar(x:numpy.ndarray,y:numpy.ndarray,xi:float=None):
-		"""Returns regression results after linearization."""
+		"""Returns harmonic regression results after linearization."""
 
 		x,yobs = self.shift(x,yobs,xi)
 
@@ -181,7 +173,7 @@ class Arps:
 		return Result(linear,nonlinear)
 
 	@staticmethod
-	def getmode(b:float):
+	def get_mode(b:float):
 		"""Returns mode based on the exponent value."""
 		if b == 0.:
 			return "Exponential"
@@ -192,7 +184,7 @@ class Arps:
 		return "Hyperbolic"
 
 	@staticmethod
-	def getb(mode:str):
+	def get_b(mode:str):
 		"""Returns exponent based on the mode."""
 		if mode.lower() in ('exponential','exp'):
 			return 0.
