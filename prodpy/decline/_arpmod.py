@@ -11,7 +11,8 @@ from scipy.stats import norm
 from scipy.stats import t as tstat
 
 Result = _make_tuple_bunch('Result',
-	['b','Di','yi','xi','n','R2','Di_error','yi_error','linear'])
+	['b','Di','yi','xi','n','R2','Di_error','yi_error'],
+	extra_field_names=['linear'])
 
 LinregressResult = _make_tuple_bunch('LinregressResult',
 	['slope','intercept','rvalue','pvalue','stderr'],
@@ -48,40 +49,26 @@ class Arps:
 	def mode(self):
 		return self.get_mode(self.b).lower()[:3]
 
-	def option(self,mode:str=None,b:float=None):
-		"""Returns mode and exponent based on their values."""
-		if mode is None and b is None:
-			return 'Exponential',0
-
-		if mode is None and b is not None:
-			return self.get_mode(float(b)),float(b)
-
-		if mode is not None and b is None:
-			return mode,self.get_b(mode)
-
-		return self.option(mode=None,b=b)
-
-	def frw(self,x:numpy.ndarray,Di:float,yi:float,*,xi:float=0.):
+	def run(self,x:numpy.ndarray,Di:float,yi:float,*,xi:float=0.):
 		"""Returns the result of forward calculations."""
-		kwargs = dict(xi=xi) if self.b==0. or self.b==1. else dict(xi=xi,b=self.b)
-		return getattr(self,f"frw{self.mode}")(x,Di,yi,**kwargs)
+		return getattr(self,f"run{self.mode}")(x,Di,yi,xi=xi,b=self.b)
 
 	@staticmethod
-	def frwexp(x:numpy.ndarray,Di:float,yi:float,*,xi:float=0.):
+	def runexp(x:numpy.ndarray,Di:float,yi:float,*,xi:float=0.,**kwargs):
 		"""
 		q = qi * exp(-Di*t)
 		"""
 		return yi*numpy.exp(-Di*(numpy.asarray(x)-xi))
 
 	@staticmethod
-	def frwhyp(x:numpy.ndarray,Di:float,yi:float,*,xi:float=0.,b:float=0.5):
+	def runhyp(x:numpy.ndarray,Di:float,yi:float,*,xi:float=0.,b:float=0.5):
 		"""
 		q = q0 / (1+b*Di*t)**(1/b)
 		"""
 		return yi/(1+b*Di*(numpy.asarray(x)-xi))**(1./b)
 
 	@staticmethod
-	def frwhar(x:numpy.ndarray,Di:float,yi:float,*,xi:float=0.):
+	def runhar(x:numpy.ndarray,Di:float,yi:float,*,xi:float=0.,**kwargs):
 		"""
 		q = q0 / (1+Di*t)
 		"""
@@ -89,11 +76,10 @@ class Arps:
 
 	def cum(self,x:numpy.ndarray,Di:float,yi:float,*,xi:float=0.):
 		"""Returns the result of cumulative calculations."""
-		inp = (Di,yi,x,xi) if self.b==0. or self.b==1. else (Di,yi,x,xi,self.b)
-		return getattr(self,f"cum{self.mode}")(*inp)
+		return getattr(self,f"cum{self.mode}")(x,Di,yi,xi=xi,b=self.b)
 
 	@staticmethod
-	def cumexp(x:numpy.ndarray,Di:float,yi:float,*,xi:float=0.):
+	def cumexp(x:numpy.ndarray,Di:float,yi:float,*,xi:float=0.,**kwargs):
 		"""
 		Np = qi / Di * (1-exp(-Di*t))
 		"""
@@ -107,7 +93,7 @@ class Arps:
 		return (yi/Di)/(1-b)*(1-(1+b*Di*(numpy.asarray(x)-xi))**(1-1./b))
 
 	@staticmethod
-	def cumhar(x:numpy.ndarray,Di:float,yi:float,*,xi:float=0.):
+	def cumhar(x:numpy.ndarray,Di:float,yi:float,*,xi:float=0.,**kwargs):
 		"""
 		Np = q0 / Di * ln(1+Di*t)
 		"""
@@ -115,27 +101,28 @@ class Arps:
 
 	def inv(self,x:numpy.ndarray,y:numpy.ndarray,*,xi:float=0.):
 		"""Returns regression results after linearization."""
-		kwargs = dict(xi=xi) if self.b==0. or self.b==1. else dict(xi=xi,b=self.b)
-		return getattr(self,f"inv{self.mode}")(x,y,**kwargs)
+		return getattr(self,f"inv{self.mode}")(x,y,xi=xi,b=self.b)
 
 	@staticmethod
-	def invexp(x:numpy.ndarray,y:numpy.ndarray,*,xi:float=0.):
+	def invexp(x:numpy.ndarray,y:numpy.ndarray,*,xi:float=0.,**kwargs):
 		"""Returns exponential regression results after linearization."""
 
 		x,y = Arps.shift(numpy.asarray(x),numpy.asarray(y),xi)
 		x,y = Arps.nzero(x,y)
 
-		linear = Arps.regress(x,numpy.log(y))
+		linear = Arps.linregr(x,numpy.log(y))
 
 		linfit = -linear.slope,numpy.exp(linear.intercept)
 
-		result = curve_fit(Arps.frwexp,x,y,p0=linfit)
+		result = curve_fit(Arps.runexp,x,y,p0=linfit)
 
-		R2 = Arps.rsquared(Arps.frwexp(x,*result[0]),y)
+		R2 = Arps.rsquared(Arps.runexp(x,*result[0]),y).tolist()
 
 		perror = numpy.sqrt(numpy.diag(result[1]))
 
-		return Result(0.,*result[0],xi,x.size,R2,*perror,linear)
+		linear = {k: v.tolist() for k, v in linear._asdict().items()}
+
+		return Result(0.,*result[0].tolist(),xi,x.size,R2,*perror.tolist(),linear=LinregressResult(**linear))
 
 	@staticmethod
 	def invhyp(x:numpy.ndarray,y:numpy.ndarray,*,xi:float=0.,b:float=0.5):
@@ -144,36 +131,54 @@ class Arps:
 		x,y = Arps.shift(numpy.asarray(x),numpy.asarray(y),xi)
 		x,y = Arps.nzero(x,y)
 
-		linear = Arps.regress(x,numpy.power(1/y,b))
+		linear = Arps.linregr(x,numpy.power(1/y,b))
 
 		linfit = linear.slope/linear.intercept/b,linear.intercept**(-1/b)
 
-		result = curve_fit(Arps.frwhyp,x,y,p0=linfit)
+		result = curve_fit(lambda x,Di,yi: Arps.runhyp(x,Di,yi,b=b),x,y,p0=linfit)
 
-		R2 = Arps.rsquared(Arps.frwhyp(x,*result[0],b=b),y)
+		R2 = Arps.rsquared(Arps.runhyp(x,*result[0],b=b),y).tolist()
 
 		perror = numpy.sqrt(numpy.diag(result[1]))
 
-		return Result(b,*result[0],xi,x.size,R2,*perror,linear)
+		linear = {k: v.tolist() for k, v in linear._asdict().items()}
+
+		return Result(b,*result[0].tolist(),xi,x.size,R2,*perror.tolist(),linear=LinregressResult(**linear))
 
 	@staticmethod
-	def invhar(x:numpy.ndarray,y:numpy.ndarray,*,xi:float=0.):
+	def invhar(x:numpy.ndarray,y:numpy.ndarray,*,xi:float=0.,**kwargs):
 		"""Returns harmonic regression results after linearization."""
 
 		x,y = Arps.shift(numpy.asarray(x),numpy.asarray(y),xi)
 		x,y = Arps.nzero(x,y)
 
-		linear = Arps.regress(x,1./y)
+		linear = Arps.linregr(x,1./y)
 
 		linfit = linear.slope/linear.intercept,1/linear.intercept
 
-		result = curve_fit(Arps.frwhar,x,y,p0=linfit)
+		result = curve_fit(Arps.runhar,x,y,p0=linfit)
 
-		R2 = Arps.rsquared(Arps.frwhar(x,*result[0]),y)
+		R2 = Arps.rsquared(Arps.runhar(x,*result[0]),y).tolist()
 
 		perror = numpy.sqrt(numpy.diag(result[1]))
 
-		return Result(1.,*result[0],xi,x.size,R2,*perror,linear)
+		linear = {k: v.tolist() for k, v in linear._asdict().items()}
+
+		return Result(1.,*result[0].tolist(),xi,x.size,R2,*perror.tolist(),linear=LinregressResult(**linear))
+
+	@staticmethod
+	def get_option(mode:str=None,b:float=None):
+		"""Returns mode and exponent based on their values."""
+		if mode is None and b is None:
+			return 'Exponential',0
+
+		if mode is None and b is not None:
+			return Arps.get_mode(float(b)),float(b)
+
+		if mode is not None and b is None:
+			return mode,Arps.get_b(mode)
+
+		return Arps.get_option(mode=None,b=b)
 
 	@staticmethod
 	def get_mode(b:float):
@@ -211,7 +216,7 @@ class Arps:
 		return (x[~numpy.isnan(y) & (y!=0)],y[~numpy.isnan(y) & (y!=0)])
 
 	@staticmethod
-	def regress(x:numpy.ndarray,y:numpy.ndarray,**kwargs):
+	def linregr(x:numpy.ndarray,y:numpy.ndarray,**kwargs):
 		"""Linear regression of x and y values."""
 
 		try:
@@ -239,6 +244,20 @@ class Arps:
 
 		return Di,yi
 
+	@staticmethod
+	def reader(result:Result):
+
+		string = f"\nDecline mode is {Arps.get_mode(result.b)} and the exponent is {result.b}.\n\n"
+
+		string += f"Linear regression R-squared is {result.linear.rvalue**2:.5f}\n"
+		string += f"Non-linear curve fit R-squared is {result.R2:.5f}\n\n"
+
+		string += f"Initial x is {result.xi:.1f}\n"
+		string += f"Initial y is {result.yi:.1f}\n"
+		string += f"Initial decline rate percentage is {result.Di*100:.1f}%\n\n"
+
+		return string
+
 if __name__ == "__main__":
 
 	import matplotlib.pyplot as plt
@@ -248,22 +267,27 @@ if __name__ == "__main__":
 
 	plt.scatter(x,y)
 
-	result = Arps(1.).inv(x,y)
+	b = 1.
 
-	print(result)
+	result = Arps(b).inv(x,y)
+
+	print(Arps.reader(result))
 
 	p10 = Arps.model(result,prc=10.)
 	p50 = Arps.model(result,prc=50.)
 	p90 = Arps.model(result,prc=90.)
 
-	fit10 = Arps(1.).frw(x,*p10)
-	fit50 = Arps(1.).frw(x,*p50)
-	fit90 = Arps(1.).frw(x,*p90)
+	fit10 = Arps(b).run(x,*p10)
+	fit50 = Arps(b).run(x,*p50)
+	fit90 = Arps(b).run(x,*p90)
 
-	plt.plot(x,fit10,label='p10')
-	plt.plot(x,fit50,label='p50')
-	plt.plot(x,fit90,label='p90')
+	plt.style.use('_mpl-gallery')
+
+	# plt.plot(x,fit10,label='p10')
+	plt.plot(x,fit50,label='p50',color='k')
+	plt.fill_between(x,fit10,fit90,color='b',alpha=.2,linewidth=0)
+	# plt.plot(x,fit90,label='p90')
 	
-	plt.legend()
+	# plt.legend()
 
 	plt.show()
