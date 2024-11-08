@@ -1,92 +1,75 @@
 import matplotlib.pyplot as plt
-import numpy as np
+
+import numpy
+
 import pandas as pd
 
-color_dict = {"P10": "#00A86B", "P90": "#FF2800", }
+color = {"P10": "#00A86B", "P90": "#FF2800", }
 
-p10_total = 6005405
-p50_total = 5994083
-p90_total = 5983336
+data = {
+    "activities" : [
+        "Baza Hasilatı",
+        "Geoloji tədbirlər",
+        "Qazma+Yan lülə",
+        "Texniki tədbirlər"
+        ],
+    "P90" : [   3.7 ,   0.6, 1.5,  1.6],
+    "P50" : [3256.  , 194. , 8. , 30. ],
+    "P10" : [   3.8 ,   2.7, 1.0,  2.1],
+    "P50s": [
+        "3256 MTon",
+        " 194 MTon",
+        "   8 MTon",
+        "  30 MTon",
+        ]
+}
 
-p10_total_string = '6005 MTon'
-p50_total_string = '5994 MTon'
-p90_total_string = '5983 MTon'
+p10_total_string = '3497 MTon'
+p50_total_string = '3487 MTon'
+p90_total_string = '3480 MTon'
 
 xy_ticklabel_color ='#101628'
 
-data = {
-    "probabilities": ['P90','P10', 'P90','P10', 'P90','P10', 'P90','P10'],
-    "activities" : ["Baza Hasilatı", "Baza Hasilatı", "Geoloji tədbirlər", "Geoloji tədbirlər", "Qazma+Yan lülə", "Qazma+Yan lülə","Texniki tədbirlər","Texniki tədbirlər"],
-    "oil_amount" : [4.9,4.3,1.3,3.1,2.4,1.5,2.2,2.4]
-}
-
 df = pd.DataFrame(data)
 
-sort_order_dict = {"Baza Hasilatı":4, "Geoloji tədbirlər":3, "Qazma+Yan lülə":2, "Texniki tədbirlər":1, 'P10':5, 'P90':6}
+df.sort_values(by='P50',ascending=True,inplace=True)
+df.reset_index(inplace=True,drop=True)
 
-df = df.sort_values(by=['probabilities','activities',], key=lambda x: x.map(sort_order_dict))
+max_wing_value = df[['P90','P10']].max().max()
+max_wing_power = (-int(numpy.floor(numpy.log10(abs(max_wing_value)))))
+max_wing_value = (numpy.ceil(max_wing_value*10**max_wing_power)/10**max_wing_power).tolist()
 
-#map the colors of a dict to a dataframe
-df['color']= df.probabilities.map(color_dict)
+fig, ax = plt.subplots(figsize=(10,6))
 
-probabilities = df.probabilities.unique()
-oil_amounts = df.oil_amount
-activities = df.activities.unique()
-colors = df.color.unique()
+for index,row in df.iterrows():
 
-fig, ax = plt.subplots(figsize=(10, 6))
+    ax.barh(row["activities"],-row['P90'],align='center',height=0.5,facecolor=color['P90'])
+    ax.barh(row["activities"], row['P10'],align='center',height=0.5,facecolor=color['P10'])
 
-direction = [1,-1]
-for probability, d, color in zip(probabilities, direction, colors): 
-    temp_df = df[df.probabilities == probability]
-    ax.barh(temp_df.activities, temp_df.oil_amount*d, align='center', height = 0.6,facecolor=color,)
+    ax.text(-row['P90']-0.4,index,row['P90'],ha='left' ,va="center",color=xy_ticklabel_color,size=11)
+    ax.text( row['P10']+0.4,index,row['P10'],ha='right',va="center",color=xy_ticklabel_color,size=11)
 
-offset_labels = [0.1]*4 + [-0.1]*4
+    ax.text(0.,index+0.35,s=row['activities'],ha='center',size=11,color=xy_ticklabel_color)
 
-ccc = ['left','left','left','left','right','right','right','right']
+    ax.text(0.2,index,row["P50s"],ha='center',va='center',size=11,weight='bold',color='white')
 
-for index,(bar, amount, off) in enumerate(zip(ax.patches, oil_amounts, offset_labels)):
-    ax.text(
-        bar.get_x() + bar.get_width() +off ,
-        bar.get_height()/2 + bar.get_y(),
-        amount,
-        ha=ccc[index],va="center", color=xy_ticklabel_color,  size=11
-          )
+N = len(df)
 
-# Show sum on each stacked bar
-for bar, activity in zip(ax.patches, activities):
-    width = bar.get_width()
-    label_y = bar.get_y() + bar.get_height() +0.1
-    ax.text(0, label_y, s=f'{activity}', ha='center',size = 11, color = xy_ticklabel_color)
+ax.text( max_wing_value,N,"P10",size=16,weight="bold",ha='center')
+ax.text(-max_wing_value,N,"P90",size=16,weight="bold",ha='center')
 
-ax.text(0,3.,"5473 MTon", ha='center',va='center',size = 11,weight='bold',color='white')
-ax.text(0,2.,"356 MTon", ha='center',va='center',size = 11,weight='bold',color='white')
-ax.text(0,1.,"46 MTon", ha='center',va='center',size = 11,weight='bold',color='white')
-ax.text(0,0.,"119 MTon", ha='center',va='center',size = 11,weight='bold',color='white')
+ax.add_patch(plt.Arrow(0,N,-1,0,width=0.2,color=color['P90']))
+ax.plot(0,N+0.0001,'o',markersize=6,color='white')
+ax.add_patch(plt.Arrow(0,N, 1,0,width=0.2,color=color['P10']))
 
-ha = ["right", "left"]
+ax.text( max_wing_value,N-0.3,p10_total_string,ha='center',size=11)
+ax.text(              0,N+0.2,p50_total_string,ha='center',size=11)
+ax.text(-max_wing_value,N-0.3,p90_total_string,ha='center',size=11)
 
-xx = [5,-5]
-
-index = 0
-for bar,probability, ha in zip(ax.patches[3::4], probabilities, ha):
-    ax.text(xx[index],bar.get_height()+bar.get_y()+1.,probability, size = 16, weight = "bold", ha= 'center')
-    index += 1
-
-ax.add_patch(plt.Arrow(0,4, 1, 0, width=0.2,color=color_dict['P10']))
-ax.add_patch(plt.Arrow(0,4, -1, 0, width=0.2,color=color_dict['P90']))
-ax.plot(0, 4.0001, 'o', markersize=6,color='white')
-
-ax.text(xx[0],4.,p10_total_string, ha='center',size = 11)
-ax.text(0,4.2,p50_total_string, ha='center',size = 11)
-ax.text(xx[1],4.,p90_total_string, ha='center',size = 11)
-
-ax.set_ylim((-1,5))
+ax.set_ylim((-1,N+1))
 ax.set_yticks([])
 ax.set_xticks([])
-ax.set_xlim((-6,6))
-# ax.set_axis_off()
-
-##ax.set_xticks([-4000, -3000, -2000, -1000,0,1000,2000,3000,4000], ['', '', '', '','5996 kton','', '', '', ''])
+ax.set_xlim((-max_wing_value-1,max_wing_value+1))
+# # ax.set_axis_off()
 
 plt.show()
