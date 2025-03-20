@@ -15,6 +15,38 @@ import numpy
 
 from .directory._browser import Browser
 
+class TxtFile(Browser):
+
+    def __init__(self,**kwargs):
+
+        super().__init__(**kwargs)
+
+        self.frame = {}
+
+    def write(self,filepath,comment=None,**kwargs):
+        """It writes text form of frame."""
+
+        if comment is None:
+            comment = "# "
+
+        with open(filepath,"w",encoding='utf-8') as txtmaster:
+
+            txtmaster.write(self.header.__str__(comment=comment))
+            txtmaster.write(f"{comment}\n")
+            txtmaster.write(self.frame.__str__(limit=self.frame.shape[0],comment=comment,**kwargs))
+
+        # numpy.savetxt("data.txt",Z,fmt="%s",header=header,footer=footer,comments="")
+
+    def writeb(self,filepath):
+        """It writes binary form of frame."""
+
+        for header,datacolumn in zip(self._headers,self._running):
+            kwargs[header] = datacolumn
+
+        numpy.savez_compressed(filepath,**kwargs)
+
+        # numpy.savez_compressed('data.npz', a=A, b=B, c=C)
+
 class TxtRead():
 
     def __init__(self,txtfile,headline=None,comments="#",delimiter=None,skiprows=0):

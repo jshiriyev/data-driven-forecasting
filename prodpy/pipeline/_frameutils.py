@@ -81,8 +81,8 @@ class FrameUtils():
 		Returns:
 
 		A new filtered frame.
+		
 		"""
-
 		bools = self.frame[column].isin(args)
 
 		return self.frame[bools].reset_index(drop=True)
