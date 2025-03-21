@@ -5,7 +5,6 @@ import numpy
 from scipy._lib._bunch import _make_tuple_bunch
 
 from scipy.stats import linregress
-from scipy.stats import norm
 from scipy.stats import t as tstat
 
 Result = _make_tuple_bunch('Result',
@@ -17,15 +16,16 @@ LinregressResult = _make_tuple_bunch('LinregressResult',
 	extra_field_names=['intercept_stderr'])
 
 class BaseClass():
-	"""Base class for Arp's decline models: Exponential, 
-	Hyperbolic, and Harmonic; main decline attributes are:
-	
-	Di 		: initial decline rate
-	yi 		: initial y value
+	"""Base class for Arp's decline models: Exponential, Hyperbolic, and Harmonic.
+
+	Attributes:
+	----------
+	Di (float)	: initial decline rate
+	yi (float)	: initial y value
 
 	The decline exponent defines the mode:
 	
-	b 		: Arps' decline-curve exponent
+	b (float)	: Arps' decline-curve exponent
 
 	b = 0. 		-> mode = 'Exponential'
 	0 < b < 1.	-> mode = 'Hyperbolic'
@@ -33,7 +33,7 @@ class BaseClass():
 
 	"""
 
-	def __init__(self,Di,yi,b):
+	def __init__(self,Di,yi,b=0.):
 
 		self._Di = Di
 		self._yi = yi
@@ -41,29 +41,47 @@ class BaseClass():
 
 	@property
 	def Di(self):
+		"""Getter for the initial decline rate."""
 		return self._Di
 
 	@property
 	def yi(self):
+		"""Getter for the initial y value."""
 		return self._yi
 
 	@property
 	def b(self):
+		"""Getter for the decline exponent."""
 		return self._b
 
 	@property
 	def mode(self):
+		"""Getter for the decline mode: 'exp', 'hyp', or 'har'."""
 		return self.b2mode(self.b).lower()[:3]
 
-	def run(self,*args,**kwargs):
-		pass
+	def run(self,x:numpy.ndarray,cum:bool=False,**kwargs):
+		"""Runs the decline model for a given x value.
+        
+        Arguments:
+        ---------
+        x (float array): The input value for the decline function.
+        cum (bool, optional): If True, uses the cum function; otherwise, uses the rate function.
+        **kwargs: Additional arguments passed to the selected function.
+        
+        Returns:
+        -------
+        y (float array): The result of the decline calculation.
+        """
+		forward = getattr(self,"cum" if cum else "rate")
 
-	def run(self,x,cumulative=False,**kwargs):
-		""""""
-		return getattr(self,"cumulative" if cumulative else "rate")(x,self.Di,self.yi,**kwargs)
+		return forward(x,self.Di,self.yi,self.b,**kwargs)
 
-	def fit(self,*args,**kwargs):
-		pass
+	def fit(self,x:numpy.ndarray,y:numpy.ndarray,*args,xi:float=0.):
+
+		x,y = self.shift(numpy.asarray(x),numpy.asarray(y),xi)
+		x,y = self.nzero(x,y)
+		
+		return x,y
 
 	@staticmethod
 	def shift(x:numpy.ndarray,y:numpy.ndarray,xi:float=None):
@@ -96,7 +114,7 @@ class BaseClass():
 
 	@staticmethod
 	def reader(result:Result):
-
+		"""Returns the text that explains the results."""
 		string = f"\nDecline mode is {BaseClass.b2mode(result.b)} and the exponent is {result.b}.\n\n"
 
 		string += f"Linear regression R-squared is {result.linear.rvalue**2:.5f}\n"
@@ -110,7 +128,7 @@ class BaseClass():
 
 	@staticmethod
 	def simulate(result:Result,prc:float=50.):
-		"""prc -> prcentile, prc=0.5 gives mean values"""
+		"""prc -> prcentile, prc=0.5 gives mean values."""
 		Di = result.Di+tstat.ppf(prc/100.,result.n-2)*result.Di_error
 		yi = result.yi-tstat.ppf(prc/100.,result.n-2)*result.yi_error
 

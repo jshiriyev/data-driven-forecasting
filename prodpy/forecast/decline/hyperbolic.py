@@ -11,33 +11,39 @@ class Hyperbolic(BaseClass):
 		super().__init__(*args,**kwargs)
 
 	@staticmethod
-	def rate(x:numpy.ndarray,Di:float,yi:float,*,xi:float=0.,b:float=0.5):
+	def rate(x:numpy.ndarray,Di:float,yi:float,b:float,*,xi:float=0.):
 		"""
 		q = q0 / (1+b*Di*t)**(1/b)
 		"""
 		return yi/(1+b*Di*(numpy.asarray(x)-xi))**(1./b)
 
 	@staticmethod
-	def cumulative(x:numpy.ndarray,Di:float,yi:float,*,xi:float=0.,b:float=0.5):
+	def cum(x:numpy.ndarray,Di:float,yi:float,b:float,*,xi:float=0.):
 		"""
 		Np = q0 / ((1-b)*Di)*(1-(1+b*Di*t)**(1-1/b))
 		"""
 		return (yi/Di)/(1-b)*(1-(1+b*Di*(numpy.asarray(x)-xi))**(1-1./b))
-	
+
 	@staticmethod
-	def inverse(x:numpy.ndarray,y:numpy.ndarray,*,xi:float=0.,b:float=0.5):
+	def transform(y,b):
+
+		return numpy.power(1/y,b)
+
+	@staticmethod
+	def inverse(linear,b):
+
+		return linear.slope/linear.intercept/b,linear.intercept**(-1/b)
+	
+	def fit(self,x:numpy.ndarray,y:numpy.ndarray,b:float,*,xi:float=0.):
 		"""Returns hyperbolic regression results after linearization."""
 
-		x,y = BaseClass.shift(numpy.asarray(x),numpy.asarray(y),xi)
-		x,y = BaseClass.nzero(x,y)
+		linear = Arps.linregr(x,numpy.power(1/y,b))
 
-		linear = BaseClass.linregr(x,numpy.power(1/y,b))
+		p0 = self.inverse(linear,b)
 
-		linfit = linear.slope/linear.intercept/b,linear.intercept**(-1/b)
+		result = curve_fit(lambda x,Di,yi: Arps.runhyp(x,Di,yi,b=b),x,y,p0=p0)
 
-		result = curve_fit(lambda x,Di,yi: BaseClass.runhyp(x,Di,yi,b=b),x,y,p0=linfit)
-
-		R2 = BaseClass.rsquared(BaseClass.runhyp(x,*result[0],b=b),y).tolist()
+		R2 = Arps.rsquared(Arps.runhyp(x,*result[0],b=b),y).tolist()
 
 		perror = numpy.sqrt(numpy.diag(result[1]))
 
