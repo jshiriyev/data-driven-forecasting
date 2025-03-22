@@ -25,6 +25,21 @@ class ProdTable():
     def days_in_prev_month(self):
         return self.frame.index.to_series().apply(ProdTable.get_previous_month_days)
     
+    def days_in_month(frame,column:str):
+        # Convert the input date string to a datetime object
+        date = frame[column]
+
+        # Calculate the start of the next month
+        next_month = (date+pandas.offsets.MonthBegin(1))
+
+        next_month = pandas.to_datetime(next_month).dt.to_period('M').dt.to_timestamp()
+
+        # Calculate the start of the given month
+        start_of_month = pandas.to_datetime(date).dt.to_period('M').dt.to_timestamp()
+
+        # Return the number of days in the month
+        return (next_month-start_of_month).dt.days
+
     @staticmethod
     def get_previous_month_days(date:pd.Timestamp) -> int:
         """

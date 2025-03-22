@@ -2,10 +2,10 @@ from typing import Union, List, Dict
 
 import pandas
 
-class StackedTables():
+class TableStack():
 
     def __init__(self,printFlag:bool=True):
-        """Initializes the StackedTables class.
+        """Initializes the TableStack class.
 
         The class assumes that the Excel sheet contains tables listed from top to bottom, where:
         - Each table includes a title, column headers, and table entries.

@@ -1,4 +1,4 @@
-from ._frameutils import FrameUtils
+from ._frameutils import utils
 
 from ._template import Template
 
@@ -10,24 +10,9 @@ class Outlook(Template):
 
 		self(leadhead=leadhead,datehead=datehead)
 
-	def __call__(self,*,leadhead:str=None,datehead:str=None):
-		"""Assigns the leadhead and datehead."""
-		self._leadhead = leadhead
-		self._datehead = datehead
-
-		return self
-
-	@property
-	def leadhead(self):
-		return self._leadhead
-
-	@property
-	def datehead(self):
-		return self._datehead
-
 	def heads(self,*args,**kwargs):
 		"""Returns the heads that are in the frame and uses select_dtype arguments."""
-		return self.__utils(self.frame).heads(*args,**kwargs)
+		return utils.heads(self.frame,*args,**kwargs)
 
 	def pull(self,*args,**kwargs):
 		"""Returns a frame given in the args and included and excluded dtypes."""
@@ -40,17 +25,17 @@ class Outlook(Template):
 	@property
 	def datetimes(self):
 		"""Returns the list of column names with datetime format."""
-		return self.__utils(self.frame).heads(include=('datetime64',))
+		return utils.heads(self.frame,include=('datetime64',))
 
 	@property
 	def numbers(self):
 		"""Returns the list of column names with number format."""
-		return self.__utils(self.frame).heads(include=('number',))
+		return utils.heads(self.frame,include=('number',))
 
 	@property
 	def nominals(self):
 		"""Returns the list of column names that are categorical by nature."""
-		return self.__utils(self.frame).heads(exclude=('number','datetime64'))
+		return utils.heads(self.frame,exclude=('number','datetime64'))
 
 	def unique(self,*args):
 		"""Returns the list of unique leads for the given column names."""
