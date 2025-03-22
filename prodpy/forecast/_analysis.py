@@ -2,39 +2,12 @@ import datetime
 
 import pandas
 
-from .arps._arpmod import Arps
-
-from ._model import Model
-
+from .decline._arps import Arps
 from ._timespan import TimeSpan
 
 class Analysis():
 
-	def __init__(self,datehead:str,ratehead:str):
-		"""Initializing the class with date and rate column keys. The date and rate
-		values are used for the optimization and forecasting of pandas.DataFrames."""
-
-		self._datehead = datehead
-		self._ratehead = ratehead
-
-	@property
-	def datehead(self):
-		return self._datehead
-
-	@property
-	def ratehead(self):
-		return self._ratehead
-
-	@property
-	def heads(self):
-		return (self.datehead,self.ratehead)
-	
-	def fit(self,frame:pandas.DataFrame,*args,**kwargs):
-		"""Returns optimized model that fits the frame and fit-score (optionally)"""
-
-		return self.ufit(frame,*args,**kwargs)
-
-	def ufit(self,frame:pandas.DataFrame,*args,date0:datetime.date=None,**kwargs):
+	def fit(self,frame:pandas.DataFrame,*args,date0:datetime.date=None,**kwargs):
 		"""Returns optimized model that fits the frame and fit-score (optionally)"""
 
 		dates = TimeSpan(frame[self.datehead])
@@ -57,10 +30,6 @@ class Analysis():
 		return {item:self.ufit(frame,*args,**kwargs) for item,frame in view}
 
 	def run(self,model:Model,*args,**kwargs):
-
-		return self.urun(model,*args,**kwargs)
-
-	def urun(self,model:Model,*args,**kwargs):
 		"""Forecasts the rates based on the model, and for the pandas.date_range parameters."""
 
 		dates = TimeSpan.get(*args,**kwargs)

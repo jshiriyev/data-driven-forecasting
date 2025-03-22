@@ -1,81 +1,110 @@
-import calendar
+import pandas as pd
 
-import re
+class Table():
+    """A class to handle a pd.DataFrame of well data with column mapping."""
 
-import pandas
+    fields = []
 
-class ProductionTable():
+    def __init__(self,frame:pd.DataFrame=None,tiein:dict=None):
+        """
+        Initialize the class with a pd.DataFrame and a column mapping.
 
-    def __init__(self,frame:pandas.DataFrame,multp:float=1.0):
-        self.frame = frame*multp
+        Parameters:
+        ----------
+        frame (pd.DataFrame)  : The input pd.DataFrame containing perforation data.
+        tiein (dict)          : A dictionary tying in data attributes to pd.DataFrame columns.
+        """
+        self.frame = frame # Calls the property setter
+        self.tiein = tiein # Calls the property setter
 
-    def __getitem__(self,key):
-        return self.frame[key]
+    @property
+    def frame(self) -> pd.DataFrame:
+        """Returns the pd.DataFrame containing perforation data."""
+        return self._frame
+
+    @frame.setter
+    def frame(self,value:pd.DataFrame) -> None:
+        """Sets the pd.DataFrame, assigning empty dataframe if the input is None."""
+        self._frame = pd.DataFrame(columns=self.fields) if value is None else value
+
+    @property
+    def tiein(self) -> dict:
+        """Returns the column tie-in for the pd.DataFrame."""
+        return self._tiein
+
+    @tiein.setter
+    def tiein(self,value:dict):
+        """Sets the column tie-in, ensuring default tie-in if None is provided."""
+        if value is None:
+            self._tiein = {key:key for key in self.fields}
+            return
+
+        invalid_keys = [key for key in value.keys() if key not in self.fields]
+
+        if invalid_keys:
+            raise ValueError(f"tie-in keys are: {', '.join(self.fields)}")
+
+        self._tiein = value
+
+    def __repr__(self):
+        """Returns a string representation of the object."""
+        return f"{self.__class__.__name__}\n{repr(self.frame)}\n"
 
     def __getattr__(self,key):
+        """Returns unique values for a given data field from the pd.DataFrame
+        if key is in data fields, otherwise returns corresponding pd.DataFrame attribute.
+        """
+        if key in self.fields:
+            return self.frame[self.tiein[key]]
+
         return getattr(self.frame,key)
 
-    @property
-    def monthly_rates(self):
-        return self.frame.diff()
+    def __getitem__(self,key):
+        """Retrieves a row as a data object if an integer index is given,
+        otherwise returns the corresponding pd.DataFrame subset.
+        """
+        rows = self.frame.iloc[key]
 
-    @property
-    def daily_rates(self):
-        return self.frame.diff().div(self.days_in_prev_month,axis=0)
+        if rows.ndim == 1:
+            rows = rows.to_frame().T
 
-    @property
-    def days_in_prev_month(self):
-        return self.frame.index.to_series().apply(ProductionTable.get_previous_month_days)
+        return Table(rows,self.tiein)
     
-    @staticmethod
-    def get_previous_month_days(date:pandas.Timestamp) -> int:
-        """
-        Calculate the number of days in the previous month based on the given date.
+if __name__ == "__main__":
 
-        Parameters:
-            date (pandas.Timestamp): A pandas Timestamp object representing the current date.
+    import datetime
 
-        Returns:
-            int: The number of days in the previous month.
-        """
-        first_day_of_current_month = date.replace(day=1)
-        last_day_of_previous_month = first_day_of_current_month-pandas.Timedelta(days=1)
+    Table.fields.extend(["a","b","c","d"])
 
-        days_in_previous_month = calendar.monthrange(
-            last_day_of_previous_month.year,last_day_of_previous_month.month)[1]
+    df = pd.DataFrame(dict(
+        A=[datetime.date(2020,1,1),datetime.date(2021,1,1),datetime.date(2022,1,1),datetime.date(2023,1,1)],
+        B=['A','B','C','D'],
+        C=['5-6','7-8','9-10','11'],
+        D=['XY','XZ','YZ','ZZ']))
 
-        return days_in_previous_month
+    base = Table(df,dict(a='A',b='B',c='C',d='D'))
 
-    def drop_zero_rates(self):
+    print(base[2].c)
+    print(base[2:])
 
-        return ProductionTable(self.frame.loc[:,self.monthly_rates.sum()>0])
+    # print(type(df.A))
 
-    def rename(self,func=None) -> pandas.DataFrame:
-        """
-        Renames the columns of a DataFrame based on a given function.
+    # print(base.a)
+    # print(type(base.a))
+    # print(base.c)
 
-        Parameters:
+    # print(base.tiein)
+    # print(base['A'])
+    # print(base[2])
 
-        func (callable): A function that takes a column name as input and returns a new column name.
+    # print(perfs.tiein)
+    # print(perfs[2])
 
-        Returns: frame with new column names
-        """
-        func = ProductionTable.extract_digits if func is None else func
+    # print(perfs.layer)
 
-        self.frame.rename(
-            columns={col:func(col) for col in self.frame.columns},inplace=True)
+    # perfs2 = PerfFrame()
 
-    def subtract(self,frame:pandas.DataFrame):
+    # print(perfs2.tiein)
 
-        self_frame = self.frame[sorted(self.frame.columns)]
-
-        frame = frame.reindex(self.frame.index,fill_value=0)
-        frame = frame[sorted(frame.columns)]
-
-        # Compute the difference
-        difference = self_frame-frame
-
-        # Compute the cumulative sum
-        cumulative_difference = difference.sum(axis=1)
-
-        return cumulative_difference
+    # # # for d in dir(frame):
+    # # #     print(d)
