@@ -1,4 +1,6 @@
-from ._arpmod import Arps
+from . import decline
+
+from .decline._arps import Arps
 
 # from ._model import Model
 

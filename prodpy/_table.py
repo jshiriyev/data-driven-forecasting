@@ -79,20 +79,3 @@ class ProductionTable():
         cumulative_difference = difference.sum(axis=1)
 
         return cumulative_difference
-
-    @staticmethod
-    def extract_digits(item_name:str) -> str:
-        """
-        Extracts digits or characters enclosed in single quotes from a given string.
-        If no match is found, returns the original string.
-
-        Parameters:
-        - item_name (str): The input string.
-
-        Returns:
-        - str: The extracted content inside single quotes, or the original string if no match is found.
-        """
-        match = re.search(r"'([^']*)'",item_name) # chatgpt suggested
-        # match = re.search(r"'(.*?)'",item_name) # previous version
-
-        return match.group(1) if match else item_name

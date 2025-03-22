@@ -18,39 +18,51 @@ class Name:
     name : str
 
     @staticmethod
-    def get(index:int,template:str) -> str:
+    def apply(index:int,template:str=None) -> str:
         """Generates a well name by formatting a given index into a string template.
 
         Parameters:
-            index    : The well index (number)
-            template : A string template containing a placeholder (e.g., "Well-{}").
+        ----------
+        index    : The well index (number)
+        template : A string template containing a placeholder (e.g., "Well-{}").
         
         Returns:
-            str: The formatted well name.
+        -------
+        str: The formatted well name.
 
         Raises:
-            ValueError: If the template does not contain a valid placeholder.
+        ------
+        ValueError: If the template does not contain a valid placeholder.
+
         """
+        template = "Well-{}" if template is None else template
+
         try:
             return template.format(index)
         except Error as e:
             raise ValueError(f"Invalid template '{template}' for index '{index}'. Error: {e}")
 
     @staticmethod
-    def digits(name:str,template:str=None) -> str:
-        """Returns digits or characters enclosed in single quotes from a given string.
-        If no match is found, returns the original string.
+    def parse(name:str,regex:str=None) -> str:
+        """Returns a searched part of the name. If no match is found, returns the original name.
 
         Parameters:
-        - name (str): The input string.
+        ----------
+        name (str): The name to parse.
+        regex (raw str): A custom regular expression for extraction. Defaults to extracting digits.
 
         Returns:
-        - str: The extracted content inside single quotes, or the original string if no match is found.
-        """
-        match = re.search(r"'([^']*)'",name) # chatgpt suggested
-        # match = re.search(r"'(.*?)'",name) # previous version
+        -------
+        str: The extracted content, or the original string if no match is found.
 
-        return match.group(1) if match else name
+        """
+        regex = r'\d+' if regex is None else regex
+        # previous version of the code : r"'(.*?)'"
+        # previous chatgpt suggestion : r"'([^']*)'"
+
+        match = re.search(regex,name)
+        
+        return match.group() if match else name
 
 @dataclass
 class Slot:

@@ -1,21 +1,30 @@
 import logging
 
+import sys
+
 import numpy
+
+from scipy import stats
 
 from scipy._lib._bunch import _make_tuple_bunch
 
-from scipy.stats import linregress
-from scipy.stats import t as tstat
-
 Result = _make_tuple_bunch('Result',
 	['b','Di','yi','xi','n','R2','Di_error','yi_error'],
-	extra_field_names=['linear'])
+	extra_field_names=['linear'],
+	)
 
 LinregressResult = _make_tuple_bunch('LinregressResult',
 	['slope','intercept','rvalue','pvalue','stderr'],
-	extra_field_names=['intercept_stderr'])
+	extra_field_names=['intercept_stderr'],
+	)
 
-class BaseClass():
+from scipy.optimize import curve_fit
+
+from ._exponential import Exponential
+from ._hyperbolic import Hyperbolic
+from ._harmonic import Harmonic
+
+class Arps():
 	"""Base class for Arp's decline models: Exponential, Hyperbolic, and Harmonic.
 
 	Attributes:
@@ -33,33 +42,11 @@ class BaseClass():
 
 	"""
 
-	def __init__(self,Di,yi,b=0.):
+	def __init__(self,Di,yi,*,b=0.):
+		"""Initializes the Arps model based on the decline exponent 'b'."""
+		self.model = getattr(sys.modules[__name__],self.b2mode(b))(Di,yi,b=b)
 
-		self._Di = Di
-		self._yi = yi
-		self._b  = b
-
-	@property
-	def Di(self):
-		"""Getter for the initial decline rate."""
-		return self._Di
-
-	@property
-	def yi(self):
-		"""Getter for the initial y value."""
-		return self._yi
-
-	@property
-	def b(self):
-		"""Getter for the decline exponent."""
-		return self._b
-
-	@property
-	def mode(self):
-		"""Getter for the decline mode: 'exp', 'hyp', or 'har'."""
-		return self.b2mode(self.b).lower()[:3]
-
-	def run(self,x:numpy.ndarray,cum:bool=False,**kwargs):
+	def run(self,x:numpy.ndarray,*,cum:bool=False,xi:float=0.):
 		"""Runs the decline model for a given x value.
         
         Arguments:
@@ -72,37 +59,56 @@ class BaseClass():
         -------
         y (float array): The result of the decline calculation.
         """
-		forward = getattr(self,"cum" if cum else "rate")
+		return getattr(self.model,"cum" if cum else "rate")(x,xi=xi)
 
-		return forward(x,self.Di,self.yi,self.b,**kwargs)
-
-	def fit(self,x:numpy.ndarray,y:numpy.ndarray,*args,xi:float=0.):
-
-		x,y = self.shift(numpy.asarray(x),numpy.asarray(y),xi)
+	def linregress(self,x:numpy.ndarray,y:numpy.ndarray,*,xi:float=0.,**kwargs):
+		"""Linear regression of x and y values."""
+		x,y = self.shift(numpy.asarray(x),numpy.asarray(y),xi=xi)
 		x,y = self.nzero(x,y)
-		
-		return x,y
+
+		try:
+			result = stats.linregress(x,self.model.linearize(y),**kwargs)
+		except Exception as exception:
+			logging.error("Error occurred: %s", exception)
+		else:
+			return {k: v.tolist() for k, v in result._asdict().items()}
 
 	@staticmethod
-	def shift(x:numpy.ndarray,y:numpy.ndarray,xi:float=None):
+	def shift(x:numpy.ndarray,y:numpy.ndarray,*,xi:float=0):
 		"""Returns shifted x data to get the yi at xi."""
-		return (x, y) if xi is None else (x[x>=xi]-xi, y[x>=xi])
+		return (x, y) if xi==0 else (x[x>=xi]-xi, y[x>=xi])
 
 	@staticmethod
 	def nzero(x:numpy.ndarray,y:numpy.ndarray):
 		"""Returns the nonzero entries of y for x and y."""
 		return (x[~numpy.isnan(y) & (y!=0)],y[~numpy.isnan(y) & (y!=0)])
 
-	@staticmethod
-	def linregr(x:numpy.ndarray,y:numpy.ndarray,**kwargs):
-		"""Linear regression of x and y values."""
+	def fit(self,x:numpy.ndarray,y:numpy.ndarray,*,xi:float=0.**kwargs):
+		"""Returns exponential regression results after linearization."""
+		x,y = self.shift(numpy.asarray(x),numpy.asarray(y),xi=xi)
+		x,y = self.nzero(x,y)
 
-		try:
-			linear = linregress(x,y,**kwargs)
-		except Exception as exception:
-			logging.error("Error occurred: %s", exception)
-		else:
-			return linear
+		linear = self.linregress(x,y)
+
+		kwargs.setdefault('p0',default=self.model.invert(linear))
+
+		result = curve_fit(self.forward,x,y,**kwargs)
+
+		R2,perror = self.process(x,y,result)
+
+		return Result(self.model.b,*result[0].tolist(),xi,x.size,R2,*perror,
+			linear=LinregressResult(**linear),
+			)
+
+	def forward(self,x:numpy.ndarray,Di:float,yi:float):
+		"""Returns either rate or cum methods based on cum flag."""
+		return self.model(Di,yi).rate(x)
+
+	def process(self,x:numpy.ndarray,y:numpy.ndarray,result:tuple):
+		"""Processes the curve_fit results to compute R-squared and parameter errors."""
+		R2 = self.rsquared(self.forward(x,*result[0]),y)
+
+		return R2, numpy.sqrt(numpy.diag(result[1])).tolist()
 
 	@staticmethod
 	def rsquared(ycal:numpy.ndarray,yobs:numpy.ndarray):
@@ -110,12 +116,12 @@ class BaseClass():
 		ssres = numpy.nansum((yobs-ycal)**2)
 		sstot = numpy.nansum((yobs-numpy.nanmean(yobs))**2)
 
-		return 1-ssres/sstot
+		return (1-ssres/sstot).tolist()
 
 	@staticmethod
-	def reader(result:Result):
+	def reader(result):
 		"""Returns the text that explains the results."""
-		string = f"\nDecline mode is {BaseClass.b2mode(result.b)} and the exponent is {result.b}.\n\n"
+		string = f"\nDecline mode is {Arps.b2mode(result.b)} and the exponent is {result.b}.\n\n"
 
 		string += f"Linear regression R-squared is {result.linear.rvalue**2:.5f}\n"
 		string += f"Non-linear curve fit R-squared is {result.R2:.5f}\n\n"
@@ -126,11 +132,10 @@ class BaseClass():
 
 		return string
 
-	@staticmethod
-	def simulate(result:Result,prc:float=50.):
+	def simulate(self,result,prc:float=50.):
 		"""prc -> prcentile, prc=0.5 gives mean values."""
-		Di = result.Di+tstat.ppf(prc/100.,result.n-2)*result.Di_error
-		yi = result.yi-tstat.ppf(prc/100.,result.n-2)*result.yi_error
+		Di = result.Di+stats.t.ppf(prc/100.,result.n-2)*result.Di_error
+		yi = result.yi-stats.t.ppf(prc/100.,result.n-2)*result.yi_error
 
 		return Di,yi
 
@@ -164,12 +169,12 @@ class BaseClass():
 			return 'Exponential',0
 
 		if mode is None and b is not None:
-			return BaseClass.b2mode(float(b)),float(b)
+			return Arps.b2mode(float(b)),float(b)
 
 		if mode is not None and b is None:
-			return mode,BaseClass.mode2b(mode)
+			return mode,Arps.mode2b(mode)
 
-		return BaseClass.option(mode=None,b=b)
+		return Arps.option(mode=None,b=b)
 
 if __name__ == "__main__":
 
@@ -182,17 +187,17 @@ if __name__ == "__main__":
 
 	b = 1.
 
-	result = BaseClass(b).inv(x,y)
+	result = Arps(b).inv(x,y)
 
-	print(BaseClass.reader(result))
+	print(Arps.reader(result))
 
-	p10 = BaseClass.model(result,prc=10.)
-	p50 = BaseClass.model(result,prc=50.)
-	p90 = BaseClass.model(result,prc=90.)
+	p10 = Arps.model(result,prc=10.)
+	p50 = Arps.model(result,prc=50.)
+	p90 = Arps.model(result,prc=90.)
 
-	fit10 = BaseClass(b).run(x,*p10)
-	fit50 = BaseClass(b).run(x,*p50)
-	fit90 = BaseClass(b).run(x,*p90)
+	fit10 = Arps(b).run(x,*p10)
+	fit50 = Arps(b).run(x,*p50)
+	fit90 = Arps(b).run(x,*p90)
 
 	plt.style.use('_mpl-gallery')
 
