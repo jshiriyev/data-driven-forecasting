@@ -18,8 +18,8 @@ class utils:
 
 		A list of column names that exist in the DataFrame and that match the
 		specified include and exclude criteria.
-		"""
 
+		"""
 		head_list = [head for head in args if head in frame.columns]
 
 		if include is None and exclude is None:
@@ -42,8 +42,8 @@ class utils:
 		Returns:
 
 		The joined frame.
-		"""
 
+		"""
 		heads = utils.heads(*args,**kwargs)
 
 		separator = " " if separator is None else separator
@@ -58,18 +58,16 @@ class utils:
 		series specified by column for args.
 		
 		Parameters:
-
+		----------
 		column   : Column name where to search for args
 		*args    : Positional values to keep in the column series.
 
 		Returns:
-
+		-------
 		A new filtered frame.
 		
 		"""
-		bools = frame[column].isin(args)
-
-		return frame[bools].reset_index(drop=True)
+		return frame[frame[column].isin(args)].reset_index(drop=True)
 
 	def groupsum(frame,column:str,*args,separator=None):
 		"""
@@ -77,12 +75,12 @@ class utils:
 		returns a new frame after summing the other columns.
 		
 		Parameters:
-
+		----------
 		column   : Column name which to group
 		*args    : Positional values to keep in the column series.
 
 		Returns:
-
+		-------
 		A new summed frame.
 
 		"""
@@ -92,7 +90,7 @@ class utils:
 
 		frame[column] = separator.join(frame[column].unique())
 
-		frame = frame.groupby(column).sum().reset_index()
+		frame = frame.groupby(column).sum().reset_index(drop=True)
 
 		return frame
 

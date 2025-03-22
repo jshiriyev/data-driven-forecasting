@@ -92,3 +92,18 @@ class ProdTable():
         cumulative_difference = difference.sum(axis=1)
 
         return cumulative_difference
+
+    @property
+    def mindate(self):
+        """Returns the smallest datetime.date observed in the date column."""
+        return self._mindate if self.empty else self.dates.min().date()-datetime.timedelta(days=45)
+
+    @property
+    def maxdate(self):
+        """Returns the largest datetime.date observed in the date column."""
+        return self._maxdate if self.empty else self.dates.max().date()+datetime.timedelta(days=45)
+
+    @property
+    def limit(self):
+        """Returns the datetime.date limits observed in the date column."""
+        return (self.mindate,self.maxdate)

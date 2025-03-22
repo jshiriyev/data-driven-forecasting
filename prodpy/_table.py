@@ -1,5 +1,7 @@
 import pandas as pd
 
+from ._frameutils import utils
+
 class Table():
     """A class to handle a pd.DataFrame of well data with column mapping."""
 
@@ -69,6 +71,21 @@ class Table():
             rows = rows.to_frame().T
 
         return Table(rows,self.tiein)
+
+    @property
+    def datetimes(self):
+        """Returns the list of column names with datetime format."""
+        return utils.heads(self.frame,include=('datetime64',))
+
+    @property
+    def numbers(self):
+        """Returns the list of column names with number format."""
+        return utils.heads(self.frame,include=('number',))
+
+    @property
+    def nominals(self):
+        """Returns the list of column names that are categorical by nature."""
+        return utils.heads(self.frame,exclude=('number','datetime64'))
     
 if __name__ == "__main__":
 

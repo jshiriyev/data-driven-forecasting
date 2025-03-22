@@ -2,10 +2,6 @@ import numpy
 
 class Reader():
 
-    def __init__(self,filepath):
-
-        pass
-
     def read(self,skiprows=0,headerline=None,comment="--",endline="/",endfile="END"):
 
         # While looping inside the file it does not read lines:
@@ -107,12 +103,6 @@ class Reader():
         injhist    = " '{}'\tWATER\tOPEN\t{}\t7*\tRATE / "#.format(wellname,waterrate)
         wefac      = " '{}'\t{} / "#.format(wellname,efficiency)
         welopen    = " '{}'\tSHUT\t3* / "#.format(wellname)
-
-class Writer():
-
-    def __init__(self,*args,**kwargs):
-
-        super().__init__(*args,**kwargs)
 
     def write(self):
 

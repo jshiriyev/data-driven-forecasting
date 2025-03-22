@@ -46,7 +46,7 @@ class Arps():
 		"""Initializes the Arps model based on the decline exponent 'b'."""
 		self.model = getattr(sys.modules[__name__],self.b2mode(b))(Di,yi,b=b)
 
-	def run(self,x:numpy.ndarray,*,cum:bool=False,xi:float=0.):
+	def run(self,x:numpy.ndarray,*,xi:float=0.,cum:bool=False):
 		"""Runs the decline model for a given x value.
         
         Arguments:
@@ -101,7 +101,7 @@ class Arps():
 			)
 
 	def forward(self,x:numpy.ndarray,Di:float,yi:float):
-		"""Returns either rate or cum methods based on cum flag."""
+		"""Returns either rate methods."""
 		return self.model(Di,yi).rate(x)
 
 	def process(self,x:numpy.ndarray,y:numpy.ndarray,result:tuple):

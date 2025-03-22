@@ -22,7 +22,6 @@ records = cur.fetchall()
 for row in records:
     for col in row:
         print (col, row[col])
-     
     
 # Query the database and obtain data as Python objects
 

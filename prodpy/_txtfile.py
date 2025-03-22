@@ -1,54 +1,11 @@
 import contextlib
-import copy
-import datetime
-
 from dateutil import parser
-
-from difflib import SequenceMatcher
-
-import logging
-
-import os
 import re
 
-import numpy
+import numpy as np
 
-from .directory._browser import Browser
-
-class TxtFile(Browser):
-
-    def __init__(self,**kwargs):
-
-        super().__init__(**kwargs)
-
-        self.frame = {}
-
-    def write(self,filepath,comment=None,**kwargs):
-        """It writes text form of frame."""
-
-        if comment is None:
-            comment = "# "
-
-        with open(filepath,"w",encoding='utf-8') as txtmaster:
-
-            txtmaster.write(self.header.__str__(comment=comment))
-            txtmaster.write(f"{comment}\n")
-            txtmaster.write(self.frame.__str__(limit=self.frame.shape[0],comment=comment,**kwargs))
-
-        # numpy.savetxt("data.txt",Z,fmt="%s",header=header,footer=footer,comments="")
-
-    def writeb(self,filepath):
-        """It writes binary form of frame."""
-
-        for header,datacolumn in zip(self._headers,self._running):
-            kwargs[header] = datacolumn
-
-        numpy.savez_compressed(filepath,**kwargs)
-
-        # numpy.savez_compressed('data.npz', a=A, b=B, c=C)
-
-class TxtRead():
-
+class TxtFile():
+    
     def __init__(self,txtfile,headline=None,comments="#",delimiter=None,skiprows=0):
 
         self.txtfile = txtfile
@@ -122,21 +79,45 @@ class TxtRead():
         if self.headline is None:
             self.numcols = len(types)
 
-        dtypes = [numpy.dtype(type_) for type_ in types]
+        dtypes = [np.dtype(type_) for type_ in types]
 
         floatFlags = [True if type_ is float else False for type_ in types]
 
         self.seekrow(self.skiprows)
 
         if all(floatFlags):
-            cols = numpy.loadtxt(self.txtmaster,comments=self.comments,delimiter=self.delimiter,unpack=True)
+            cols = np.loadtxt(self.txtmaster,comments=self.comments,delimiter=self.delimiter,unpack=True)
         else:
-            cols = numpy.loadtxt(self.txtmaster,comments=self.comments,delimiter=self.delimiter,unpack=True,dtype=str)
+            cols = np.loadtxt(self.txtmaster,comments=self.comments,delimiter=self.delimiter,unpack=True,dtype=str)
 
         heads = self.heads()
 
         for col,head in zip(cols,heads):
             self.txtfile.frame[head] = col
+
+    def write(self,filepath,comment=None,**kwargs):
+        """It writes text form of frame."""
+
+        if comment is None:
+            comment = "# "
+
+        with open(filepath,"w",encoding='utf-8') as txtmaster:
+
+            txtmaster.write(self.header.__str__(comment=comment))
+            txtmaster.write(f"{comment}\n")
+            txtmaster.write(self.frame.__str__(limit=self.frame.shape[0],comment=comment,**kwargs))
+
+        # np.savetxt("data.txt",Z,fmt="%s",header=header,footer=footer,comments="")
+
+    def writeb(self,filepath):
+        """It writes binary form of frame."""
+
+        for header,datacolumn in zip(self._headers,self._running):
+            kwargs[header] = datacolumn
+
+        np.savez_compressed(filepath,**kwargs)
+
+        # np.savez_compressed('data.npz', a=A, b=B, c=C)
 
     @contextlib.contextmanager
     def txtopen(filepath):
@@ -147,19 +128,21 @@ class TxtRead():
         finally:
             txtmaster.close()
 
-def strtypes(_list:list):
+    @staticmethod
+    def strtypes(_list:list):
 
-    return [strtype(string) for string in _list]
+        return [strtype(string) for string in _list]
 
-def strtype(string:str):
+    @staticmethod
+    def strtype(string:str):
 
-    for attempt in (float,parser.parse):
+        for attempt in (float,parser.parse):
 
-        try:
-            typedstring = attempt(string)
-        except:
-            continue
+            try:
+                typedstring = attempt(string)
+            except:
+                continue
 
-        return type(typedstring)
+            return type(typedstring)
 
-    return str
+        return str
