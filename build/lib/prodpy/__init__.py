@@ -1,6 +1,8 @@
-from . import pipeline
+from . import wellbore
+
+from ._table import prods, perfs
 
 from . import allocate
-from . import decline
+from . import onepage
 
-from . import templix
+from . import decline
