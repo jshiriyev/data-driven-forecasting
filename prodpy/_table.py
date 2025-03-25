@@ -15,6 +15,7 @@ class Table():
         ----------
         frame (pd.DataFrame)  : The input pd.DataFrame containing perforation data.
         tiein (dict)          : A dictionary tying in data attributes to pd.DataFrame columns.
+
         """
         self.frame = frame # Calls the property setter
         self.tiein = tiein # Calls the property setter
@@ -86,19 +87,6 @@ class Table():
     def nominals(self):
         """Returns the list of column names that are categorical by nature."""
         return utils.heads(self.frame,exclude=('number','datetime64'))
-
-    @staticmethod
-    def rename(frame,func) -> pd.DataFrame:
-        """
-        Renames the columns of a DataFrame based on a given function.
-
-        Parameters:
-
-        func (callable): A function that takes a column name as input and returns a new column name.
-
-        Returns: frame with new column names
-        """
-        return frame.rename(columns={col:func(col) for col in frame.columns})
 
 def prods(frame:pd.DataFrame=None,tiein:dict=None):
 
