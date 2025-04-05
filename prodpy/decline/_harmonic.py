@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 
 class Harmonic():
 	"""Harmonic Decline Model."""
@@ -17,18 +17,12 @@ class Harmonic():
 
 	@property
 	def Di(self):
-		"""
-		Getter for the initial decline rate.
-
-		"""
+		"""Getter for the initial decline rate."""
 		return self._Di
 
 	@property
 	def yi(self):
-		"""
-		Getter for the initial y value.
-
-		"""
+		"""Getter for the initial y value."""
 		return self._yi
 
 	@property
@@ -40,7 +34,7 @@ class Harmonic():
 		"""Creates a new instance of the same class when called."""
 		return self.__class__(Di,yi)
 
-	def rate(self,x:numpy.ndarray,*,xi:float=0.):
+	def rate(self,x:np.ndarray,*,xi:float=0.):
 		"""
 		Computes the rate y at x using the harmonic decline formula.
 
@@ -56,9 +50,9 @@ class Harmonic():
 		Array of rate values at given x.
 
 		"""
-		return self.yi/(1+self.Di*(numpy.asarray(x)-xi))
+		return self.yi/(1+self.Di*(np.asarray(x)-xi))
 
-	def cum(self,x:numpy.ndarray,*,xi:float=0.):
+	def cum(self,x:np.ndarray,*,xi:float=0.):
 		"""
 		Computes cumulative production Np at x.
 
@@ -74,18 +68,12 @@ class Harmonic():
 		Array of cumulative production values.
 
 		"""
-		return (self.yi/self.Di)*numpy.log(1+self.Di*(numpy.asarray(x)-xi))
+		return (self.yi/self.Di)*np.log(1+self.Di*(np.asarray(x)-xi))
 
 	def linearize(self,y):
-		"""
-		Linearizes the y values based on Harmonic model.
-
-		"""
+		"""Linearizes the y values based on Harmonic model."""
 		return 1./y
 
 	def invert(self,result):
-		"""
-		Calculates Di and yi values from linear regression results.
-
-		"""
+		"""Calculates Di and yi values from linear regression results."""
 		return result.slope/result.intercept,1/result.intercept

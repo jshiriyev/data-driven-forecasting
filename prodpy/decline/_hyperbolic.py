@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 
 class Hyperbolic():
 	"""Hyperbolic Decline Model."""
@@ -20,26 +20,17 @@ class Hyperbolic():
 
 	@property
 	def Di(self):
-		"""
-		Getter for the initial decline rate.
-
-		"""
+		"""Getter for the initial decline rate."""
 		return self._Di
 
 	@property
 	def yi(self):
-		"""
-		Getter for the initial y value.
-
-		"""
+		"""Getter for the initial y value."""
 		return self._yi
 
 	@property
 	def b(self):
-		"""
-		Getter for the Arps' decline-curve exponent.
-
-		"""
+		"""Getter for the Arps' decline-curve exponent."""
 		return self._b
 
 	@property
@@ -51,7 +42,7 @@ class Hyperbolic():
 		"""Creates a new instance of the same class when called."""
 		return self.__class__(Di,yi,b=self.b)
 
-	def rate(self,x:numpy.ndarray,*,xi:float=0.):
+	def rate(self,x:np.ndarray,*,xi:float=0.):
 		"""
 		Computes the rate y at x using the hyperbolic decline formula.
 
@@ -67,9 +58,9 @@ class Hyperbolic():
 		Array of rate values at given x.
 
 		"""
-		return self.yi/(1+self.b*self.Di*(numpy.asarray(x)-xi))**(1./self.b)
+		return self.yi/(1+self.b*self.Di*(np.asarray(x)-xi))**(1./self.b)
 
-	def cum(self,x:numpy.ndarray,*,xi:float=0.):
+	def cum(self,x:np.ndarray,*,xi:float=0.):
 		"""
 		Computes cumulative production Np at x.
 
@@ -85,18 +76,12 @@ class Hyperbolic():
 		Array of cumulative production values.
 
 		"""
-		return (self.yi/self.Di)/(1-self.b)*(1-(1+self.b*self.Di*(numpy.asarray(x)-xi))**(1-1./self.b))
+		return (self.yi/self.Di)/(1-self.b)*(1-(1+self.b*self.Di*(np.asarray(x)-xi))**(1-1./self.b))
 
 	def linearize(self,y):
-		"""
-		Linearizes the y values based on Hyperbolic model.
-
-		"""
-		return numpy.power(1./y,self.b)
+		"""Linearizes the y values based on Hyperbolic model."""
+		return np.power(1./y,self.b)
 
 	def invert(self,result):
-		"""
-		Calculates Di and yi values from linear regression results.
-
-		"""
+		"""Calculates Di and yi values from linear regression results."""
 		return result.slope/result.intercept/self.b,result.intercept**(-1/self.b)

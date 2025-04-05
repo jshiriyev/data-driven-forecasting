@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 
 class Exponential():
 	"""Exponential Decline Model."""
@@ -17,18 +17,12 @@ class Exponential():
 
 	@property
 	def Di(self):
-		"""
-		Getter for the initial decline rate.
-
-		"""
+		"""Getter for the initial decline rate."""
 		return self._Di
 
 	@property
 	def yi(self):
-		"""
-		Getter for the initial y value.
-
-		"""
+		"""Getter for the initial y value."""
 		return self._yi
 
 	@property
@@ -40,7 +34,7 @@ class Exponential():
 		"""Creates a new instance of the same class when called."""
 		return self.__class__(Di,yi)
 
-	def rate(self,x:numpy.ndarray,*,xi:float=0.):
+	def rate(self,x:np.ndarray,*,xi:float=0.):
 		"""
 		Computes the rate y at x using the exponential decline formula.
 
@@ -56,9 +50,9 @@ class Exponential():
 		Array of rate values at given x.
 
 		"""
-		return self.yi*numpy.exp(-self.Di*(numpy.asarray(x)-xi))
+		return self.yi*np.exp(-self.Di*(np.asarray(x)-xi))
 
-	def cum(self,x:numpy.ndarray,*,xi:float=0.):
+	def cum(self,x:np.ndarray,*,xi:float=0.):
 		"""
 		Computes cumulative production Np at x.
 
@@ -74,18 +68,12 @@ class Exponential():
 		Array of cumulative production values.
 
 		"""
-		return (self.yi/self.Di)*(1-numpy.exp(-self.Di*(numpy.asarray(x)-xi)))
+		return (self.yi/self.Di)*(1-np.exp(-self.Di*(np.asarray(x)-xi)))
 
 	def linearize(self,y):
-		"""
-		Linearizes the y values based on Exponential model.
-
-		"""
-		return numpy.log(y)
+		"""Linearizes the y values based on Exponential model."""
+		return np.log(y)
 
 	def invert(self,result):
-		"""
-		Calculates Di and yi values from linear regression results.
-
-		"""
-		return -result.slope,numpy.exp(result.intercept)
+		"""Calculates Di and yi values from linear regression results."""
+		return -result.slope,np.exp(result.intercept)
