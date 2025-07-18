@@ -1,79 +1,71 @@
+import math
+
 import numpy as np
 
-class Exponential():
-	"""Exponential Decline Model."""
+from scipy.stats._stats_py import LinregressResult
 
-	def __init__(self,Di:float,yi:float,**kwargs):
-		"""Initializes the Exponential decline model.
+from ._hyperbolic import BASE_DOC, Hyperbolic
 
-		Parameters:
-		----------
-		Di: Initial decline rate (1/time).
-		yi: Initial rate.
+class Exponential(Hyperbolic):
+	__doc__ = """
+	Exponential Decline Model for forecasting production in oil and gas wells.
+
+	This class represents the exponential decline model, a special case of the 
+	Arps decline equations where the hyperbolic exponent `b` is zero. It is used 
+	to model the decline in production rate over time, assuming a constant nominal 
+	decline rate.
+
+	""" + BASE_DOC
+
+	def __init__(self,*args,**kwargs):
+		"""Initializes the exponential decline model."""
+		self._b  = 0.
+
+	def d(self,*args):
+		"""Calculates the nominal decline factor."""
+		return self._di
+
+	def D(self,*args):
+		"""Calculates the effective decline factor."""
+		return 1-math.exp(-self._di)
+
+	def qt(self,t:np.ndarray):
+		"""
+		Computes the qt using the exponential decline formula: qt = qi*exp(-di*t)
 
 		"""
-		self._Di = Di
-		self._yi = yi
+		return self._qi*np.exp(-self._di*np.asarray(t))
 
-	@property
-	def Di(self):
-		"""Getter for the initial decline rate."""
-		return self._Di
+	def Nt(self,t:np.ndarray):
+		"""
+		Computes cumulative production: Nt = (qi/di)*(1-exp(-di*t))
 
-	@property
-	def yi(self):
-		"""Getter for the initial y value."""
-		return self._yi
+		"""
+		return (self._qi/self._di)*(1-np.exp(-self._di*np.asarray(t)))
+
+	def Nec(self,qec:float):
+		"""Calculates the cumulative production at economic limit."""
+		T = self.T(qec)
+		r = self.r(qec)
+
+		return self._qi*T*(r-1)/(r*math.log(r))
+
+	def T(self,qec:float):
+		"""Calculates the production life."""
+		return math.log(self.r(qec))/self._di
 
 	@property
 	def mode(self):
 		"""Getter for the decline mode."""
 		return 'exp'
 
-	def __call__(self,Di:float,yi:float):
-		"""Creates a new instance of the same class when called."""
-		return self.__class__(Di,yi)
+	def linearize(self,qt:np.ndarray):
+		"""Linearizes the qt values based on Exponential model."""
+		return np.log(qt)
 
-	def rate(self,x:np.ndarray,*,xi:float=0.):
-		"""
-		Computes the rate y at x using the exponential decline formula.
+	def resinvert(self,result:LinregressResult):
+		"""Calculates di and qi values from linear regression results."""
+		m = result.slope.tolist()
+		k = result.intercept.tolist()
 
-		y = yi*exp(-Di*(x-xi))
-
-		Parameters:
-		----------
-		x : Time values (array-like).
-		xi: Initial time (default 0).
-
-		Returns:
-		-------
-		Array of rate values at given x.
-
-		"""
-		return self.yi*np.exp(-self.Di*(np.asarray(x)-xi))
-
-	def cum(self,x:np.ndarray,*,xi:float=0.):
-		"""
-		Computes cumulative production Np at x.
-
-		Np = (yi/Di)*(1-exp(-Di*(x-xi)))
-
-		Parameters:
-		----------
-		x : Time values (array-like).
-		xi: Initial time (default 0).
-
-		Returns:
-		-------
-		Array of cumulative production values.
-
-		"""
-		return (self.yi/self.Di)*(1-np.exp(-self.Di*(np.asarray(x)-xi)))
-
-	def linearize(self,y):
-		"""Linearizes the y values based on Exponential model."""
-		return np.log(y)
-
-	def invert(self,result):
-		"""Calculates Di and yi values from linear regression results."""
-		return -result.slope,np.exp(result.intercept)
+		return -m,math.exp(k)

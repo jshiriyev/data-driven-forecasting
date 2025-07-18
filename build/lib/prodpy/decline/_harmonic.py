@@ -1,91 +1,69 @@
-import numpy
+import math
+
+import numpy as np
+
+from scipy.stats._stats_py import LinregressResult
+
+from ._hyperbolic import BASE_DOC, Hyperbolic
 
 class Harmonic():
-	"""Harmonic Decline Model."""
+	__doc__ = """
+	Harmonic Decline Model for forecasting production in oil and gas wells.
 
-	def __init__(self,Di:float,yi:float,**kwargs):
-		"""Initializes the Harmonic decline model.
+	This class represents the harmonic form of the Arps decline model, which 
+    is a specific case of the hyperbolic model with a hyperbolic exponent `b = 1`.
 
-		Parameters:
-		----------
-		Di: Initial decline rate (1/time).
-		yi: Initial rate.
+	""" + BASE_DOC
+
+	def __init__(self,*args,**kwargs):
+		"""Initializes the harmonic decline model."""
+		self._b = 1.
+
+	def d(self,t:np.ndarray):
+		"""Calculates the nominal decline factor."""
+		return self._di/(1+self._di*t)
+
+	def D(self,*args):
+		"""Calculates the effective decline factor."""
+		return self.d(t)/(1+self.d(t))
+
+	def qt(self,t:np.ndarray):
+		"""
+		Computes the qt using the harmonic decline formula: qt = qi / (1+di*(t-ti))
 
 		"""
-		self._Di = Di
-		self._yi = yi
+		return self._qi/(1+self._di*np.asarray(t))
 
-	@property
-	def Di(self):
+	def Nt(self,t:np.ndarray,*,ti:float=0.):
 		"""
-		Getter for the initial decline rate.
+		Computes cumulative production: Nt = qi/di*ln(1+di*(t-ti))
 
 		"""
-		return self._Di
+		return (self._qi/self._di)*np.log(1+self._di*np.asarray(t))
 
-	@property
-	def yi(self):
-		"""
-		Getter for the initial y value.
+	def Nec(self,qec:float):
+		"""Calculates the cumulative production at economic limit."""
+		T = self.T(qec)
+		r = self.r(qec)
 
-		"""
-		return self._yi
+		return self._qi*T*math.log(r)/(r-1)
+
+	def T(self,qec:float):
+		"""Calculates the production life."""
+		return (self.r(qec)-1)/self._di
 
 	@property
 	def mode(self):
 		"""Getter for the decline mode."""
 		return 'har'
 
-	def __call__(self,Di:float,yi:float):
-		"""Creates a new instance of the same class when called."""
-		return self.__class__(Di,yi)
+	def linearize(self,qt:np.ndarray):
+		"""Linearizes the qt values based on Harmonic model."""
+		return 1./qt
 
-	def rate(self,x:numpy.ndarray,*,xi:float=0.):
-		"""
-		Computes the rate y at x using the harmonic decline formula.
+	def resinvert(self,result:LinregressResult):
+		"""Calculates di and qi values from linear regression results."""
+		m = result.slope.tolist()
+		k = result.intercept.tolist()
 
-		y = yi / (1+Di*(x-xi))
-
-		Parameters:
-		----------
-		x : Time values (array-like).
-		xi: Initial time (default 0).
-
-		Returns:
-		-------
-		Array of rate values at given x.
-
-		"""
-		return self.yi/(1+self.Di*(numpy.asarray(x)-xi))
-
-	def cum(self,x:numpy.ndarray,*,xi:float=0.):
-		"""
-		Computes cumulative production Np at x.
-
-		Np = yi/Di*ln(1+Di*(x-xi))
-
-		Parameters:
-		----------
-		x : Time values (array-like).
-		xi: Initial time (default 0).
-
-		Returns:
-		-------
-		Array of cumulative production values.
-
-		"""
-		return (self.yi/self.Di)*numpy.log(1+self.Di*(numpy.asarray(x)-xi))
-
-	def linearize(self,y):
-		"""
-		Linearizes the y values based on Harmonic model.
-
-		"""
-		return 1./y
-
-	def invert(self,result):
-		"""
-		Calculates Di and yi values from linear regression results.
-
-		"""
-		return result.slope/result.intercept,1/result.intercept
+		return m/k,1/k
