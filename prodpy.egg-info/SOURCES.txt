@@ -24,5 +24,6 @@ prodpy/onepage/_tornado_chart.py
 prodpy/onepage/_waterfall_chart.py
 prodpy/onepage/_well_status_pie_chart.py
 prodpy/stream/__init__.py
+prodpy/stream/_perforation_vstime.py
 prodpy/stream/_production_vstime.py
 tests/test_timeview_frameutils.py
