@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: prodpy
-Version: 0.0.13
+Version: 0.0.14
 Requires-Dist: numpy>=1.26.4
 Requires-Dist: openpyxl>=3.1.2
 Requires-Dist: pandas>=2.2.2
