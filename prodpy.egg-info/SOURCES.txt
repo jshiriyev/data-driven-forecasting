@@ -26,4 +26,6 @@ prodpy/onepage/_well_status_pie_chart.py
 prodpy/stream/__init__.py
 prodpy/stream/_perforation_vstime.py
 prodpy/stream/_production_vstime.py
-tests/test_timeview_frameutils.py
+tests/test_exponential.py
+tests/test_harmonic.py
+tests/test_hyperbolic.py

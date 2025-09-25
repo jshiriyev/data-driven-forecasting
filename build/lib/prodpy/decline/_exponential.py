@@ -1,71 +1,169 @@
+from __future__ import annotations
+
 import math
+from dataclasses import dataclass, replace
+from typing import Tuple, Union
 
 import numpy as np
+from numpy.typing import ArrayLike, NDArray
+from scipy.stats import linregress
 
-from scipy.stats._stats_py import LinregressResult
+Number = Union[int, float]
 
-from ._hyperbolic import BASE_DOC, Hyperbolic
+# If you already have these in a shared utils module, import them instead.
+def _as_array(t: ArrayLike) -> NDArray[np.float64]:
+    return np.asarray(t, dtype=float)
 
-class Exponential(Hyperbolic):
-	__doc__ = """
-	Exponential Decline Model for forecasting production in oil and gas wells.
 
-	This class represents the exponential decline model, a special case of the 
-	Arps decline equations where the hyperbolic exponent `b` is zero. It is used 
-	to model the decline in production rate over time, assuming a constant nominal 
-	decline rate.
+def _validate_positive(name: str, value: Number) -> None:
+    if not (value > 0):
+        raise ValueError(f"{name} must be > 0, got {value!r}")
 
-	""" + BASE_DOC
+@dataclass(frozen=True)
+class Exponential:
+    """
+    Exponential (Arps limit b → 0) decline model.
 
-	def __init__(self,*args,**kwargs):
-		"""Initializes the exponential decline model."""
-		self._b  = 0.
+    q(t) = qi * exp(-di * t)
+    d(t) = di
+    D(t) = 1 - exp(-di)  (effective decline over Δt = 1)
+    N(t) = (qi/di) * (1 - exp(-di * t))
 
-	def d(self,*args):
-		"""Calculates the nominal decline factor."""
-		return self._di
+    Economic limit:
+      r   = qi / q_ec
+      T   = (1/di) * ln(r)
+      N_ec   = (qi - q_ec) / di
 
-	def D(self,*args):
-		"""Calculates the effective decline factor."""
-		return 1-math.exp(-self._di)
+    Notes:
+    - di > 0, qi > 0, t >= 0, q_ec > 0
+    - Accepts array-like t and returns NumPy arrays.
+    """
 
-	def qt(self,t:np.ndarray):
-		"""
-		Computes the qt using the exponential decline formula: qt = qi*exp(-di*t)
+    di: float = 1.0
+    qi: float = 1.0
 
-		"""
-		return self._qi*np.exp(-self._di*np.asarray(t))
+    # ---- construction & validation -----------------------------------------
+    def __post_init__(self):
+        _validate_positive("di", self.di)
+        _validate_positive("qi", self.qi)
 
-	def Nt(self,t:np.ndarray):
-		"""
-		Computes cumulative production: Nt = (qi/di)*(1-exp(-di*t))
+    def with_params(
+        self,
+        *,
+        di: Number | None = None,
+        qi: Number | None = None,
+    ) -> "Exponential":
+        """Return a new instance with updated parameters (immutability-friendly)."""
+        return replace(
+            self,
+            di=float(di) if di is not None else self.di,
+            qi=float(qi) if qi is not None else self.qi,
+        )
 
-		"""
-		return (self._qi/self._di)*(1-np.exp(-self._di*np.asarray(t)))
+    def __call__(self, di: Number, qi: Number) -> "Exponential":
+        """Configure di, qi and return a new instance (functional style)."""
+        return self.with_params(di=di, qi=qi)
 
-	def Nec(self,qec:float):
-		"""Calculates the cumulative production at economic limit."""
-		T = self.T(qec)
-		r = self.r(qec)
+    # ---- core formulas ------------------------------------------------------
+    def q(self, t: ArrayLike) -> NDArray[np.float64]:
+        """Rate q(t)."""
+        tt = _as_array(t)
+        return self.qi * np.exp(-self.di * tt)
 
-		return self._qi*T*(r-1)/(r*math.log(r))
+    def d(self, t: ArrayLike) -> NDArray[np.float64]:
+        """
+        Nominal decline rate d(t) = - (dq/dt) / q = di (constant).
+        Returns an array with the same shape as t.
+        """
+        tt = _as_array(t)
+        return np.full_like(tt, self.di, dtype=float)
 
-	def T(self,qec:float):
-		"""Calculates the production life."""
-		return math.log(self.r(qec))/self._di
+    def D(self, t: ArrayLike) -> NDArray[np.float64]:
+        """
+        Effective (continuous) decline over Δt=1 (dimensionless):
+        D = 1 - exp(-di), constant.
+        Returns an array with the same shape as t.
+        """
+        tt = _as_array(t)
+        val = 1.0 - math.exp(-self.di)
+        return np.full_like(tt, val, dtype=float)
 
-	@property
-	def mode(self):
-		"""Getter for the decline mode."""
-		return 'exp'
+    def N(self, t: ArrayLike) -> NDArray[np.float64]:
+        """
+        Cumulative production N(t) = (qi/di) * (1 - exp(-di * t)).
+        """
+        tt = _as_array(t)
+        return (self.qi / self.di) * (1.0 - np.exp(-self.di * tt))
 
-	def linearize(self,qt:np.ndarray):
-		"""Linearizes the qt values based on Exponential model."""
-		return np.log(qt)
+    # ---- economic limit & life ----------------------------------------------
+    def r(self, q_ec: Number) -> float:
+        """Rate ratio r = qi / q_ec."""
+        _validate_positive("q_ec", q_ec)
+        return float(self.qi / q_ec)
 
-	def resinvert(self,result:LinregressResult):
-		"""Calculates di and qi values from linear regression results."""
-		m = result.slope.tolist()
-		k = result.intercept.tolist()
+    def T(self, q_ec: Number) -> float:
+        """
+        Producing life until q(t) = q_ec:
+        T = (1/di) * ln(qi / q_ec)
+        """
+        _validate_positive("q_ec", q_ec)
+        return math.log(self.r(q_ec)) / self.di
 
-		return -m,math.exp(k)
+    def N_ec(self, q_ec: Number) -> float:
+        """
+        Cumulative production at economic limit:
+        N_ec = (qi - q_ec) / di
+        """
+        _validate_positive("q_ec", q_ec)
+        return (self.qi - float(q_ec)) / self.di
+
+    @staticmethod
+    def _linearize(q: ArrayLike) -> NDArray[np.float64]:
+        """
+        Exponential linearization: y = ln(q) = ln(qi) - di * t
+        """
+        qq = _as_array(q)
+        if np.any(qq <= 0):
+            raise ValueError("All q values must be > 0 for log-linearization.")
+        return np.log(qq)
+
+    def linearize(self, q: ArrayLike) -> NDArray[np.float64]:
+        """Instance helper: ln(q)."""
+        return self._linearize(q)
+
+    @staticmethod
+    def invert(slope: Number, intercept: Number) -> Tuple[float, float]:
+        """
+        Given regression of y = ln(q) vs t, where y = c + m t,
+          m  = -di  → di = -m
+          c  = ln(qi) → qi = exp(c)
+        """
+        m = float(slope)
+        c = float(intercept)
+        di = -m
+        qi = math.exp(c)
+        _validate_positive("di", di)
+        _validate_positive("qi", qi)
+        return di, qi
+
+    def fit(self, t: ArrayLike, q: ArrayLike) -> "Exponential":
+        """
+        Estimate di and qi via log-linear regression:
+          regress y = ln(q) on t ⇒ slope=m, intercept=c ⇒ di, qi
+        """
+        tt = _as_array(t)
+        qq = _as_array(q)
+        if tt.shape != qq.shape:
+            raise ValueError("t and q must have the same shape")
+        y = self.linearize(qq)
+        reg = linregress(tt, y)
+        di, qi = self.invert(reg.slope, reg.intercept)
+        return self.with_params(di=di, qi=qi)
+
+    # ---- convenience / representation ---------------------------------------
+    @property
+    def mode(self) -> str:
+        return "exponential"
+
+    def __repr__(self) -> str:
+        return f"Exponential(di={self.di:.6g}, qi={self.qi:.6g})"
