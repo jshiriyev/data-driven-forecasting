@@ -2,9 +2,9 @@ import datetime
 
 import pandas as pd
 
-from ._arps import Arps
+from .decline._arps import Arps
 
-class Analysis(Arps):
+class Decline(Arps):
 
 	def __init__(self,*args,**kwargs):
 
@@ -13,7 +13,7 @@ class Analysis(Arps):
 	def run(self,dates,*,date0:datetime.date=None,cum:bool=False):
 		"""Forecasts the rates based on the model, and for the pd.date_range parameters."""
 
-		dates = TimeSpan.get(*args,**kwargs)
+		dates = Schedule.get(*args,**kwargs)
 
 		days  = dates.subtract(model.date0)
 

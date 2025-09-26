@@ -198,6 +198,8 @@ Quick visualization with Matplotlib:
 
 ```python
 import matplotlib.pyplot as plt
+import numpy as np
+
 from prodpy.decline import Arps
 
 m = Arps(di=0.2, qi=100.0, b=0.6)

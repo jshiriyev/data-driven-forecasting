@@ -1,5 +1,4 @@
-import numpy
-
+import numpy as np
 import lasio
 
 class Allocate():
@@ -80,7 +79,7 @@ class Allocate():
 
 		depth = lasfile[0]
 
-		bools = numpy.logical_and(depth>=top,depth<=bottom)
+		bools = np.logical_and(depth>=top,depth<=bottom)
 
 		depth = depth[bools]
 		# print("depths selected",depth)
@@ -88,7 +87,7 @@ class Allocate():
 		curve = lasfile[key][bools]
 
 		if depth.size==1:
-			return numpy.sum(curve==lithid)*(bottom-top)
+			return np.sum(curve==lithid)*(bottom-top)
 
 		heights = (depth[2:]-depth[:-2])/2
 		# print("heigths before correction",heights)
@@ -103,11 +102,11 @@ class Allocate():
 		else:
 			heightL = depth[-1]-depth[-2]
 
-		heights = numpy.insert(heights,0,heightI)
-		heights = numpy.insert(heights,heights.size,heightL)
+		heights = np.insert(heights,0,heightI)
+		heights = np.insert(heights,heights.size,heightL)
 		# print("heigths after correction",heights)
 
-		return numpy.sum(heights[curve==lithid])
+		return np.sum(heights[curve==lithid])
 
 if __name__ == "__main__":
 
@@ -136,8 +135,8 @@ if __name__ == "__main__":
 
 	zone = (0.,17.5)
 
-	D = numpy.linspace(dtop,dlow,N)
-	L = numpy.random.randint(0,2,N)
+	D = np.linspace(dtop,dlow,N)
+	L = np.random.randint(0,2,N)
 
 	plt.scatter(L,D)
 	plt.hlines(zone,0,1)

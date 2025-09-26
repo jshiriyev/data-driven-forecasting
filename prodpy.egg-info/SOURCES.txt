@@ -2,14 +2,14 @@ README.md
 setup.py
 prodpy/__init__.py
 prodpy/_allocate.py
-prodpy/_timespan.py
+prodpy/_decline.py
+prodpy/_schedule.py
 prodpy.egg-info/PKG-INFO
 prodpy.egg-info/SOURCES.txt
 prodpy.egg-info/dependency_links.txt
 prodpy.egg-info/requires.txt
 prodpy.egg-info/top_level.txt
 prodpy/decline/__init__.py
-prodpy/decline/_analysis.py
 prodpy/decline/_arps.py
 prodpy/decline/_exponential.py
 prodpy/decline/_harmonic.py
@@ -30,3 +30,4 @@ tests/test_arps.py
 tests/test_exponential.py
 tests/test_harmonic.py
 tests/test_hyperbolic.py
+tests/test_schedule.py
