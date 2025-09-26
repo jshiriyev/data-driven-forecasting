@@ -21,7 +21,6 @@ except Exception:
 def kind(request):
     return request.param
 
-
 @pytest.fixture
 def params(kind):
     if kind == "exponential":
@@ -31,11 +30,9 @@ def params(kind):
     # hyperbolic
     return dict(mode="hyperbolic", di=0.25, qi=120.0, b=0.5)
 
-
 @pytest.fixture
 def tvec():
     return np.linspace(0.0, 10.0, 1201)  # dense for robust tests
-
 
 def _model_from_params(params):
     mode = params["mode"]
@@ -47,7 +44,6 @@ def _model_from_params(params):
     if mode == "harmonic":
         return Harmonic(di=di, qi=qi)
     return Hyperbolic(b=b, di=di, qi=qi)
-
 
 # -----------------------
 # Construction & mapping
@@ -64,7 +60,6 @@ def test_mode_b_mapping(params):
     assert mode2.lower() == mode
     assert math.isclose(b2, Arps.mode2b(mode), rel_tol=0, abs_tol=0)
 
-
 # --------------
 # run() behavior
 # --------------
@@ -77,7 +72,6 @@ def test_run_matches_underlying(params, tvec, cum):
     y = arps.run(tvec, cum=cum)
     assert_allclose(y, y_ref, rtol=1e-12, atol=1e-12)
 
-
 def test_run_with_xi_shift(params, tvec):
     base = _model_from_params(params)
     arps = Arps(params["di"], params["qi"], b=params["b"])
@@ -89,7 +83,6 @@ def test_run_with_xi_shift(params, tvec):
     # for t >= xi, this equals q(t - xi)
     mask = tvec >= xi
     assert_allclose(y[mask], base.q(tvec[mask] - xi), rtol=1e-12, atol=1e-12)
-
 
 # -----------------------------
 # linregress / fit per model
@@ -117,7 +110,6 @@ def test_fit_recovers_parameters(params, tvec, noise_level):
     assert hasattr(res.linear, "slope")
     assert hasattr(res.linear, "intercept")
 
-
 def test_linregress_transform_is_correct(params, tvec):
     base = _model_from_params(params)
     arps = Arps(params["di"], params["qi"], b=params["b"])
@@ -130,7 +122,6 @@ def test_linregress_transform_is_correct(params, tvec):
     # high correlation in transform space
     corr = np.corrcoef(y_lin, y_hat)[0, 1]
     assert corr > 0.999
-
 
 # -----------------------------
 # Utilities / text / simulate
@@ -145,7 +136,6 @@ def test_reader_contains_key_fields(params, tvec):
     assert "Decline mode is" in txt
     assert "R-squared" in txt
     assert f"exponent is {res.b}" in txt
-
 
 def test_simulate_moves_params(params, tvec):
     base = _model_from_params(params)

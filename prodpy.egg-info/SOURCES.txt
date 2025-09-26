@@ -9,8 +9,8 @@ prodpy.egg-info/dependency_links.txt
 prodpy.egg-info/requires.txt
 prodpy.egg-info/top_level.txt
 prodpy/decline/__init__.py
-prodpy/decline/_arpsmodel.py
-prodpy/decline/_dcanalysis.py
+prodpy/decline/_analysis.py
+prodpy/decline/_arps.py
 prodpy/decline/_exponential.py
 prodpy/decline/_harmonic.py
 prodpy/decline/_hyperbolic.py
@@ -26,6 +26,7 @@ prodpy/onepage/_well_status_pie_chart.py
 prodpy/stream/__init__.py
 prodpy/stream/_perforation_vstime.py
 prodpy/stream/_production_vstime.py
+tests/test_arps.py
 tests/test_exponential.py
 tests/test_harmonic.py
 tests/test_hyperbolic.py
