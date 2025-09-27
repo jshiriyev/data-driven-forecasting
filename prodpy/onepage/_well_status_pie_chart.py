@@ -20,7 +20,15 @@ def autopct_format(values):
         return '{v:d}'.format(v=val)
     return my_format
     
-ax.pie(sizes, explode=explode, labels=labels, colors=colors, shadow=True, startangle=140,autopct=autopct_format(sizes))
+ax.pie(
+    sizes,
+    explode=explode,
+    labels=labels,
+    colors=colors,
+    shadow=True,
+    startangle=140,
+    autopct=autopct_format(sizes)
+)
 
 # Equal aspect ratio ensures that pie is drawn as a circle.
 ax.axis('equal')  
