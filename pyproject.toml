@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "prodpy"
+version = "0.0.29"
+description = "Production forecasting utilities and decline-curve analysis tools built around Arps models."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    { name = "Javid Shiriyev" }
+]
+keywords = ["petroleum engineering", "decline-curve", "arps", "production forecasting"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Manufacturing",
+    "Topic :: Scientific/Engineering",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+    "Natural Language :: English"
+]
+dependencies = [
+    "numpy>=1.26.4",
+    "openpyxl>=3.1.2",
+    "pandas>=2.2.2",
+    "scipy>=1.13.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/jshiriyev/data-driven-forecasting"
+Documentation = "https://github.com/jshiriyev/data-driven-forecasting/tree/main/docs"
+Issues = "https://github.com/jshiriyev/data-driven-forecasting/issues"
+Changelog = "https://github.com/jshiriyev/data-driven-forecasting/releases"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["prodpy*"]

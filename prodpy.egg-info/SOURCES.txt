@@ -1,4 +1,5 @@
 README.md
+pyproject.toml
 setup.py
 prodpy/__init__.py
 prodpy/_allocate.py
@@ -15,14 +16,10 @@ prodpy/decline/_exponential.py
 prodpy/decline/_harmonic.py
 prodpy/decline/_hyperbolic.py
 prodpy/onepage/__init__.py
-prodpy/onepage/_annual_production.py
-prodpy/onepage/_bubble_map_circles.py
-prodpy/onepage/_bubble_map_pie_chart.py
-prodpy/onepage/_production_vstime.py
-prodpy/onepage/_templix.py
-prodpy/onepage/_tornado_chart.py
-prodpy/onepage/_waterfall_chart.py
-prodpy/onepage/_well_status_pie_chart.py
+prodpy/onepage/_charts.py
+prodpy/onepage/_forecast.py
+prodpy/onepage/_history.py
+prodpy/onepage/_spatial.py
 prodpy/stream/__init__.py
 prodpy/stream/_perforation_vstime.py
 prodpy/stream/_production_vstime.py

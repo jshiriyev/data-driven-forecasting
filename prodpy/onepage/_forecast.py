@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 
 import pandas as pd
 
-class Templix():
+class Forecast():
 
 	@staticmethod
 	def plot_oil_gain_bars(case:pd.DataFrame,base:pd.DataFrame=None,/,count:int=20,filename:str=None) -> None:

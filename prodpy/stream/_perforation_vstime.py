@@ -110,3 +110,23 @@ def plot3(tops:pd.DataFrame,perfs:pd.DataFrame):
 	)
 
 	return fig
+
+if __name__ == "__main__":
+
+	# --- Example formation tops ---
+	tops = pd.DataFrame({
+	    "formation": ["Fasila", "Balakhany VIII", "Balakhany X", "Pereriv"],
+	    "depth": [1200, 1350, 1500, 1650]
+	})
+
+	# --- Example perforations ---
+	perfs = pd.DataFrame({
+	    "top": [1360, 1510, 1620],
+	    "base": [1375, 1525, 1640],
+	    "guntype": ["TCP", "HSD", "TCP"],
+	    "date": pd.to_datetime(["2020-05-01", "2021-08-15", "2023-02-10"])
+	})
+
+	# Now you can call your function
+	fig = plot3(tops, perfs)
+	fig.show()
