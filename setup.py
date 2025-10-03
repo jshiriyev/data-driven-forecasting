@@ -2,13 +2,16 @@ from setuptools import setup, find_packages
 
 setup(
 	name = 'prodpy',
-	version = '0.0.29',
+	version = '0.0.30',
 	packages = find_packages(),
 	install_requires = [
-		'numpy>=1.26.4',
+		'numpy>=2.3.1',
 		'openpyxl>=3.1.2',
 		'pandas>=2.2.2',
 		'scipy>=1.13.0',
+        'plotly>=5.22.0',
+        'lasio>=0.31',
+        'matplotlib>=3.10.6'
 		],
 	)
 

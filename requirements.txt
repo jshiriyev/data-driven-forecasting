@@ -3,5 +3,4 @@ matplotlib==3.10.6
 numpy==2.3.3
 pandas==2.3.3
 plotly==5.22.0
-prodpy==0.0.28
 scipy==1.16.2

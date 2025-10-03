@@ -24,6 +24,7 @@ prodpy/stream/__init__.py
 prodpy/stream/_perforation_vstime.py
 prodpy/stream/_production_vstime.py
 tests/test_arps.py
+tests/test_dca.py
 tests/test_exponential.py
 tests/test_harmonic.py
 tests/test_hyperbolic.py

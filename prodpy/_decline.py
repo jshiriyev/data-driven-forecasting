@@ -17,7 +17,6 @@ except Exception:
 
 DeclineMode = Literal['exponential', 'hyperbolic', 'harmonic', 'exp', 'hyp', 'har']
 
-
 @dataclass
 class DCA:
     '''
@@ -44,6 +43,7 @@ class DCA:
     _t_days: Optional[np.ndarray] = None
     _q_obs: Optional[np.ndarray] = None
     _fit: Optional[FitResult] = None
+    _arps_hat: Optional[Arps] = None
 
     # ---------------- API ----------------
     def fit(
@@ -92,14 +92,17 @@ class DCA:
 
         # 4) Configure Arps orchestrator with chosen mode/b
         #    Arps maps mode<->b and instantiates correct model class under the hood.
-        mode_name, b_eff = Arps.option(mode=model, b=b)
+        mode_name, b_eff = Arps.option(mode=model.lower(), b=b)
         arps = Arps(di=1.0, qi=float(np.nanmax(q)), b=b_eff, mode=mode_name)
 
         # 5) Fit (linearized init + non-linear curve_fit refinement, returns FitResult)
         self._fit = arps.fit(t, q, xi=xi)
 
+        self._arps_hat = Arps(di=self._fit.di, qi=self._fit.qi, b=self._fit.b)
+
         # 6) Cache for plotting/forecasting
         self._sched, self._t_days, self._q_obs = s, t_all, q_all
+
         return self
 
     def run(
@@ -144,16 +147,14 @@ class DCA:
         t_last = float(t_all[-1]) if t_all.size else 0.0
         if periods is None:
             horizon = float(horizon_days or 365)
-            periods = int(np.ceil(horizon / dt))
+            periods = max(1, int(np.ceil(horizon / dt)))
 
         t_future = t_last + dt * np.arange(1, periods + 1, dtype=float)
         t_grid = np.concatenate([t_all, t_future])
 
-        arps_hat = Arps(di=self._fit.di, qi=self._fit.qi, b=self._fit.b)
-
         # Evaluate model on full grid (rate & cum) using Arps orchestrator
-        q_fit_full = arps_hat.run(t_grid, xi=self._fit.xi, cum=False)
-        N_full = arps_hat.run(t_grid, xi=self._fit.xi, cum=True)
+        q_fit_full = self._arps_hat.run(t_grid, xi=self._fit.xi, cum=False)
+        N_full = self._arps_hat.run(t_grid, xi=self._fit.xi, cum=True)
 
         # Economic cutoff (optional)
         if econ_rate is not None and np.nanmin(q_fit_full) <= econ_rate:
@@ -195,8 +196,6 @@ class DCA:
         if self._fit is None:
             raise RuntimeError('Call .fit(...) before plotting.')
 
-        arps_hat = Arps(di=self._fit.di, qi=self._fit.qi, b=self._fit.b)
-
         fdf = self.run(periods=periods, horizon_days=horizon_days)
 
         if ax is None:
@@ -209,7 +208,7 @@ class DCA:
         ax.plot(fdf['date'], fdf['q_fit'], lw=2.0, label='Fitted model')
 
         # Cosmetic
-        ttl = title or f"DCA Forecast ({arps_hat.mode}, b={self._fit.b:.3g})"
+        ttl = title or f"DCA Forecast ({self._arps_hat.mode}, b={self._fit.b:.3g})"
         ax.set_title(ttl)
         ax.set_xlabel('Date')
         ax.set_ylabel(self.rate_col)

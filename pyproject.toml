@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "prodpy"
-version = "0.0.29"
+version = "0.0.30"
 description = "Production forecasting utilities and decline-curve analysis tools built around Arps models."
 readme = "README.md"
 requires-python = ">=3.10"

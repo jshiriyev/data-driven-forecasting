@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: prodpy
-Version: 0.0.29
+Version: 0.0.30
 Summary: Production forecasting utilities and decline-curve analysis tools built around Arps models.
 Author: Javid Shiriyev
 Project-URL: Homepage, https://github.com/jshiriyev/data-driven-forecasting
