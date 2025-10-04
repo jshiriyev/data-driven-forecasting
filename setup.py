@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
 	name = 'prodpy',
-	version = '0.0.30',
+	version = '0.0.32',
 	packages = find_packages(),
 	install_requires = [
 		'numpy>=2.3.1',
