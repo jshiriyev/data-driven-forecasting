@@ -3,6 +3,34 @@
 ## Overview  
 This repository is designed to offer comprehensive **production forecasting** solutions for oil and gas wells. It includes tools for **production data analysis**, **decline curve analysis**, and **time series analysis**, enabling users to make informed predictions about future production trends.
 
+## Installation
+
+Install in editable mode during development:
+
+```bash
+python -m pip install -U pip
+python -m pip install -e .
+```
+
+or clone the repository and install the required dependencies:  
+
+```bash
+git clone https://github.com/jshiriyev/data-driven-forecasting.git  
+cd data-driven-forecasting 
+pip install -r requirements.txt  
+```
+
+## 🧪 Testing
+
+Run the full suite (models + orchestrator):
+
+```bash
+python -m pip install pytest numpy scipy
+pytest -q
+# or parallel
+pytest -n auto
+```
+
 ## Features
 - **Graphical Templates** – Industry-standard visualizations for production trend analysis and interpretation.
 
@@ -48,23 +76,6 @@ It is a lightweight orchestrator for Arps decline-curve models — **Exponential
 ---
 
 - **Time Series Analysis** – Utilize statistical methods and machine learning models for forecasting.
-
-## Installation
-
-Install in editable mode during development:
-
-```bash
-python -m pip install -U pip
-python -m pip install -e .
-```
-
-or clone the repository and install the required dependencies:  
-
-```bash
-git clone https://github.com/jshiriyev/data-driven-forecasting.git  
-cd data-driven-forecasting 
-pip install -r requirements.txt  
-```
 
 ## 🚀 Quickstart
 Example usage of the **decline curve analysis** module:  
@@ -215,19 +226,6 @@ The following libraries are required:
 - `numpy`  
 - `matplotlib`  
 - `scipy`
-
----
-
-## 🧪 Testing
-
-Run the full suite (models + orchestrator):
-
-```bash
-python -m pip install pytest numpy scipy
-pytest -q
-# or parallel
-pytest -n auto
-```
 
 Key checks in `tests/test_arps.py`:
 
