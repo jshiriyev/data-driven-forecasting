@@ -3,34 +3,6 @@
 ## Overview  
 This repository is designed to offer comprehensive **production forecasting** solutions for oil and gas wells. It includes tools for **production data analysis**, **decline curve analysis**, and **time series analysis**, enabling users to make informed predictions about future production trends.
 
-## Installation
-
-Install in editable mode during development:
-
-```bash
-python -m pip install -U pip
-python -m pip install -e .
-```
-
-or clone the repository and install the required dependencies:  
-
-```bash
-git clone https://github.com/jshiriyev/data-driven-forecasting.git  
-cd data-driven-forecasting 
-pip install -r requirements.txt  
-```
-
-## 🧪 Testing
-
-Run the full suite (models + orchestrator):
-
-```bash
-python -m pip install pytest numpy scipy
-pytest -q
-# or parallel
-pytest -n auto
-```
-
 ## Features
 - **Graphical Templates** – Industry-standard visualizations for production trend analysis and interpretation.
 
@@ -60,8 +32,6 @@ The `prodpy.decline` module provides analytical tools for fitting and forecastin
 
 It is a lightweight orchestrator for Arps decline-curve models — **Exponential**, **Harmonic**, and **Hyperbolic** — with a consistent, vectorized API for rates, cumulatives, linearized regression, non-linear fitting, and simple uncertainty simulation.
 
----
-
 ## ✨ Features
 
 * **One interface, three models**: choose by `mode` (`"exponential"|"harmonic"|"hyperbolic"`) or exponent `b` (0, 1, or 0<b<1).
@@ -72,10 +42,6 @@ It is a lightweight orchestrator for Arps decline-curve models — **Exponential
 * **Simple uncertainty sampling** via `simulate()` (t-based scaling of parameter std errors).
 
 > Dependencies: `numpy`, `scipy` (and optionally `pytest` for tests, `matplotlib` for examples).
-
----
-
-- **Time Series Analysis** – Utilize statistical methods and machine learning models for forecasting.
 
 ## 🚀 Quickstart
 Example usage of the **decline curve analysis** module:  
@@ -100,8 +66,6 @@ N_exp = m_exp.run(t, cum=True)    # cumulative N(t)
 t2 = np.linspace(190.0, 220.0, 121)
 q2 = m_har.run(t2, xi=200.0)      # q(t - 200) where t >= 200
 ```
-
----
 
 ## 🔧 Fitting workflow (linearize → regress → invert → curve_fit)
 
@@ -217,7 +181,35 @@ class Arps:
 * J.J. Arps, “Analysis of Decline Curves,” *Trans. AIME* (1945).
 * Standard petroleum engineering texts on decline-curve analysis.
 
----
+- **Time Series Analysis** – Utilize statistical methods and machine learning models for forecasting.
+
+## Installation
+
+Install in editable mode during development:
+
+```bash
+python -m pip install -U pip
+python -m pip install -e .
+```
+
+or clone the repository and install the required dependencies:  
+
+```bash
+git clone https://github.com/jshiriyev/data-driven-forecasting.git  
+cd data-driven-forecasting 
+pip install -r requirements.txt  
+```
+
+## 🧪 Testing
+
+Run the full suite (models + orchestrator):
+
+```bash
+python -m pip install pytest numpy scipy
+pytest -q
+# or parallel
+pytest -n auto
+```
 
 ## Dependencies  
 The following libraries are required:  
