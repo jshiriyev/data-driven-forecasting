@@ -1,11 +1,11 @@
 import numpy
 
-import pandas
+import pandas as pd
 
-FT = pandas.read_csv('test2_formation_tops.txt',delimiter='\t')
-UT = pandas.read_csv('test2_flow_unit_tops.txt',delimiter='\t')
-PR = pandas.read_csv('test2_perforations.txt',delimiter='\t')
-FP = pandas.read_csv('test2_production_horizon_based.txt',delimiter='\t')
+FT = pd.read_csv('test2_formation_tops.txt',delimiter='\t')
+UT = pd.read_csv('test2_flow_unit_tops.txt',delimiter='\t')
+PR = pd.read_csv('test2_perforations.txt',delimiter='\t')
+FP = pd.read_csv('test2_production_horizon_based.txt',delimiter='\t')
 
 FT['Top'] = FT['Top'].astype('float64',copy=True)
 FT['Bottom'] = FT['Bottom'].astype('float64',copy=True)
