@@ -119,20 +119,21 @@ print("(di, qi)@95%:", hi)
 Install the test dependencies and run the suite:
 
 ```bash
-python -m pip install pytest numpy scipy
+python -m pip install -e ".[dev,plots]"
 pytest -q
-# or parallel
+# or parallel (requires pytest-xdist)
 pytest -n auto
 ```
 
 Key checks in `tests/test_arps.py` verify mode-to-exponent mapping, rate and cumulative outputs, shifted-origin behavior, fit accuracy, linearization fidelity, and the helper utilities (`reader`, `simulate`).
 
 ## Requirements
-- Python 3.9 or newer
-- pandas
+- Python 3.10 or newer
 - numpy
-- matplotlib
+- openpyxl
+- pandas
 - scipy
+- matplotlib (optional, for plots)
 
 ## Contributing
 Contributions are welcome! If you find a bug or want to improve the tool:

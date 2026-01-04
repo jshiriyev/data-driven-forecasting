@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, Literal
+from typing import Optional, Literal, TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+
+if TYPE_CHECKING:
+    from matplotlib.axes import Axes
 
 # Use your internal modules (fallback friendly if importing locally)
 try:
@@ -187,14 +189,19 @@ class DCA:
         periods: Optional[int] = None,
         horizon_days: Optional[int] = 365,
         show: bool = True,
-        ax: Optional[plt.Axes] = None,
+        ax: Optional[Axes] = None,
         title: Optional[str] = None,
-    ) -> plt.Axes:
+    ) -> Axes:
         '''
         Quick visualization: history vs fitted+forecasted trend on linear axes.
         '''
         if self._fit is None:
             raise RuntimeError('Call .fit(...) before plotting.')
+
+        try:
+            import matplotlib.pyplot as plt
+        except ImportError as exc:
+            raise ImportError('Plotting requires matplotlib. Install prodpy[plots].') from exc
 
         fdf = self.run(periods=periods, horizon_days=horizon_days)
 

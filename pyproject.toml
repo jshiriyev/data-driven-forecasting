@@ -31,6 +31,16 @@ dependencies = [
     "scipy>=1.13.0"
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+    "mypy"
+]
+plots = [
+    "matplotlib"
+]
+
 [project.urls]
 Homepage = "https://github.com/jshiriyev/data-driven-forecasting"
 Documentation = "https://github.com/jshiriyev/data-driven-forecasting/tree/main/docs"

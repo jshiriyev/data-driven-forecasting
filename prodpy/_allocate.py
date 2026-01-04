@@ -1,5 +1,8 @@
 import numpy as np
-import lasio
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+	from lasio import LASFile
 
 class Allocate():
 
@@ -62,7 +65,7 @@ class Allocate():
 		return shares
 
 	@staticmethod
-	def nets(zone:tuple,lithid:int=1,lasfile:lasio.LASFile=None,key:str="LID"):
+	def nets(zone:tuple,lithid:int=1,lasfile:"LASFile"=None,key:str="LID"):
 		"""
 		The method requires the use of las file where the lithology identifier curve is available.
 		It creates heights for each las depth node and returns summed heights with specified lithology identifier.

@@ -1,6 +1,2 @@
-lasio==0.31
-matplotlib==3.10.6
-numpy==2.3.3
-pandas==2.3.3
-plotly==5.22.0
-scipy==1.16.2
+# Keep dependencies in pyproject.toml.
+-e .[dev,plots]
