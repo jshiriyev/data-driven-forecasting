@@ -1,2 +1,0 @@
-# Keep dependencies in pyproject.toml.
--e .[dev,plots]
