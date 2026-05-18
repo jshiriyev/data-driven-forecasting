@@ -1,8 +1,7 @@
 import numpy as np
 
 from ._base_solver import BaseSolver
-
-from ._result import Result
+from ._pressure_distribution import PressureDistribution
 
 class SteadySolver(BaseSolver):
     """
@@ -48,7 +47,7 @@ class SteadySolver(BaseSolver):
 
     def solve(self,times,nodes):
         """Solves for the pressure values at steady state."""
-        result = Result(self.correct(times),nodes)
+        result = PressureDistribution(self.correct(times),nodes)
 
         drop = self._term*(np.log(self._radius/self.well._radius)-3/4+self.well._skin)
 

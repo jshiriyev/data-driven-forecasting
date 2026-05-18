@@ -1,22 +1,25 @@
+from abc import abstractmethod
+
 import numpy as np
 
 from prodpy.resprops import Layer, Fluid
 from prodpy.porsim.prerun import Borehole
 
-from ._porous_media import PorousMedia
+from ._reservoir_domain import ReservoirDomain
+from ._pressure_distribution import PressureDistribution
 
-class BaseSolver(PorousMedia):
+class BaseSolver(ReservoirDomain):
 	"""
 	Shared base for analytical single-well diffusivity-equation solvers.
 
 	BaseSolver combines drainage geometry, rock properties, fluid properties,
-    borehole geometry, and initial pressure. Public properties use oilfield
-    units; underscored properties use SI units for equation evaluation.
+	borehole geometry, and initial pressure. Public properties use oilfield
+	units; underscored properties use SI units for equation evaluation.
 
 	Parameters
 	----------
 	*args
-		Positional arguments passed to the parent :class:`PorousMedia` class.
+		Positional arguments passed to the parent :class:`ReservoirDomain` class.
 	layer : Layer, optional
 		Reservoir rock/property object. Expected to provide properties such as
 		permeability, porosity, and rock compressibility through the internal
@@ -25,11 +28,14 @@ class BaseSolver(PorousMedia):
 		Reservoir fluid-property object. Expected to provide viscosity and
 		fluid compressibility through the internal attributes used by this class.
 	borehole : Borehole
-        Wellbore geometry and operating constraints.
-    pinit : float
-        Initial reservoir pressure, psi.
+		Wellbore geometry and operating constraints.
+	tcomp : float, optional
+		Total compressibility in 1/psi. If not provided, it will be computed
+		as the sum of layer and fluid compressibilities.
+	pinit : float
+		Initial reservoir pressure, psi.
 	**kwargs
-		Additional keyword arguments passed to the parent :class:`PorousMedia`
+		Additional keyword arguments passed to the parent :class:`ReservoirDomain`
 		class.
 
 	Notes
@@ -37,7 +43,7 @@ class BaseSolver(PorousMedia):
 	Public properties use oilfield units; underscored properties use SI units.
 
 	This class assumes single-phase, slightly compressible flow and scalar
-    effective properties and isotropic permeability. Subclasses implement a
+	effective properties and isotropic permeability. Subclasses implement a
 	specific flow regime by overriding `__call__` or `solve`.
 
 	BaseSolver represents a scheduled oil-rate-controlled borehole. All borehole
@@ -51,55 +57,55 @@ class BaseSolver(PorousMedia):
 
 	def __init__(self,
 		*args,
-		layer:Layer | None = None,
-		fluid:Fluid | None = None,
-		borehole:Borehole | None = None,
-		pinit:float | None = None,
+		layer: Layer | None = None,
+		fluid: Fluid | None = None,
+		borehole: Borehole | None = None,
+		tcomp: float | None = None,
+		pinit: float | None = None,
 		**kwargs
 	) -> None:
-		"""Initialize the base solver with porous-media, layer, and fluid properties.
-
-		Parameters
-		----------
-		*args
-			Positional arguments passed to :class:`PorousMedia`.
-		layer : Layer, optional
-			Reservoir layer object containing rock and petrophysical properties.
-		fluid : Fluid, optional
-			Fluid object containing viscosity and compressibility properties.
-		**kwargs
-			Additional keyword arguments passed to :class:`PorousMedia`.
-
-		"""
 		super().__init__(*args,**kwargs)
 
 		self.layer = layer
 		self.fluid = fluid
 		self.borehole = borehole
-
+		self.tcomp = tcomp
 		self.pinit = pinit
 
-	def __call__(self, tcomp: float = None):
+	def __call__(self, times: np.ndarray, nodes: np.ndarray, *args, **kwargs):
 		"""
 		Evaluate the analytical solution.
 
-		This method should be implemented by subclasses. The base class only
-		defines the common reservoir and fluid-property calculations required
-		by analytical diffusivity-equation solvers.
+		The base class prepares the common time/node grid and initializes
+		the PressureDistribution object. Subclasses should implement the
+		actual analytical solution in the `_evaluate` method.
 
 		Parameters
 		----------
-		tcomp : float, optional
-			Optional total compressibility override.
+		times : np.ndarray
+			Time values where the solution is evaluated.
+		nodes : np.ndarray
+			Spatial/radial nodes where the solution is evaluated.
 
-		Raises
-		------
-		NotImplementedError
-			Subclasses should override this method.
+		Returns
+		-------
+		PressureDistribution
+			Pressure solution evaluated at the requested times and nodes.
+
 		"""
-		raise NotImplementedError(
-			"__call__ must be implemented by subclasses of BaseSolver."
-		)
+		solution = PressureDistribution(times, nodes)
+
+		if self._rate.size != 1:
+			raise ValueError("InfiniteReservoir currently supports one constant oil-rate constraint.")
+		
+		return self._evaluate(solution, *args, **kwargs)
+	
+	@abstractmethod
+	def _evaluate(self, solution: "PressureDistribution", *args, **kwargs):
+		"""
+		Implement the analytical solution in subclasses.
+		"""
+		raise NotImplementedError
 
 	@property
 	def layer(self):
@@ -275,13 +281,26 @@ class BaseSolver(PorousMedia):
 	@property
 	def tcomp(self):
 		"""Total compressibility in 1/psi"""
-		return self._tcomp*self.PSI_TO_PA
+		return None if self._tcomp is None else self._tcomp*self.PSI_TO_PA
 
-	@property
-	def _tcomp(self):
-		"""Total compressibility in 1/Pa"""
-		layer, fluid, _ = self._require_ready()
-		return layer._comp + fluid._comp
+	@tcomp.setter
+	def tcomp(self, value):
+		"""Total compressibility. If value is provided, it is expected in 1/psi;
+		if None, it will be computed as the sum of layer and fluid compressibilities."""
+		if value is None:
+			layer, fluid, _ = self._require_ready()
+			if layer._comp is None or fluid._comp is None:
+				self._tcomp = None
+			else:
+				self._tcomp = layer._comp + fluid._comp
+		else:
+			value = Layer._validate_range(
+				value, 0,
+				name="tcomp",
+				include_lower_limit = False,
+			)
+			
+			self._tcomp = value / self.PSI_TO_PA
 
 	@property
 	def hdiff(self):

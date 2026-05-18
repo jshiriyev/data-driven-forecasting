@@ -4,9 +4,7 @@ import logging
 import numpy as np
 
 from ._base_solver import BaseSolver
-from ._porous_media import PorousMedia
-
-from ._result import Result
+from ._pressure_distribution import PressureDistribution
 
 class PseudoSteadyState(BaseSolver):
     """Pseudo Steady State solution based on shape factors.
@@ -65,7 +63,7 @@ class PseudoSteadyState(BaseSolver):
 
     def solve(self,times,nodes):
         """Solves for the pressure values at pseudo-steady state."""
-        result = Result(self.correct(times),nodes)
+        result = PressureDistribution(self.correct(times),nodes)
 
         inner = (4*self._surface)/(self.GAMMA*self.bound.factor*self.well._radius**2)
         drop1 = self._term*(1/2*np.log(inner)+self.well._skin)

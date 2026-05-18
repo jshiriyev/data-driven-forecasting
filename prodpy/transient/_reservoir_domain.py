@@ -18,7 +18,7 @@ class Boundary:
 
     note: str = ""
 
-class PorousMedia():
+class ReservoirDomain():
     """A reservoir class for flow calculations."""
     EULER_GAMMA = 0.5772156649015329
 
@@ -85,6 +85,26 @@ class PorousMedia():
             self.shape_key = shape_key
             self.shape = self.SHAPE_FACTORS[shape_key]
 
+    def __repr__(self) -> str:
+        """Return a concise constructor-style representation of the porous media."""
+
+        args = [
+            f"reservoir_area={self.area:.1f} acres",
+            f"payzone_height={self.height:.1f} ft",
+        ]
+
+        if self.shape_key == "custom":
+            args.extend([
+                f"shape_factor={self.shape.shape_factor!r}",
+                f"tDA_infinite_acting_end={self.shape.tDA_infinite_acting_end!r}",
+                f"tDA_pss_start={self.shape.tDA_pss_start!r}",
+                f"note={self.shape.note!r}",
+            ])
+        else:
+            args.append(f"shape_key={self.shape_key!r}")
+
+        return f"{type(self).__name__}({', '.join(args)})"
+
     @staticmethod
     def _validate_positive(name: str, value: float) -> float:
         try:
@@ -149,7 +169,7 @@ class PorousMedia():
 
 if __name__ == "__main__":
 
-    res = PorousMedia(1000,20)
+    res = ReservoirDomain(1000,20)
 
     print(res.area)
     print(res._area)
