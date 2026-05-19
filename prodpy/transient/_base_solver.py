@@ -345,19 +345,6 @@ class BaseSolver(ReservoirDomain):
 		"""Constant for dimensionless pressure scaling in Pa."""
 		fluid = self._require_fluid()
 		return (self._rate)/(2*np.pi*self._perm*self._height*fluid._mobil)
-
-	def tD(self, time: float):
-		"""Dimensionless time for the diffusivity equation."""
-		_, _, borehole = self._require_ready()
-
-		try:
-			time = float(time)
-		except ValueError:
-			raise ValueError("Time must be a numeric value.")
-		
-		time *= self.DAY_TO_SEC
-		
-		return (self._hdiff * time)/(borehole._radius**2)
 	
 	def CD(self):
 		"""Dimensionless wellbore storage coefficient."""
@@ -367,6 +354,17 @@ class BaseSolver(ReservoirDomain):
 		volume = length*borehole._area
 
 		return (self._storage)/(volume*self._tcomp)
+	
+	def tD(self, times: np.typing.ArrayLike):
+		"""Dimensionless time for the diffusivity equation."""
+		_, _, borehole = self._require_ready()
+		times *= self.DAY_TO_SEC
+		return (self._hdiff * times) / (borehole._radius**2)
+	
+	def rD(self, nodes: np.typing.ArrayLike):
+		_, _, borehole = self._require_ready()
+		nodes *= self.FT_TO_METER
+		return  nodes / borehole.radius
 
 	def pD(self, press: float):
 		"""Dimensionless pressure."""

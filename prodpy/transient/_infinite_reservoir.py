@@ -43,21 +43,27 @@ class InfiniteReservoir(BaseSolver):
         Compute pressure distribution for this specific analytical solution.
 
         """
-        times = self.correct(solution.times) * self.DAY_TO_SEC
-        self._beta = solution._nodes ** 2 / (4 * self._hdiff * times)
-        self._theta = -1/2*special.expi(-self._beta)
+        tD = self.tD(self._correct(solution.times))
+        rD = self.rD(solution.nodes)
+
+        theta = self.theta(
+            self.beta(tD, rD)
+        )
 
         if self._pinit is None:
             raise ValueError("pinit must be set before evaluating InfiniteReservoir.")
 
-        values = self._pinit - self._pcons * self._theta # how to add skin factor: self.borehole.skin
+        values = self._pinit - self._pcons * theta # how to add skin factor: self.borehole.skin
 
         solution.set_pressure(values, si_unit_flag=True)
 
         return solution
 
-    def correct(self, times:np.ndarray):
-        """It sets the time values to np.nan if it is outside of the solver limit."""
+    def _correct(self, times:np.ndarray):
+        """
+        It sets the time values to np.nan if it is outside of the solver limit.
+        
+        """
         bound_internal = times>=self.tmin
         bound_external = times<=self.tmax
 
@@ -71,21 +77,43 @@ class InfiniteReservoir(BaseSolver):
 
         return np.where(valids, times, np.nan)
     
-    @property
-    def beta(self):
-        return self._beta
-    
-    @property
-    def theta(self):
-        return self._theta
+    @staticmethod
+    def beta(
+        tD: np.typing.ArrayLike,
+        rD: np.typing.ArrayLike,
+    ) -> np.typing.NDArray:
+        return rD ** 2 / (4 * tD)
     
     @staticmethod
-    def get_beta_theta(hdiff: float, times: np.ndarray, nodes: np.ndarray):
-        _hdiff = hdiff / BaseSolver.DAY_TO_SEC * BaseSolver.FT_TO_METER**2
-        solution = PressureDistribution(times, nodes)
-        beta = solution._nodes ** 2 / (4 * _hdiff * solution._times)
-        return beta, -1/2*special.expi(-beta)
+    def theta(
+        beta: np.typing.ArrayLike
+    ) -> np.typing.NDArray:
+        return -1/2*special.expi(-beta)
+    
+    @staticmethod
+    def get_beta(
+        tD: np.typing.ArrayLike,
+        rD: np.typing.ArrayLike,
+    ) -> np.typing.NDArray:
+        tD = PressureDistribution._set_times(tD)
+        rD = PressureDistribution._set_nodes(rD)
+        return InfiniteReservoir.beta(tD, rD)
+    
+    @staticmethod
+    def get_theta_from_beta(
+        beta: np.typing.ArrayLike
+    ) -> np.typing.NDArray:
+        beta = np.asarray(beta, dtype=float)
 
-if __name__ == "__main__":
+        return InfiniteReservoir.theta(beta)
+    
+    @staticmethod
+    def get_theta(
+        tD: np.typing.ArrayLike,
+        rD: np.typing.ArrayLike,
+    ) -> np.typing.NDArray:
+        tD = PressureDistribution._set_times(tD)
+        rD = PressureDistribution._set_nodes(rD)
 
-    t = InfiniteReservoir(2,2,layer="None")
+        beta = InfiniteReservoir.beta(tD, rD)
+        return InfiniteReservoir.theta(beta)

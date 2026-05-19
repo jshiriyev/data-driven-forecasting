@@ -20,14 +20,14 @@ class PressureDistribution:
 
     """
     PSI_TO_PA = 6894.757293168
-    DAYS_TO_SECONDS = 24 * 60 * 60
-    FEET_TO_METERS = 0.3048
+    DAY_TO_SEC = 24 * 60 * 60
+    FT_TO_METER = 0.3048
 
     _IMMUTABLE_FIELDS = frozenset({"_times", "_nodes", "_press"})
 
     def __init__(self, times: np.ndarray, nodes: np.ndarray) -> None:
-        self._times = self._as_vector(times, name="times").reshape((-1, 1)) * self.DAYS_TO_SECONDS
-        self._nodes = self._as_vector(nodes, name="nodes").reshape((1, -1)) * self.FEET_TO_METERS
+        self._times = self._set_times(times) * self.DAY_TO_SEC
+        self._nodes = self._set_nodes(nodes) * self.FT_TO_METER
         self._press = np.empty((self._times.size, self._nodes.size), dtype=float)
 
         self._times.flags.writeable = False
@@ -48,6 +48,18 @@ class PressureDistribution:
         if name in self._IMMUTABLE_FIELDS and hasattr(self, name):
             raise AttributeError(f"{name} is immutable after construction.")
         super().__setattr__(name, value)
+
+    @staticmethod
+    def _set_times(times: np.typing.ArrayLike):
+        return PressureDistribution._as_vector(
+            times, name="times"
+            ).reshape((-1, 1))
+    
+    @staticmethod
+    def _set_nodes(nodes: np.typing.ArrayLike):
+        return PressureDistribution._as_vector(
+            nodes, name="nodes"
+            ).reshape((1, -1))
 
     @staticmethod
     def _as_vector(values: np.ndarray, *, name: str) -> np.ndarray:
@@ -87,12 +99,12 @@ class PressureDistribution:
     @property
     def times(self):
         """Time values in days."""
-        return self._times / self.DAYS_TO_SECONDS
+        return self._times / self.DAY_TO_SEC
 
     @property
     def nodes(self):
         """Node positions in feet."""
-        return self._nodes / self.FEET_TO_METERS
+        return self._nodes / self.FT_TO_METER
 
     @property
     def press(self):
