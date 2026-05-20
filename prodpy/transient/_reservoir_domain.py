@@ -26,12 +26,37 @@ class ReservoirDomain(Layer):
 		self.height = height
 
 	def __repr__(self) -> str:
-		"""Return a concise constructor-style representation of the reservoir domain."""
+		"""Return a concise representation of rock, geometry, and state."""
 
-		args = [
-			f"area={self.area:.1f} acres",
-			f"height={self.height:.1f} ft",
-		]
+		if self.is_isotropic:
+			args = [
+				f"perm={self._repr_value(self.xperm)}",
+				"is_isotropic=True",
+			]
+		else:
+			args = [
+				f"xperm={self._repr_value(self.xperm)}",
+				f"yperm={self._repr_value(self.yperm)}",
+				f"zperm={self._repr_value(self.zperm)}",
+			]
+
+		args.extend([
+			f"poro={self._repr_value(self.poro)}",
+			f"comp={self._repr_value(self.comp)}",
+			f"press={self._repr_value(self.press)}",
+			f"area={self._repr_value(self.area)} acres",
+			f"height={self._repr_value(self.height)} ft",
+		])
+
+		if self._fluid is not None:
+			phases = tuple(self._fluid.phases)
+			args.append(f"fluid={type(self._fluid).__name__}(phases={phases!r})")
+
+		if self._pinit is not None:
+			args.append(f"pinit={self._repr_value(self.pinit)} psi")
+
+		if self._tcomp is not None:
+			args.append(f"tcomp={self._repr_value(self.tcomp)} 1/psi")
 
 		return f"{type(self).__name__}({', '.join(args)})"
 

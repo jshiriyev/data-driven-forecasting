@@ -93,7 +93,7 @@ class InfiniteActing(BaseSolver):
         self._require_scalar_analytical_state()
         self._validate_nodes(solution.nodes)
 
-        tD = self._dimensionless_time(self._correct(solution.times))
+        tD = self.tD(self._correct(solution.times))
         rD = self.rD(solution.nodes)
 
         theta = self.theta(
@@ -152,13 +152,6 @@ class InfiniteActing(BaseSolver):
             raise ValueError(
                 "nodes must be greater than or equal to the borehole radius."
             )
-
-    def _dimensionless_time(self, times: np.typing.ArrayLike):
-        """Dimensionless time using scalar hydraulic diffusivity."""
-        borehole = self._require_borehole()
-        times = np.asarray(times, dtype=float) * uc.DAY_TO_SEC
-
-        return self._scalar_hdiff() * times / borehole._radius**2
 
     def _apply_skin_at_wellbore(self, theta: np.ndarray, nodes: np.typing.ArrayLike):
         """
