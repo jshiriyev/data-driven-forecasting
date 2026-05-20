@@ -195,7 +195,7 @@ class PseudoSteadyState(BaseSolver):
         self._validate_nodes(solution.nodes)
 
         tD = self._dimensionless_radial_time(self._correct(solution.times))
-        rD = self.rD(solution.nodes)
+        rD = self.nodes2rD(solution.nodes)
         reD = self._reservoir_radius_dimensionless()
 
         pD = self.prD(tD, rD, reD)

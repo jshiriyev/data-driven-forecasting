@@ -93,11 +93,11 @@ class InfiniteActing(BaseSolver):
         self._require_scalar_analytical_state()
         self._validate_nodes(solution.nodes)
 
-        tD = self.tD(self._correct(solution.times))
-        rD = self.rD(solution.nodes)
+        tD = self.times2tD(self._correct(solution.times))
+        rD = self.nodes2rD(solution.nodes)
 
-        theta = self.theta(
-            self.beta(tD, rD)
+        theta = self.__theta(
+            self.__beta(tD, rD)
         )
 
         theta = self._apply_skin_at_wellbore(theta, solution.nodes)
@@ -207,7 +207,7 @@ class InfiniteActing(BaseSolver):
         return float(arr.item())
     
     @staticmethod
-    def beta(
+    def __beta(
         tD: np.typing.ArrayLike,
         rD: np.typing.ArrayLike,
     ) -> np.typing.NDArray:
@@ -217,7 +217,7 @@ class InfiniteActing(BaseSolver):
         return rD ** 2 / (4 * tD)
     
     @staticmethod
-    def theta(
+    def __theta(
         beta: np.typing.ArrayLike
     ) -> np.typing.NDArray:
         """
@@ -226,7 +226,7 @@ class InfiniteActing(BaseSolver):
         return -1/2*special.expi(-beta)
     
     @staticmethod
-    def get_beta(
+    def beta(
         tD: np.typing.ArrayLike,
         rD: np.typing.ArrayLike,
     ) -> np.typing.NDArray:
@@ -235,10 +235,10 @@ class InfiniteActing(BaseSolver):
         """
         tD = PressureDistribution._set_times(tD)
         rD = PressureDistribution._set_nodes(rD)
-        return InfiniteActing.beta(tD, rD)
+        return InfiniteActing.__beta(tD, rD)
     
     @staticmethod
-    def get_theta_from_beta(
+    def beta2theta(
         beta: np.typing.ArrayLike
     ) -> np.typing.NDArray:
         """
@@ -246,10 +246,10 @@ class InfiniteActing(BaseSolver):
         """
         beta = np.asarray(beta, dtype=float)
 
-        return InfiniteActing.theta(beta)
+        return InfiniteActing.__theta(beta)
     
     @staticmethod
-    def get_theta(
+    def theta(
         tD: np.typing.ArrayLike,
         rD: np.typing.ArrayLike,
     ) -> np.typing.NDArray:
@@ -259,5 +259,24 @@ class InfiniteActing(BaseSolver):
         tD = PressureDistribution._set_times(tD)
         rD = PressureDistribution._set_nodes(rD)
 
-        beta = InfiniteActing.beta(tD, rD)
-        return InfiniteActing.theta(beta)
+        beta = InfiniteActing.__beta(tD, rD)
+        return InfiniteActing.__theta(beta)
+    
+    @staticmethod
+    def pD(*args, **kwargs) -> np.typing.NDArray:
+        """
+        Convenience wrapper for dimensionless pressure from tD and rD.
+        """
+        return InfiniteActing.theta(*args, **kwargs)
+
+    @staticmethod
+    def pwD(
+        tD: np.typing.ArrayLike,
+    ) -> np.typing.NDArray:
+        """
+        Dimensionless wellbore pressure for the line-source solution.
+        """
+        tD = PressureDistribution._set_times(tD).flatten()
+
+        beta = InfiniteActing.__beta(tD, 1.0)
+        return InfiniteActing.__theta(beta)

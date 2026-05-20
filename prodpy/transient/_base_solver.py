@@ -389,14 +389,16 @@ class BaseSolver(ReservoirDomain, ABC):
             * phase._mobil
         )
 
-    def CD(self):
+    def storage2CD(self, storage: np.typing.ArrayLike):
         """Dimensionless wellbore storage coefficient."""
         borehole = self._require_borehole()
         tcomp = self._require_total_compressibility()
 
+        _storage = storage / uc.PSI_TO_PA * uc.FT_TO_M**3
+
         volume = self._poro * self._height * borehole._area
 
-        return self._storage / (volume * tcomp)
+        return _storage / (volume * tcomp)
 
     def CD2storage(self, CD: np.typing.ArrayLike):
         """Convert dimensionless wellbore storage to ft3/psi."""
@@ -407,7 +409,7 @@ class BaseSolver(ReservoirDomain, ABC):
 
         return np.asarray(CD, dtype=float) * volume * tcomp * uc.PSI_TO_PA / uc.FT_TO_M**3
 
-    def tD(self, times: np.typing.ArrayLike):
+    def times2tD(self, times: np.typing.ArrayLike):
         """Dimensionless radial-flow time."""
         borehole = self._require_borehole()
         times = np.asarray(times, dtype=float) * uc.DAY_TO_SEC
@@ -421,7 +423,7 @@ class BaseSolver(ReservoirDomain, ABC):
 
         return tD * borehole._radius**2 / self._hdiff / uc.DAY_TO_SEC
 
-    def rD(self, nodes: np.typing.ArrayLike):
+    def nodes2rD(self, nodes: np.typing.ArrayLike):
         """Dimensionless radius relative to borehole radius."""
         borehole = self._require_borehole()
         nodes = np.asarray(nodes, dtype=float) * uc.FT_TO_M
@@ -435,7 +437,7 @@ class BaseSolver(ReservoirDomain, ABC):
 
         return rD * borehole._radius / uc.FT_TO_M
 
-    def pD(self, press: np.typing.ArrayLike):
+    def press2pD(self, press: np.typing.ArrayLike):
         """Dimensionless pressure for the constant oil-rate radial solution."""
         pinit = self._require_initial_pressure()
         press = np.asarray(press, dtype=float) * uc.PSI_TO_PA

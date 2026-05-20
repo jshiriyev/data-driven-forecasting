@@ -77,7 +77,7 @@ def test_base_solver_dimensionless_radius_roundtrip():
     solver = _solver()
     nodes = np.array([0.5, 10.0])
 
-    assert np.allclose(solver.rD2nodes(solver.rD(nodes)), nodes)
+    assert np.allclose(solver.rD2nodes(solver.nodes2rD(nodes)), nodes)
 
 
 def test_base_solver_rejects_non_oil_rate_constraint():

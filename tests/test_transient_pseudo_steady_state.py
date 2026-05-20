@@ -66,7 +66,7 @@ def test_pseudo_steady_state_solves_cylindrical_reservoir_pressure():
     solution = solver([time], nodes)
 
     tD = solver._dimensionless_radial_time(np.array([[time]]))
-    rD = solver.rD(nodes)
+    rD = solver.nodes2rD(nodes)
     reD = solver._reservoir_radius_dimensionless()
     pD = PseudoSteadyState.prD(tD, rD, reD)
     pD[0, 0] += solver.borehole.skin
