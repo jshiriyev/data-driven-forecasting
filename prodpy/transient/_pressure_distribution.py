@@ -1,5 +1,7 @@
 import numpy as np
 
+from prodpy import UnitConversion as uc
+
 class PressureDistribution:
     """
     Store analytical pressure solutions over one or more times and nodes.
@@ -19,15 +21,11 @@ class PressureDistribution:
     or row-by-row through :meth:`set_pressure_at_time`.
 
     """
-    PSI_TO_PA = 6894.757293168
-    DAY_TO_SEC = 24 * 60 * 60
-    FT_TO_METER = 0.3048
-
     _IMMUTABLE_FIELDS = frozenset({"_times", "_nodes", "_press"})
 
     def __init__(self, times: np.ndarray, nodes: np.ndarray) -> None:
-        self._times = self._set_times(times) * self.DAY_TO_SEC
-        self._nodes = self._set_nodes(nodes) * self.FT_TO_METER
+        self._times = self._set_times(times) * uc.DAY_TO_SEC
+        self._nodes = self._set_nodes(nodes) * uc.FT_TO_M
         self._press = np.empty((self._times.size, self._nodes.size), dtype=float)
 
         self._times.flags.writeable = False
@@ -99,17 +97,17 @@ class PressureDistribution:
     @property
     def times(self):
         """Time values in days."""
-        return self._times / self.DAY_TO_SEC
+        return self._times / uc.DAY_TO_SEC
 
     @property
     def nodes(self):
         """Node positions in feet."""
-        return self._nodes / self.FT_TO_METER
+        return self._nodes / uc.FT_TO_M
 
     @property
     def press(self):
         """Pressure values in psi."""
-        return self._press / self.PSI_TO_PA
+        return self._press / uc.PSI_TO_PA
 
     def set_pressure_at_time(
         self,
@@ -158,7 +156,7 @@ class PressureDistribution:
             )
 
         if not si_unit_flag:
-            values = values * self.PSI_TO_PA
+            values = values * uc.PSI_TO_PA
 
         self._press.flags.writeable = True
         try:
@@ -191,7 +189,7 @@ class PressureDistribution:
             )
 
         if not si_unit_flag:
-            values = values * self.PSI_TO_PA
+            values = values * uc.PSI_TO_PA
 
         self._press.flags.writeable = True
         try:

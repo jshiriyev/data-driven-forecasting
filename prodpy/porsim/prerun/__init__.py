@@ -2,7 +2,7 @@
 
 # 2. Well and Boundary Constraints
 from ._constraint import Constraint
-# from ._boundary import Boundary
+from ._boundary import Boundary
 from ._borehole import Borehole
 # from .constraints import Locator
 # from .constraints import Schedule

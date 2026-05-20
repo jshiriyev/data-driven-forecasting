@@ -1,177 +1,203 @@
-from dataclasses import dataclass
-from typing import Optional, Union, Dict
-import math
-
 import numpy as np
 
-Number = Union[int, float, np.ndarray]
+from prodpy.resprops import Layer, BlackOil
 
-@dataclass(frozen=True)
-class Boundary:
-    """Dietz drainage-area shape-factor record."""
-    #shape factor, {C_A} value
-    shape_factor: float
-    # Use infinite system solution
-    tDA_infinite_acting_end: Optional[float]
-    # PSS is exact for higher values
-    tDA_pss_start: Optional[float]
+from prodpy import UnitConversion as uc
 
-    note: str = ""
+class ReservoirDomain(Layer):
+	"""A reservoir class for flow calculations."""
 
-class ReservoirDomain():
-    """A reservoir class for flow calculations."""
-    EULER_GAMMA = 0.5772156649015329
+	def __init__(self, *args, area: float = np.inf, height: float = 1., **kwargs) -> None:
+		"""Initialize the base reservoir class for porous mediaflow calculations.
 
-    FT_TO_METER = 0.3048
-    ACRE_TO_SQFT = 43560
+		Arguments:
+		---------
+		area (float): in acre.
+		height (float): in ft, defaults to 1 ft.
 
-    SHAPE_FACTORS: Dict[str, Boundary] = {
-        "circle_center":       Boundary(31.62,   0.10,  0.06, "Circle, centered well"),
-        "hexagon_center":      Boundary(31.6,    0.10,  0.06, "Hexagon, centered well"),
-        "triangle_center":     Boundary(27.6,    0.09,  0.07, "Triangle, centered well"),
-        "parallelogram_center":Boundary(27.1,    0.09,  0.07, "Parallelogram/rhombus row"),
-        "triangle_row":        Boundary(21.9,    0.08,  0.12, "Triangle row; verify well location"),
-        "triangle_low_CA":     Boundary( 0.098,  0.015, 0.60, "Low-C_A triangular/boundary row"),
-        "square_center":       Boundary(30.8828, 0.09,  0.05, "Square, centered well"),
-        "square_quadrants":    Boundary(12.9851, 0.03,  0.25, "Square subdivided row"),
-        "square_offcenter":    Boundary( 4.5132, 0.025, 0.30, "Square off-center row"),
-        "square_grid":         Boundary( 3.3351, 0.01,  0.25, "Square grid row"),
-        "rect_center":         Boundary(21.8369, 0.025, 0.15, "Rectangle centered row"),
-        "rect_split_center":   Boundary(10.8374, 0.025, 0.15, "Rectangle split/center row"),
-        "rect_offcenter":      Boundary( 4.5141, 0.06,  0.50, "Rectangle off-center row"),
-        "rect_corner":         Boundary( 2.0769, 0.02,  0.50, "Rectangle/corner row"),
-        "long_rect_center":    Boundary( 3.1573, 0.005, 0.15, "Long rectangle row"),
-        "long_rect_edge":      Boundary( 0.5813, 0.02,  0.60, "Long rectangle edge row"),
-        "very_long_rect_edge": Boundary( 0.1109, 0.005, 0.60, "Very long rectangle edge row"),
-        "strip_center":        Boundary( 5.3790, 0.01,  0.30, "Strip/rectangle centered row"),
-        "strip_split":         Boundary( 2.6896, 0.01,  0.30, "Strip split row"),
-        "strip_offcenter":     Boundary( 0.2318, 0.03,  2.00, "Strip off-center row"),
-        "strip_edge":          Boundary( 0.1155, 0.01,  2.00, "Strip edge row"),
-    }
+		"""
+		super().__init__(*args,**kwargs)
+		
+		self._fluid = None
+		self._pinit = None
+		self._tcomp = None
 
-    def __init__(
-        self,
-        area: float,
-        height: float = 1.,
-        /,
-        shape_key: str = "circle_center",
-        shape_factor: Optional[float] = None,
-        tDA_infinite_acting_end: Optional[float] = None,
-        tDA_pss_start: Optional[float] = None,
-        note: str = "Circle, centered well",
-    ) -> None:
-        """Initialize the base reservoir class for porous mediaflow calculations.
+		self.area = area
+		self.height = height
 
-        Arguments:
-        ---------
-        area (float): in acre.
-        height (float): in ft, defaults to 1 ft.
+	def __repr__(self) -> str:
+		"""Return a concise constructor-style representation of the reservoir domain."""
 
-        """
-        self.area = area
-        self.height = height
+		args = [
+			f"area={self.area:.1f} acres",
+			f"height={self.height:.1f} ft",
+		]
 
-        if shape_factor is not None:
-            self.shape_key = "custom"
-            self.shape = Boundary(
-                shape_factor = self._validate_positive("shape factor", shape_factor),
-                tDA_infinite_acting_end = tDA_infinite_acting_end,
-                tDA_pss_start = tDA_pss_start,
-                note = note,
-            )
-        else:
-            if shape_key not in self.SHAPE_FACTORS:
-                raise KeyError(f"Unknown shape_key: {shape_key}")
-            self.shape_key = shape_key
-            self.shape = self.SHAPE_FACTORS[shape_key]
+		return f"{type(self).__name__}({', '.join(args)})"
 
-    def __repr__(self) -> str:
-        """Return a concise constructor-style representation of the porous media."""
+	@staticmethod
+	def _validate_positive(name: str, value: float) -> float:
+		try:
+			value = float(value)
+		except (TypeError, ValueError):
+			raise ValueError(f"{name} must be a positive finite value.") from None
+		
+		if value <= 0:
+			raise ValueError(f"{name} must be a positive value.")
+	
+		return value
 
-        args = [
-            f"reservoir_area={self.area:.1f} acres",
-            f"payzone_height={self.height:.1f} ft",
-        ]
+	@property
+	def area(self):
+		"""Getter for the reservoir area."""
+		return self._area / uc.FT_TO_M**2 / uc.ACRE_TO_FT2
 
-        if self.shape_key == "custom":
-            args.extend([
-                f"shape_factor={self.shape.shape_factor!r}",
-                f"tDA_infinite_acting_end={self.shape.tDA_infinite_acting_end!r}",
-                f"tDA_pss_start={self.shape.tDA_pss_start!r}",
-                f"note={self.shape.note!r}",
-            ])
-        else:
-            args.append(f"shape_key={self.shape_key!r}")
+	@area.setter
+	def area(self,value):
+		"""Setter for the reservoir area."""
+		value = self._validate_positive("area", value)
+		self._area = value * uc.ACRE_TO_FT2 * uc.FT_TO_M**2
 
-        return f"{type(self).__name__}({', '.join(args)})"
+	@property
+	def radius(self) -> float:
+		"""Circular equivalent drainage radius."""
+		return self._radius / uc.FT_TO_M
+	
+	@property
+	def _radius(self) -> float:
+		"""Getter for the reservoir equivalent radius in meters."""
+		return np.sqrt(self._area / np.pi)
 
-    @staticmethod
-    def _validate_positive(name: str, value: float) -> float:
-        try:
-            value = float(value)
-        except (TypeError, ValueError):
-            raise ValueError(f"{name} must be a positive finite value.") from None
+	@property
+	def height(self):
+		"""Getter for the reservoir height."""
+		return self._height / uc.FT_TO_M
 
-        if value <= 0 or not math.isfinite(value):
-            raise ValueError(f"{name} must be a positive finite value.")
-        return value
+	@height.setter
+	def height(self,value):
+		"""Setter for the reservoir height."""
+		value = self._validate_positive("height", value)
+		
+		if not np.isfinite(value):
+			raise ValueError("height must be a finite value.")
+	
+		self._height = value * uc.FT_TO_M
+		
+	@property
+	def volume(self) -> float:
+		"""Getter for the reservoir volume."""
+		return self._volume/(uc.FT_TO_M**3)
 
-    @classmethod
-    def available_shape_factors(cls) -> Dict[str, Boundary]:
-        """Return available shape-factor records."""
-        return cls.SHAPE_FACTORS.copy()
+	@property
+	def _volume(self) -> float:
+		"""Getter for the reservoir volume in meter**3."""
+		return self._area*self._height
+	
+	@property
+	def vpore(self):
+		"""Pore volume in ft3."""
+		return self._vpore / (uc.FT_TO_M**3)
 
-    @property
-    def area(self):
-        """Getter for the reservoir area."""
-        return self._area / self.FT_TO_METER**2 / self.ACRE_TO_SQFT
+	@property
+	def _vpore(self):
+		"""Pore volume in m3."""
+		return self._volume * self._poro
+	
+	def init(self, *args, pinit: float | None = None, tcomp: float | None = None, **kwargs):
+		self.fluid = BlackOil(*args, **kwargs)
+		self.pinit = pinit
+		self.tcomp = tcomp
+		
+	@property
+	def fluid(self):
+		return self._fluid
+	
+	@fluid.setter
+	def fluid(self, value):
+		if not isinstance(value, BlackOil) and value is not None:
+			raise TypeError("fluid must be an instance of BlackOil or None.")
+		self._fluid = value
+			
+	@property
+	def pinit(self):
+		"""Initial pressure in psi."""
+		return None if self._pinit is None else self._pinit/uc.PSI_TO_PA
+	
+	@pinit.setter
+	def pinit(self, value):
+		"""Initial pressure in psi."""
+		self._pinit = None if value is None else Layer._validate_range(
+			value, 0, name="pinit", include_lower_limit = False,
+			).item()*uc.PSI_TO_PA
 
-    @area.setter
-    def area(self,value):
-        """Setter for the reservoir area."""
-        value = self._validate_positive("area", value)
-        self._area = value * self.ACRE_TO_SQFT * self.FT_TO_METER**2
+	@property
+	def tcomp(self):
+		"""Total compressibility in 1/psi"""
+		return None if self._tcomp is None else self._tcomp*uc.PSI_TO_PA
 
-    @property
-    def height(self):
-        """Getter for the reservoir height."""
-        return self._height / self.FT_TO_METER
+	@tcomp.setter
+	def tcomp(self, value):
+		"""Total compressibility. If value is provided, it is expected in 1/psi;
+		if None, it will be computed as the sum of layer and fluid compressibilities."""
+		if value is None:
+			fluid = self._require_fluid()
+			if self._comp is None or fluid._comp is None:
+				self._tcomp = None
+			else:
+				self._tcomp = self._comp + fluid._comp
+			return
 
-    @height.setter
-    def height(self,value):
-        """Setter for the reservoir height."""
-        value = self._validate_positive("height", value)
-        self._height = value * self.FT_TO_METER
+		value = Layer._validate_range(
+			value, 0,
+			name = "tcomp",
+			include_lower_limit = False,
+		)
+		
+		self._tcomp = value / uc.PSI_TO_PA
+			
+	def hdiff(self, axis: str = "x", phase: str = "oil") -> float:
+		"""Hydraulic diffusivity in ft2/day."""
+		return self._hdiff(axis, phase) * uc.DAY_TO_SEC / uc.FT_TO_M**2
 
-    @property
-    def radius_equivalent(self) -> float:
-        """Circular equivalent drainage radius."""
-        return self._radius_equivalent / self.FT_TO_METER
-    
-    @property
-    def _radius_equivalent(self) -> float:
-        """Setter for the reservoir equivalent radius."""
-        return math.sqrt(self._area / math.pi)
+	def _hdiff(self, axis: str = "x", phase: str = "oil") -> float:
+		"""Hydraulic diffusivity in m2/sec."""
+		axis_map = {"x": 0, "y": 1, "z": 2}
+		
+		try:
+			index = axis_map[axis.lower()]
+		except KeyError:
+			raise ValueError("axis must be one of: 'x', 'y', or 'z'.") from None
+		
+		fluid = self._require_fluid()
+		tcomp = self._require_total_compressibility()
+		
+		phase_obj = fluid.get_phase(phase)
+		
+		return (phase_obj._rperm * self._perm[:, index]) / (self._poro * phase_obj._visc * tcomp)
 
-    @property
-    def shape_factor(self) -> float:
-        return self.shape.shape_factor
-
-    @property
-    def volume(self) -> float:
-        """Getter for the reservoir volume."""
-        return self._volume/(self.FT_TO_METER**3)
-
-    @property
-    def _volume(self) -> float:
-        """Setter for the reservoir volume."""
-        return self._area*self._height
-
-if __name__ == "__main__":
-
-    res = ReservoirDomain(1000,20)
-
-    print(res.area)
-    print(res._area)
-    print(res.radius_equivalent)
-    print(res.volume)
+	def _require_fluid(self) -> BlackOil:
+		"""Return fluid system if available; otherwise raise a clear error."""
+		if self._fluid is None:
+			raise ValueError(
+				"Fluid system is not initialized. "
+				"Call init(...) or assign reservoir.fluid first."
+			)
+		return self._fluid
+	
+	def _require_initial_pressure(self) -> np.typing.NDArray:
+		"""Return initial pressure in Pa."""
+		if self._pinit is None:
+			raise ValueError(
+				"Initial pressure pinit is not set. "
+				"Provide pinit=... before using this method."
+			)
+		return self._pinit
+	
+	def _require_total_compressibility(self) -> float:
+		"""Return total compressibility in 1/Pa."""
+		if self._tcomp is None:
+			raise ValueError(
+				"Total compressibility tcomp is not set. "
+				"Provide tcomp=... or make sure both layer and fluid compressibilities are available."
+			)
+		return self._tcomp

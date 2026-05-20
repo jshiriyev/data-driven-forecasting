@@ -241,5 +241,117 @@ def test_edge_bound_initializes_constraint_and_face_properties():
 
     assert edge.face == "xmin"
     assert edge.axis == "x"
+    assert edge.side == "min"
+    assert edge.axis_id == 0
+    assert edge.normal == (-1, 0, 0)
+    assert edge.normal_direction == -1
     assert edge.mode == "press"
     assert edge.limit == pytest.approx(500.0)
+
+
+def test_boundary_can_represent_unconstrained_or_no_flow_face():
+    boundary = Boundary("zmax")
+
+    assert boundary.face == "zmax"
+    assert boundary.axis == "z"
+    assert boundary.side == "max"
+    assert boundary.normal == (0, 0, 1)
+    assert boundary.constraints == ()
+    assert boundary.active_constraint(10.0) is None
+
+
+def test_boundary_adds_constraints_from_objects_and_kwargs_sorted_by_start():
+    boundary = Boundary(
+        "ymax",
+        constraints=[
+            Constraint(start=10.0, stop=20.0, press=3000.0),
+            Constraint(start=0.0, stop=10.0, wrate=100.0),
+        ],
+    )
+
+    added = boundary.add_constraint(start=20.0, grate=50_000.0)
+
+    assert [constraint.start for constraint in boundary.constraints] == [0.0, 10.0, 20.0]
+    assert boundary.constraints[-1] is added
+    assert boundary.active_constraint(5.0).mode == "wrate"
+    assert boundary.active_constraint(10.0).mode == "press"
+    assert boundary.active_constraint(20.0).mode == "grate"
+
+
+def test_boundary_rejects_overlapping_constraints():
+    boundary = Boundary("xmax", constraints=[Constraint(start=0.0, stop=10.0, press=3000.0)])
+
+    with pytest.raises(ValueError, match="overlaps with an existing constraint"):
+        boundary.add_constraint(start=9.0, stop=20.0, press=2500.0)
+
+
+def test_boundary_allows_touching_half_open_constraints():
+    boundary = Boundary("xmax")
+
+    boundary.add_constraint(start=0.0, stop=10.0, press=3000.0)
+    boundary.add_constraint(start=10.0, stop=20.0, press=2500.0)
+
+    assert boundary.validate_schedule()
+    assert boundary.active_constraint(9.999).limit == pytest.approx(3000.0)
+    assert boundary.active_constraint(10.0).limit == pytest.approx(2500.0)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "error_type", "message"),
+    [
+        ({"face": 1}, TypeError, "face must be a string"),
+        ({"face": "left"}, ValueError, "face must be one of"),
+    ],
+)
+def test_boundary_invalid_face_raises(kwargs, error_type, message):
+    with pytest.raises(error_type, match=message):
+        Boundary(**kwargs)
+
+
+def test_boundary_constraints_are_read_only_tuple_snapshot():
+    boundary = Boundary("xmin")
+    constraint = boundary.add_constraint(press=4000.0)
+
+    constraints = boundary.constraints
+
+    assert constraints == (constraint,)
+    with pytest.raises(AttributeError):
+        constraints.append(Constraint(start=1.0, press=3000.0))
+
+
+def test_boundary_schedule_change_times_and_repr():
+    boundary = Boundary(
+        "zmin",
+        constraints=[
+            Constraint(start=0.0, stop=10.0, press=4000.0),
+            Constraint(start=10.0, press=3500.0),
+        ],
+    )
+
+    schedule = boundary.schedule()
+    rows = schedule.to_dict("records") if hasattr(schedule, "to_dict") else schedule
+
+    assert rows[0] == {
+        "index": 0,
+        "face": "zmin",
+        "axis": "z",
+        "side": "min",
+        "start_days": 0.0,
+        "stop_days": 10.0,
+        "mode": "press",
+        "limit": 4000.0,
+        "unit": "psi",
+    }
+    assert rows[1]["index"] == 1
+    assert rows[1]["stop_days"] is None or np.isnan(rows[1]["stop_days"])
+    assert boundary.change_times() == [0.0, 10.0]
+    assert repr(boundary) == "Boundary(face='zmin', axis='z', side='min', constraints=2)"
+
+
+def test_boundary_single_constraint_proxy_rejects_multi_constraint_schedule():
+    boundary = Boundary("xmin")
+    boundary.add_constraint(start=0.0, stop=10.0, press=4000.0)
+    boundary.add_constraint(start=10.0, press=3500.0)
+
+    with pytest.raises(ValueError, match="expected exactly one"):
+        _ = boundary.limit

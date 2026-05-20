@@ -1,410 +1,466 @@
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 
 import numpy as np
+from scipy import constants
 
-from prodpy.resprops import Layer, Fluid
-from prodpy.porsim.prerun import Borehole
+from prodpy.porsim.prerun import Borehole, Boundary
 
-from ._reservoir_domain import ReservoirDomain
+from prodpy import UnitConversion as uc
+
 from ._pressure_distribution import PressureDistribution
-
-class BaseSolver(ReservoirDomain):
-	"""
-	Shared base for analytical single-well diffusivity-equation solvers.
-
-	BaseSolver combines drainage geometry, rock properties, fluid properties,
-	borehole geometry, and initial pressure. Public properties use oilfield
-	units; underscored properties use SI units for equation evaluation.
-
-	Parameters
-	----------
-	*args
-		Positional arguments passed to the parent :class:`ReservoirDomain` class.
-	layer : Layer, optional
-		Reservoir rock/property object. Expected to provide properties such as
-		permeability, porosity, and rock compressibility through the internal
-		attributes used by this class.
-	fluid : Fluid, optional
-		Reservoir fluid-property object. Expected to provide viscosity and
-		fluid compressibility through the internal attributes used by this class.
-	borehole : Borehole
-		Wellbore geometry and operating constraints.
-	tcomp : float, optional
-		Total compressibility in 1/psi. If not provided, it will be computed
-		as the sum of layer and fluid compressibilities.
-	pinit : float
-		Initial reservoir pressure, psi.
-	**kwargs
-		Additional keyword arguments passed to the parent :class:`ReservoirDomain`
-		class.
-
-	Notes
-	-----
-	Public properties use oilfield units; underscored properties use SI units.
-
-	This class assumes single-phase, slightly compressible flow and scalar
-	effective properties and isotropic permeability. Subclasses implement a
-	specific flow regime by overriding `__call__` or `solve`.
-
-	BaseSolver represents a scheduled oil-rate-controlled borehole. All borehole
-	constraints must be `orate` constraints.
-
-	"""
-	FT_TO_METER = 0.3048
-	PSI_TO_PA = 6894.757293168
-	DAY_TO_SEC = 24*60*60
-	_GRAVITY = 9.80665
-
-	def __init__(self,
-		*args,
-		layer: Layer | None = None,
-		fluid: Fluid | None = None,
-		borehole: Borehole | None = None,
-		tcomp: float | None = None,
-		pinit: float | None = None,
-		**kwargs
-	) -> None:
-		super().__init__(*args,**kwargs)
-
-		self.layer = layer
-		self.fluid = fluid
-		self.borehole = borehole
-		self.tcomp = tcomp
-		self.pinit = pinit
-
-	def __call__(self, times: np.ndarray, nodes: np.ndarray, *args, **kwargs):
-		"""
-		Evaluate the analytical solution.
-
-		The base class prepares the common time/node grid and initializes
-		the PressureDistribution object. Subclasses should implement the
-		actual analytical solution in the `_evaluate` method.
-
-		Parameters
-		----------
-		times : np.ndarray
-			Time values where the solution is evaluated.
-		nodes : np.ndarray
-			Spatial/radial nodes where the solution is evaluated.
-
-		Returns
-		-------
-		PressureDistribution
-			Pressure solution evaluated at the requested times and nodes.
-
-		"""
-		solution = PressureDistribution(times, nodes)
-
-		if self._rate.size != 1:
-			raise ValueError("InfiniteReservoir currently supports one constant oil-rate constraint.")
-		
-		return self._evaluate(solution, *args, **kwargs)
-	
-	@abstractmethod
-	def _evaluate(self, solution: "PressureDistribution", *args, **kwargs):
-		"""
-		Implement the analytical solution in subclasses.
-		"""
-		raise NotImplementedError
-
-	@property
-	def layer(self):
-		"""Layer: Reservoir rock and layer-property object."""
-		return self._layer
-	
-	@layer.setter
-	def layer(self, value: Layer | None) -> None:
-		"""
-		Set the reservoir layer object.
-
-		The layer may be temporarily None to allow delayed assignment, but
-		calculations requiring layer properties will raise a clear error until
-		a valid Layer object is assigned.
-		"""
-		if value is None:
-			self._layer = None
-			return
-
-		if not isinstance(value, Layer):
-			raise TypeError(
-				f"layer must be a Layer instance or None; got {type(value).__name__}."
-			)
-
-		if not value.is_isotropic:
-			raise ValueError(
-				"layer must be isotropic for this solver: xperm, yperm, and zperm "
-				"must be equal."
-			)
-
-		if value.poro is None:
-			raise ValueError("layer.poro must be set before using this solver.")
-
-		self._layer = value
-	
-	@property
-	def perm(self):
-		"""Permeability in mD."""
-		layer = self._require_layer()
-
-		if not layer.is_isotropic:
-			raise ValueError(
-				"This solver requires isotropic permeability, but layer is anisotropic."
-			)
-
-		return layer.perm[:, 0]
-	
-	@property
-	def _perm(self):
-		"""Permeability in m2."""
-		layer = self._require_layer()
-
-		if not layer.is_isotropic:
-			raise ValueError(
-				"This solver requires isotropic permeability, but layer is anisotropic."
-			)
-
-		return layer._perm[:,0]
-
-	@property
-	def fluid(self):
-		"""Fluid: Reservoir fluid-property object."""
-		return self._fluid
-	
-	@fluid.setter
-	def fluid(self, value: Fluid | None) -> None:
-		"""
-		Set the reservoir fluid object.
-
-		The fluid may be temporarily None to allow delayed assignment, but
-		calculations requiring fluid properties will raise a clear error until
-		a valid Fluid object is assigned.
-		"""
-		if value is None:
-			self._fluid = None
-			return
-
-		if not isinstance(value, Fluid):
-			raise TypeError(
-				f"fluid must be a Fluid instance or None; got {type(value).__name__}."
-			)
-
-		required_attrs = ("_visc", "_mobil")
-
-		missing = [
-			attr for attr in required_attrs
-			if not hasattr(value, attr) or getattr(value, attr) is None
-		]
-
-		if missing:
-			raise ValueError(
-				"fluid is missing required properties for this solver: "
-				+ ", ".join(missing)
-			)
-
-		self._fluid = value
-	
-	@property
-	def borehole(self):
-		"""Borehole: Well object containing radius, skin, and constraints."""
-		return self._borehole
-	
-	@borehole.setter
-	def borehole(self, value: Borehole | None) -> None:
-		"""
-		Set the borehole object.
-
-		The borehole may be temporarily None to allow delayed assignment, but
-		calculations requiring borehole geometry or constraints will raise a
-		clear error until a valid Borehole object is assigned.
-		"""
-		if value is None:
-			self._borehole = None
-			return
-
-		if not isinstance(value, Borehole):
-			raise TypeError(
-				f"borehole must be a Borehole instance or None; got {type(value).__name__}."
-			)
-
-		required_attrs = ("_radius", "_area", "constraints")
-
-		missing = [
-			attr for attr in required_attrs
-			if not hasattr(value, attr) or getattr(value, attr) is None
-		]
-
-		if missing:
-			raise ValueError(
-				"borehole is missing required properties for this solver: "
-				+ ", ".join(missing)
-			)
-		
-		constraints = value.constraints
-
-		if not constraints:
-			raise ValueError(
-				"borehole must contain at least one oil-rate constraint with mode='orate'."
-			)
-
-		if not all(c.mode == "orate" for c in constraints):
-			raise ValueError(
-				"BaseSolver only supports oil-rate-controlled boreholes; "
-				"all constraints must have mode='orate'."
-			)
-
-		self._borehole = value
-	
-	@property
-	def rate(self):
-		"""Oil-rate schedule limits in STB/day."""
-		borehole = self._require_borehole()
-		return np.array([c.limit for c in borehole.constraints])
-	
-	@property
-	def _rate(self):
-		"""Oil-rate schedule limits in m3/s."""
-		borehole = self._require_borehole()
-		return np.array([c._limit for c in borehole.constraints])
-	
-	@property
-	def pinit(self):
-		"""Initial pressure in psi."""
-		return None if self._pinit is None else self._pinit/self.PSI_TO_PA
-	
-	@pinit.setter
-	def pinit(self, value):
-		"""Initial pressure in psi."""
-		self._pinit = None if value is None else Layer._validate_range(
-			value, 0, name="pinit", include_lower_limit = False,
-			).item()*self.PSI_TO_PA
-
-	@property
-	def tcomp(self):
-		"""Total compressibility in 1/psi"""
-		return None if self._tcomp is None else self._tcomp*self.PSI_TO_PA
-
-	@tcomp.setter
-	def tcomp(self, value):
-		"""Total compressibility. If value is provided, it is expected in 1/psi;
-		if None, it will be computed as the sum of layer and fluid compressibilities."""
-		if value is None:
-			layer, fluid, _ = self._require_ready()
-			if layer._comp is None or fluid._comp is None:
-				self._tcomp = None
-			else:
-				self._tcomp = layer._comp + fluid._comp
-		else:
-			value = Layer._validate_range(
-				value, 0,
-				name="tcomp",
-				include_lower_limit = False,
-			)
-			
-			self._tcomp = value / self.PSI_TO_PA
-
-	@property
-	def hdiff(self):
-		"""Hydraulic diffusivity in ft2/day."""
-		return self._hdiff*self.DAY_TO_SEC/self.FT_TO_METER**2
-
-	@property
-	def _hdiff(self):
-		"""Hydraulic diffusivity in m2/sec."""
-		layer, fluid, _ = self._require_ready()
-		return self._perm / (layer._poro * fluid._visc * self._tcomp)
-
-	@property
-	def vpore(self):
-		"""Pore volume in ft3."""
-		return self._vpore / (self.FT_TO_METER**3)
-
-	@property
-	def _vpore(self):
-		"""Pore volume in m3."""
-		layer = self._require_layer()
-		return self._volume * layer._poro
-	
-	@property
-	def storage(self):
-		"""Storage coefficient in ft3/psi."""
-		return self._storage*self.PSI_TO_PA*self.FT_TO_METER**3
-
-	@property
-	def _storage(self):
-		"""Storage coefficient in m3/Pa."""
-		_, fluid, borehole = self._require_ready()
-		return (borehole._area)/(fluid._rho * self._GRAVITY)
-	
-	@property
-	def pcons(self):
-		"""Constant for dimensionless pressure scaling in psi."""
-		return self._pcons / self.PSI_TO_PA
-
-	@property
-	def _pcons(self):
-		"""Constant for dimensionless pressure scaling in Pa."""
-		fluid = self._require_fluid()
-		return (self._rate)/(2*np.pi*self._perm*self._height*fluid._mobil)
-	
-	def CD(self):
-		"""Dimensionless wellbore storage coefficient."""
-		layer, _, borehole = self._require_ready()
-
-		length = layer.poro*self._height
-		volume = length*borehole._area
-
-		return (self._storage)/(volume*self._tcomp)
-	
-	def tD(self, times: np.typing.ArrayLike):
-		"""Dimensionless time for the diffusivity equation."""
-		_, _, borehole = self._require_ready()
-		times *= self.DAY_TO_SEC
-		return (self._hdiff * times) / (borehole._radius**2)
-	
-	def rD(self, nodes: np.typing.ArrayLike):
-		_, _, borehole = self._require_ready()
-		nodes *= self.FT_TO_METER
-		return  nodes / borehole.radius
-
-	def pD(self, press: float):
-		"""Dimensionless pressure."""
-		if self._pinit is None:
-			raise ValueError("Initial pressure (pinit) must be set to compute dimensionless pressure.")
-		
-		try:
-			press = float(press)
-		except ValueError:
-			raise ValueError("Pressure must be a numeric value.")
-		
-		press *= self.PSI_TO_PA
-		
-		return (self._pinit-press)/self._pcons
-	
-	def _require_layer(self) -> Layer:
-		"""Return layer if available; otherwise raise a clear error."""
-		if self.layer is None:
-			raise ValueError("layer must be set before using this solver.")
-		return self.layer
+from ._reservoir_domain import ReservoirDomain
 
 
-	def _require_fluid(self) -> Fluid:
-		"""Return fluid if available; otherwise raise a clear error."""
-		if self.fluid is None:
-			raise ValueError("fluid must be set before using this solver.")
-		return self.fluid
+class BaseSolver(ReservoirDomain, ABC):
+    """
+    Shared base for radial analytical diffusivity-equation solvers.
 
+    ``BaseSolver`` extends :class:`ReservoirDomain` with one wellbore and an
+    optional collection of external boundary/fault conditions. It intentionally
+    keeps the analytical-flow assumptions narrow:
 
-	def _require_borehole(self) -> Borehole:
-		"""Return borehole if available; otherwise raise a clear error."""
-		if self.borehole is None:
-			raise ValueError("borehole must be set before using this solver.")
-		return self.borehole
+    - one and only one borehole is allowed;
+    - the borehole must contain exactly one oil-rate constraint;
+    - the reservoir fluid system is a :class:`prodpy.resprops.BlackOil` object;
+    - exactly one phase in the black-oil system may be mobile;
+    - because the well control is oil-rate, the mobile phase must be oil;
+    - radial analytical flow is assumed.
 
+    Public properties use oilfield units. Underscored properties use SI units.
 
-	def _require_ready(self) -> tuple[Layer, Fluid, Borehole]:
-		"""Return layer, fluid, and borehole after validating solver readiness."""
-		return self._require_layer(), self._require_fluid(), self._require_borehole()
-	
+    Parameters
+    ----------
+    *args
+        Positional arguments passed to :class:`ReservoirDomain`.
+    **kwargs
+        Keyword arguments passed to :class:`ReservoirDomain`.
 
+    Notes
+    -----
+    ``BaseSolver`` does not add required construction arguments beyond
+    ``ReservoirDomain``. Users can assign ``solver.borehole`` or call
+    ``solver.set_borehole(...)`` after construction, and may add zero or more
+    boundaries with ``solver.add_boundary(...)``.
 
-	
+    Concrete subclasses must implement ``__call__`` and can call
+    ``super().__call__(times, nodes)`` to get common readiness checks and a
+    prepared :class:`PressureDistribution`.
+    """
+
+    REQUIRED_RATE_MODE = "orate"
+    REQUIRED_MOBILE_PHASE = "oil"
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+        self._borehole: Borehole | None = None
+        self._boundaries: list[Boundary] = []
+
+    @abstractmethod
+    def __call__(self, times: np.typing.ArrayLike, nodes: np.typing.ArrayLike, *args, **kwargs):
+        """
+        Prepare and evaluate the analytical solution.
+
+        Subclasses may use this implementation by calling ``super().__call__``.
+        The base implementation validates the reservoir/well/fluid state,
+        creates a :class:`PressureDistribution`, and delegates the actual
+        pressure calculation to ``_evaluate``.
+
+        Parameters
+        ----------
+        times : array-like
+            Evaluation times in days.
+        nodes : array-like
+            Radial node locations in ft.
+
+        Returns
+        -------
+        PressureDistribution
+            Pressure solution evaluated at the requested times and nodes.
+        """
+        self._require_ready()
+
+        solution = PressureDistribution(times, nodes)
+
+        return self._evaluate(solution, *args, **kwargs)
+
+    @abstractmethod
+    def _evaluate(self, solution: PressureDistribution, *args, **kwargs):
+        """Implement the concrete analytical pressure solution."""
+        raise NotImplementedError
+
+    # ------------------------------------------------------------------
+    # Borehole management
+    # ------------------------------------------------------------------
+    @property
+    def borehole(self) -> Borehole | None:
+        """Single borehole object assigned to the solver."""
+        return self._borehole
+
+    @borehole.setter
+    def borehole(self, value: Borehole | None) -> None:
+        """
+        Set the solver borehole.
+
+        ``None`` is allowed only as a delayed-assignment/clearing state. A
+        usable solver must have exactly one :class:`Borehole` before
+        evaluation.
+        """
+        if value is None:
+            self._borehole = None
+            return
+
+        if not isinstance(value, Borehole):
+            raise TypeError(
+                f"borehole must be a Borehole instance or None; got {type(value).__name__}."
+            )
+
+        if value._radius is None:
+            raise ValueError("borehole radius must be assigned before using this solver.")
+
+        self._borehole = value
+
+    def set_borehole(self, borehole: Borehole | None = None, **kwargs) -> Borehole:
+        """
+        Assign the single solver borehole.
+
+        Parameters
+        ----------
+        borehole : Borehole, optional
+            Existing borehole object.
+        **kwargs
+            Arguments used to create a :class:`Borehole` when ``borehole`` is
+            not provided.
+
+        Returns
+        -------
+        Borehole
+            Assigned borehole object.
+        """
+        if borehole is None:
+            borehole = Borehole(**kwargs)
+        elif kwargs:
+            raise ValueError(
+                "Provide either an existing Borehole object or keyword "
+                "arguments to create one, not both."
+            )
+
+        self.borehole = borehole
+        return borehole
+
+    def _require_borehole(self) -> Borehole:
+        """Return the assigned borehole, or raise a clear readiness error."""
+        if self._borehole is None:
+            raise ValueError("Exactly one borehole must be assigned before using this solver.")
+
+        return self._borehole
+
+    def _require_oil_rate_constraint(self):
+        """
+        Return the sole oil-rate constraint for the assigned borehole.
+
+        ``BaseSolver`` represents constant oil-rate analytical flow. Scheduled
+        or mixed-mode well controls should be handled by a more specific solver.
+        """
+        borehole = self._require_borehole()
+        constraints = borehole.constraints
+
+        if len(constraints) != 1:
+            raise ValueError(
+                "BaseSolver requires exactly one borehole constraint: "
+                "a constant oil-rate constraint with mode='orate'."
+            )
+
+        constraint = constraints[0]
+
+        if constraint.mode != self.REQUIRED_RATE_MODE:
+            raise ValueError(
+                "BaseSolver only supports oil-rate-controlled boreholes; "
+                f"expected mode='orate', got mode={constraint.mode!r}."
+            )
+
+        return constraint
+
+    @property
+    def rate(self) -> float:
+        """Constant oil-rate constraint in STB/day."""
+        return self._require_oil_rate_constraint().limit
+
+    @property
+    def _rate(self) -> float:
+        """Constant oil-rate constraint in m3/s."""
+        return self._require_oil_rate_constraint()._limit
+
+    # ------------------------------------------------------------------
+    # Boundary management
+    # ------------------------------------------------------------------
+    @property
+    def boundaries(self) -> tuple[Boundary, ...]:
+        """
+        Boundary/fault objects assigned to the solver.
+
+        A tuple is returned to prevent accidental list-level modification.
+        """
+        return tuple(self._boundaries)
+
+    def add_boundary(self, boundary: Boundary | str | None = None, **kwargs) -> Boundary:
+        """
+        Add a boundary/fault condition container.
+
+        Parameters
+        ----------
+        boundary : Boundary or str, optional
+            Existing :class:`Boundary` object, or a face string such as
+            ``"xmin"``. If omitted, ``kwargs`` must contain the arguments needed
+            to construct a :class:`Boundary`, including ``face``.
+        **kwargs
+            Arguments used to create a boundary when ``boundary`` is not an
+            existing :class:`Boundary`.
+        """
+        if boundary is None:
+            boundary = Boundary(**kwargs)
+        elif isinstance(boundary, str):
+            boundary = Boundary(boundary, **kwargs)
+        elif kwargs:
+            raise ValueError(
+                "Provide either an existing Boundary object or construction "
+                "arguments, not both."
+            )
+
+        if not isinstance(boundary, Boundary):
+            raise TypeError(
+                f"boundary must be a Boundary instance, face string, or None; "
+                f"got {type(boundary).__name__}."
+            )
+
+        self._boundaries.append(boundary)
+        return boundary
+
+    def remove_boundary(self, boundary: Boundary) -> None:
+        """Remove a boundary/fault condition container."""
+        self._boundaries.remove(boundary)
+
+    def clear_boundaries(self) -> None:
+        """Remove all boundary/fault condition containers."""
+        self._boundaries.clear()
+
+    def active_boundaries(self, time_days: float) -> tuple[Boundary, ...]:
+        """
+        Return boundaries with an active constraint at ``time_days``.
+        """
+        return tuple(
+            boundary
+            for boundary in self._boundaries
+            if boundary.active_constraint(time_days) is not None
+        )
+
+    # ------------------------------------------------------------------
+    # Mobile-phase helpers
+    # ------------------------------------------------------------------
+    @property
+    def mobile_phase_name(self) -> str:
+        """Name of the sole mobile phase in the BlackOil fluid system."""
+        name, _ = self._require_mobile_phase()
+        return name
+
+    @property
+    def mobile_phase(self):
+        """Sole mobile phase object in the BlackOil fluid system."""
+        _, phase = self._require_mobile_phase()
+        return phase
+
+    def _require_mobile_phase(self):
+        """
+        Return the sole mobile phase as ``(name, phase)``.
+
+        A phase is considered mobile when any finite relative-permeability
+        value is greater than zero. Defined but immobile phases are allowed, but
+        they must have zero relative permeability.
+        """
+        fluid = self._require_fluid()
+        mobile = [
+            (name, phase)
+            for name, phase in fluid.phases.items()
+            if self._phase_is_mobile(phase)
+        ]
+
+        if len(mobile) != 1:
+            names = [name for name, _ in mobile]
+            raise ValueError(
+                "BaseSolver requires exactly one mobile phase in the BlackOil "
+                f"system; found {len(mobile)} mobile phases: {names}."
+            )
+
+        name, phase = mobile[0]
+
+        if name != self.REQUIRED_MOBILE_PHASE:
+            raise ValueError(
+                "BaseSolver is oil-rate controlled, so the sole mobile phase "
+                f"must be 'oil'; got {name!r}."
+            )
+
+        return name, phase
+
+    @staticmethod
+    def _phase_is_mobile(phase) -> bool:
+        rperm = np.asarray(phase._rperm, dtype=float)
+        finite = np.isfinite(rperm)
+
+        return bool(np.any(finite & (rperm > 0.0)))
+
+    # ------------------------------------------------------------------
+    # Radial analytical-flow quantities
+    # ------------------------------------------------------------------
+    @property
+    def radial_permeability(self):
+        """Effective radial permeability in mD."""
+        return self._radial_permeability / uc.MD_TO_M2
+
+    @property
+    def _radial_permeability(self):
+        """
+        Effective radial permeability in m2.
+
+        For a vertical well this is ``sqrt(kx * ky)``. For horizontal wells,
+        the radial plane is taken perpendicular to the borehole axis.
+        """
+        borehole = self._require_borehole()
+
+        axis_pairs = {
+            "x": (1, 2),
+            "y": (0, 2),
+            "z": (0, 1),
+        }
+        first, second = axis_pairs[borehole.axis]
+
+        return np.sqrt(self._perm[:, first] * self._perm[:, second])
+
+    def hdiff(self):
+        """Hydraulic diffusivity for the mobile oil phase in ft2/day."""
+        return self._hdiff * uc.DAY_TO_SEC / uc.FT_TO_M**2
+
+    @property
+    def _hdiff(self):
+        """
+        Hydraulic diffusivity for radial flow of the mobile oil phase in m2/s.
+        """
+        _, phase = self._require_mobile_phase()
+        tcomp = self._require_total_compressibility()
+
+        return (
+            phase._rperm
+            * self._radial_permeability
+            / (self._poro * phase._visc * tcomp)
+        )
+
+    @property
+    def storage(self):
+        """Wellbore storage coefficient in ft3/psi."""
+        return self._storage * uc.PSI_TO_PA / uc.FT_TO_M**3
+
+    @property
+    def _storage(self):
+        """Wellbore storage coefficient in m3/Pa."""
+        _, phase = self._require_mobile_phase()
+
+        if phase._rho is None:
+            raise ValueError(
+                "Mobile oil-phase density must be assigned to compute wellbore storage."
+            )
+
+        borehole = self._require_borehole()
+        return borehole._area / (phase._rho * constants.g)
+
+    @property
+    def pcons(self):
+        """Pressure-scaling constant in psi for the constant oil-rate solution."""
+        return self._pcons / uc.PSI_TO_PA
+
+    @property
+    def _pcons(self):
+        """Pressure-scaling constant in Pa for the constant oil-rate solution."""
+        _, phase = self._require_mobile_phase()
+
+        return self._rate / (
+            2.0
+            * np.pi
+            * self._radial_permeability
+            * self._height
+            * phase._mobil
+        )
+
+    def CD(self):
+        """Dimensionless wellbore storage coefficient."""
+        borehole = self._require_borehole()
+        tcomp = self._require_total_compressibility()
+
+        volume = self._poro * self._height * borehole._area
+
+        return self._storage / (volume * tcomp)
+
+    def CD2storage(self, CD: np.typing.ArrayLike):
+        """Convert dimensionless wellbore storage to ft3/psi."""
+        borehole = self._require_borehole()
+        tcomp = self._require_total_compressibility()
+
+        volume = self._poro * self._height * borehole._area
+
+        return np.asarray(CD, dtype=float) * volume * tcomp * uc.PSI_TO_PA / uc.FT_TO_M**3
+
+    def tD(self, times: np.typing.ArrayLike):
+        """Dimensionless radial-flow time."""
+        borehole = self._require_borehole()
+        times = np.asarray(times, dtype=float) * uc.DAY_TO_SEC
+
+        return self._hdiff * times / borehole._radius**2
+
+    def tD2times(self, tD: np.typing.ArrayLike):
+        """Convert dimensionless time to days."""
+        borehole = self._require_borehole()
+        tD = np.asarray(tD, dtype=float)
+
+        return tD * borehole._radius**2 / self._hdiff / uc.DAY_TO_SEC
+
+    def rD(self, nodes: np.typing.ArrayLike):
+        """Dimensionless radius relative to borehole radius."""
+        borehole = self._require_borehole()
+        nodes = np.asarray(nodes, dtype=float) * uc.FT_TO_M
+
+        return nodes / borehole._radius
+
+    def rD2nodes(self, rD: np.typing.ArrayLike):
+        """Convert dimensionless radius to ft."""
+        borehole = self._require_borehole()
+        rD = np.asarray(rD, dtype=float)
+
+        return rD * borehole._radius / uc.FT_TO_M
+
+    def pD(self, press: np.typing.ArrayLike):
+        """Dimensionless pressure for the constant oil-rate radial solution."""
+        pinit = self._require_initial_pressure()
+        press = np.asarray(press, dtype=float) * uc.PSI_TO_PA
+
+        return (pinit - press) / self._pcons
+
+    def pD2press(self, pD: np.typing.ArrayLike):
+        """Convert dimensionless pressure to psi."""
+        pinit = self._require_initial_pressure()
+        pD = np.asarray(pD, dtype=float)
+
+        return (pinit - pD * self._pcons) / uc.PSI_TO_PA
+
+    # ------------------------------------------------------------------
+    # Readiness
+    # ------------------------------------------------------------------
+    def _require_ready(self) -> "BaseSolver":
+        """
+        Validate the common BaseSolver state and return ``self``.
+        """
+        self._require_fluid()
+        self._require_initial_pressure()
+        self._require_total_compressibility()
+        self._require_borehole()
+        self._require_oil_rate_constraint()
+        self._require_mobile_phase()
+
+        return self

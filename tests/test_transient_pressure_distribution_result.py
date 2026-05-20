@@ -5,6 +5,8 @@ import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 
+from prodpy import UnitConversion as uc
+
 
 def _load_pressure_distribution_module():
     module_path = (
@@ -76,7 +78,7 @@ def test_set_pressure_at_time_defaults_to_psi_and_updates_one_row():
 
     result.set_pressure_at_time(1.0, np.array([1000.0, 900.0, 800.0]))
 
-    assert_allclose(result._press[0], np.array([1000.0, 900.0, 800.0]) * result.PSI_TO_PA)
+    assert_allclose(result._press[0], np.array([1000.0, 900.0, 800.0]) * uc.PSI_TO_PA)
     assert_allclose(result.press[0], [1000.0, 900.0, 800.0])
 
 
@@ -87,7 +89,7 @@ def test_set_pressure_at_time_accepts_si_pressure_values_when_requested():
     result.set_pressure_at_time(1.0, pressures_pa, si_unit_flag=True)
 
     assert_allclose(result._press[0], pressures_pa.ravel())
-    assert_allclose(result.press[0], pressures_pa.ravel() / result.PSI_TO_PA)
+    assert_allclose(result.press[0], pressures_pa.ravel() / uc.PSI_TO_PA)
 
 
 def test_set_pressure_at_time_uses_tolerance_when_matching_time():
@@ -134,7 +136,7 @@ def test_set_pressure_defaults_to_psi_and_updates_full_matrix_in_place():
     assert id(result._press) == press_id
     assert not result._press.flags.writeable
     assert_allclose(result.press, pressures)
-    assert_allclose(result._press, pressures * result.PSI_TO_PA)
+    assert_allclose(result._press, pressures * uc.PSI_TO_PA)
 
 
 def test_set_pressure_accepts_si_pressure_matrix_when_requested():
@@ -147,7 +149,7 @@ def test_set_pressure_accepts_si_pressure_matrix_when_requested():
     result.set_pressure(pressures_pa, si_unit_flag=True)
 
     assert_allclose(result._press, pressures_pa)
-    assert_allclose(result.press, pressures_pa / result.PSI_TO_PA)
+    assert_allclose(result.press, pressures_pa / uc.PSI_TO_PA)
 
 
 @pytest.mark.parametrize(

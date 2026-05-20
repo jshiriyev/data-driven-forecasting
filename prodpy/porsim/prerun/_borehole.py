@@ -2,6 +2,7 @@ import math
 
 from typing import Iterable
 
+from prodpy import UnitConversion as uc
 from ._constraint import Constraint
 
 class Borehole:
@@ -47,8 +48,8 @@ class Borehole:
     -----
     Public radius is exposed in ft to stay consistent with oilfield units.
     Internally, radius is stored in meters.
+    
     """
-    FT_TO_METER = 0.3048
     AXIS_TO_ID = {"x": 0, "y": 1, "z": 2}
     ID_TO_AXIS = {0: "x", 1: "y", 2: "z"}
 
@@ -118,7 +119,7 @@ class Borehole:
     @property
     def radius(self):
         """Getter for well radius."""
-        return self._radius/self.FT_TO_METER
+        return self._radius / uc.FT_TO_M
 
     @radius.setter
     def radius(self, value: float):
@@ -130,12 +131,12 @@ class Borehole:
         if value <= 0:
             raise ValueError("radius must be positive.")
 
-        self._radius = value * self.FT_TO_METER
+        self._radius = value * uc.FT_TO_M
 
     @property
     def area(self):
         """Getter for borehole area in ft2."""
-        return self._area / (self.FT_TO_METER**2)
+        return self._area / (uc.FT_TO_M**2)
 
     @property
     def _area(self):
@@ -145,7 +146,7 @@ class Borehole:
     @property
     def circumference(self):
         """Getter for borehole circumference in ft."""
-        return self._circumference / self.FT_TO_METER
+        return self._circumference / uc.FT_TO_M
     
     @property
     def _circumference(self):

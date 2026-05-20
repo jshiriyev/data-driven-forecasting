@@ -135,7 +135,7 @@ class GasPhase():
         comp = self.comp(press,zfact,zprime)
         fvf  = self.fvf(press,zfact)
 
-        return Fluid(visc,rho,comp,fvf,press)
+        return Fluid(visc=visc, rho=rho, comp=comp, fvf=fvf, press=press)
 
     @staticmethod
     def get_molw(spgr):

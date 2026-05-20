@@ -8,5 +8,6 @@ from ._layer import Layer
 
 from ._gas import GasPhase
 from ._oil import OilPhase
-
 from ._water import WaterPhase
+
+from ._black_oil import BlackOil

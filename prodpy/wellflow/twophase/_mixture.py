@@ -30,7 +30,7 @@ class Mixture():
 		a = self.voidage(grate,lrate,slip=slip)
 		rho = self.rho(self.gas.rho,self.liq.rho,a)
 
-		fluid = Fluid(mu,rho=rho)
+		fluid = Fluid(visc=mu, rho=rho)
 
 		fluid.quality = x
 		fluid.voidage = a

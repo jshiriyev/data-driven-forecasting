@@ -1,5 +1,7 @@
 import numpy as np
 
+from prodpy import UnitConversion as uc
+
 class Layer():
 	"""
 	Reservoir porous-media properties with oilfield-unit public access
@@ -17,10 +19,8 @@ class Layer():
 
 	Permeability, porosity, compressibility, and pressure may be scalar
 	or array-like. Array-like values represent grid-cell properties.
+	
 	"""
-	MD_TO_M2 = 9.869233e-16
-	PSI_TO_PA = 6894.757293168
-
 	def __init__(self, *args, poro=None, comp=None, press=None, allow_inf: bool = False, allow_nan: bool = True, **kwargs):
 		"""
 		Initializes a reservoir rock with the following petrophysical parameters:
@@ -136,7 +136,7 @@ class Layer():
 			If values are negative, non-finite, empty, or incompatible in length.
 
 		"""
-		self._xperm = self._validate_range(xperm, 0, name="xperm", **self.settings)*self.MD_TO_M2
+		self._xperm = self._validate_range(xperm, 0, name="xperm", **self.settings)*uc.MD_TO_M2
 
 		size = self._xperm.size
 
@@ -146,13 +146,13 @@ class Layer():
 		self._yperm = (
 			self._xperm * yreduce
 			if yperm is None
-			else self._validate_range(yperm, 0, size=size, full=True, name="yperm", **self.settings)*self.MD_TO_M2
+			else self._validate_range(yperm, 0, size=size, full=True, name="yperm", **self.settings)*uc.MD_TO_M2
 		)
 
 		self._zperm = (
 			self._xperm * zreduce
 			if zperm is None
-			else self._validate_range(zperm, 0, size=size, full=True, name="zperm", **self.settings)*self.MD_TO_M2
+			else self._validate_range(zperm, 0, size=size, full=True, name="zperm", **self.settings)*uc.MD_TO_M2
 		)
 
 	@classmethod
@@ -229,27 +229,49 @@ class Layer():
 	@property
 	def perm(self):
 		"""Permeability matrix in mD, with columns [xperm, yperm, zperm]."""
-		return self._perm/self.MD_TO_M2
+		return self._perm / uc.MD_TO_M2
 
 	@property
 	def _perm(self):
 		"""Permeability matrix in m2, with columns [xperm, yperm, zperm]."""
 		return np.column_stack((self._xperm,self._yperm,self._zperm))
+	
+	@property
+	def isoperm(self):
+		"""Permeability in mD."""
+
+		if not self.is_isotropic:
+			raise ValueError(
+				"The layer is anisotropic."
+			)
+
+		return self.perm[:, 0]
+	
+	@property
+	def _isoperm(self):
+		"""Permeability in m2."""
+
+		if not self.is_isotropic:
+			raise ValueError(
+				"The layer is anisotropic."
+			)
+
+		return self._perm[:,0]
 
 	@property
 	def xperm(self):
 		"""Getter for the reservoir permeability in x-direction."""
-		return None if self._xperm is None else self._xperm/self.MD_TO_M2
+		return None if self._xperm is None else self._xperm / uc.MD_TO_M2
 
 	@property
 	def yperm(self):
 		"""Getter for the reservoir permeability in y-direction."""
-		return self._yperm/self.MD_TO_M2
+		return self._yperm / uc.MD_TO_M2
 
 	@property
 	def zperm(self):
 		"""Getter for the reservoir permeability in z-direction."""
-		return self._zperm/self.MD_TO_M2
+		return self._zperm / uc.MD_TO_M2
 	
 	@property
 	def is_isotropic(self) -> bool:
@@ -293,25 +315,25 @@ class Layer():
 	@property
 	def comp(self):
 		"""Getter for the compressibility value in 1/psi if available; otherwise, returns None."""
-		return None if self._comp is None else self._comp*self.PSI_TO_PA
+		return None if self._comp is None else self._comp * uc.PSI_TO_PA
 
 	@comp.setter
 	def comp(self,value):
 		"""Setter for the compressibility value if value (in 1/psi) is available; otherwise sets None."""
 		self._comp = None if value is None else (
-			self._validate_range(value, 0, size=self.size, name="comp", **self.settings)/self.PSI_TO_PA
+			self._validate_range(value, 0, size=self.size, name="comp", **self.settings) / uc.PSI_TO_PA
 		)
 
 	@property
 	def press(self):
 		"""Getter for the pressure value in psi if available; otherwise, returns None."""
-		return None if self._press is None else self._press/self.PSI_TO_PA
+		return None if self._press is None else self._press / uc.PSI_TO_PA
 
 	@press.setter
 	def press(self,value):
 		"""Setter for the pressure value if value (in psi) is available; otherwise sets None."""
 		self._press = None if value is None else (
-			self._validate_range(value, 0, size=self.size, name="press", **self.settings)*self.PSI_TO_PA
+			self._validate_range(value, 0, size=self.size, name="press", **self.settings) * uc.PSI_TO_PA
 		)
 
 if __name__ == "__main__":

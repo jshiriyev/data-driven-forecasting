@@ -1,4 +1,7 @@
 import numpy as np
+from scipy import constants
+
+from prodpy import UnitConversion as uc
 
 from ._layer import Layer
 
@@ -24,27 +27,25 @@ class Fluid():
     _mobil : 1/(Pa*s)
 
     NaN values are allowed to represent unknown grid/state values.
-    """
-    CP_TO_PA_S = 1e-3
-    LBFT3_TO_KGM3 = 16.018463
-    PSI_TO_PA = 6894.757293168
-    PA_PER_M_TO_PSI_PER_FT = 22620.594
-    _GRAVITY = 9.80665
 
-    def __init__(self,visc,*,rho=62.4,comp=1e-6,fvf=1.0,press=None,satur=1.0,rperm=1.0,size:int|None=None):
+    """
+    def __init__(self, *, visc=None, rho=None, comp=None, fvf=1.0, press=None, satur=1.0, rperm=1.0, size:int|None=None):
         """
         Initializes a fluid with specific properties.
 
         Parameters
         ----------
-        visc    : float or array-like of floats, positional
-            Viscosity of the fluid in centipoise (cp)
+        visc    : float or array-like of floats, optional
+            Viscosity of the fluid in centipoise (cp). If not provided,
+            viscosity-dependent properties such as mobility are unavailable.
 
         rho     : float or array-like of floats, optional
-            Density of the fluid in lb/ft3
+            Density of the fluid in lb/ft3. If not provided, density-dependent
+            properties such as pressure gradient are unavailable.
 
         comp    : float or array-like of floats, optional
-            Compressibility of the fluid in 1/psi.
+            Compressibility of the fluid in 1/psi. If not provided, it remains
+            unavailable for total-compressibility calculations.
 
         fvf     : float or array-like of floats, optional
             Formation volume factor, dimensionless;
@@ -93,36 +94,42 @@ class Fluid():
     @property
     def visc(self):
         """Viscosity in cp."""
-        return self._visc/self.CP_TO_PA_S
+        return None if self._visc is None else self._visc/uc.CP_TO_PA_SEC
 
     @visc.setter
     def visc(self,value):
         """Viscosity in Pa.s."""
-        self._visc = Layer._validate_range(
-            value, 0, size=self.size, name="visc", include_lower_limit = False,
-            )*self.CP_TO_PA_S
+        self._visc = None if value is None else (
+            Layer._validate_range(
+                value, 0, size=self.size, name="visc", include_lower_limit = False,
+            ) * uc.CP_TO_PA_SEC
+        )
 
     @property
     def rho(self):
         """Getter for the fluid density."""
-        return self._rho/self.LBFT3_TO_KGM3
+        return None if self._rho is None else self._rho * uc.FT_TO_M**3 / uc.LBM_TO_KG
 
     @rho.setter
     def rho(self,value):
         """Setter for the fluid density."""
-        self._rho = Layer._validate_range(
-            value, 0, size=self.size, name="rho", include_lower_limit = False,
-            )*self.LBFT3_TO_KGM3
+        self._rho = None if value is None else (
+            Layer._validate_range(
+                value, 0, size=self.size, name="rho", include_lower_limit = False,
+                ) * uc.LBM_TO_KG / uc.FT_TO_M**3
+            )
 
     @property
     def comp(self):
         """Getter for the fluid compressibility."""
-        return self._comp*self.PSI_TO_PA
+        return None if self._comp is None else self._comp*uc.PSI_TO_PA
 
     @comp.setter
     def comp(self,value):
         """Setter for the fluid compressibility."""
-        self._comp = Layer._validate_range(value, 0, size=self.size, name="comp")/self.PSI_TO_PA
+        self._comp = None if value is None else (
+            Layer._validate_range(value, 0, size=self.size, name="comp")/uc.PSI_TO_PA
+        )
 
     @property
     def fvf(self):
@@ -139,13 +146,13 @@ class Fluid():
     @property
     def press(self):
         """Getter for the fluid pressure."""
-        return None if self._press is None else self._press/self.PSI_TO_PA
+        return None if self._press is None else self._press/uc.PSI_TO_PA
 
     @press.setter
     def press(self,value):
         """Setter for the fluid pressure."""
         self._press = None if value is None else (
-            Layer._validate_range(value, 0, size=self.size, name="press")*self.PSI_TO_PA
+            Layer._validate_range(value, 0, size=self.size, name="press")*uc.PSI_TO_PA
         )
 
     @property
@@ -171,21 +178,23 @@ class Fluid():
     @property
     def grad(self):
         """Pressure gradient in psi/ft."""
-        return self._grad / self.PA_PER_M_TO_PSI_PER_FT
+        return None if self._grad is None else self._grad * uc.FT_TO_M / uc.PSI_TO_PA
 
     @property
     def _grad(self):
         """Pressure gradient in Pa/m."""
-        return self._rho * self._GRAVITY
+        return None if self._rho is None else self._rho * constants.g
 
     @property
     def mobil(self):
         """Fluid mobility kr / (mu * B) in 1/cp."""
-        return self._mobil * self.CP_TO_PA_S
+        return None if self._mobil is None else self._mobil * uc.CP_TO_PA_SEC
 
     @property
     def _mobil(self):
         """Fluid mobility kr / (mu * B) in 1/(Pa*s)."""
+        if self._visc is None:
+            return None
         return (self._rperm)/(self._visc*self._fvf)
 
 if __name__ == "__main__":

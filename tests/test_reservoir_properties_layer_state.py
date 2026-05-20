@@ -5,6 +5,8 @@ import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 
+from prodpy import UnitConversion as uc
+
 
 def _load_layer_module():
     module_path = Path(__file__).parents[1] / "prodpy" / "resprops" / "_layer.py"
@@ -39,13 +41,13 @@ def test_reduced_permeability_and_si_storage():
         ],
     )
 
-    assert_allclose(layer._xperm, np.array([10.0, 15.0, 20.0]) * layer.MD_TO_M2)
-    assert_allclose(layer._perm, layer.perm * layer.MD_TO_M2)
+    assert_allclose(layer._xperm, np.array([10.0, 15.0, 20.0]) * uc.MD_TO_M2)
+    assert_allclose(layer._perm, layer.perm * uc.MD_TO_M2)
     assert_allclose(layer.poro, [0.1, 0.2, 0.3])
     assert_allclose(layer.comp, [1e-6])
-    assert_allclose(layer._comp, np.array([1e-6]) / layer.PSI_TO_PA)
+    assert_allclose(layer._comp, np.array([1e-6]) / uc.PSI_TO_PA)
     assert_allclose(layer.press, [3000.0])
-    assert_allclose(layer._press, np.array([3000.0]) * layer.PSI_TO_PA)
+    assert_allclose(layer._press, np.array([3000.0]) * uc.PSI_TO_PA)
 
 
 def test_explicit_permeability_overrides_reduction_and_broadcasts_scalars():
