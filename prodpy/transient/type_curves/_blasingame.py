@@ -1,0 +1,2 @@
+class Blasingame:
+    pass

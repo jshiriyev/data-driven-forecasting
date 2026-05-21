@@ -3,7 +3,7 @@ import pytest
 
 from prodpy.porsim.prerun import Borehole, Constraint
 from prodpy.resprops import BlackOil, Fluid
-from prodpy.transient._base_solver import BaseSolver
+from prodpy.transient._qconst_solver import BaseSolver
 
 
 class DummySolver(BaseSolver):

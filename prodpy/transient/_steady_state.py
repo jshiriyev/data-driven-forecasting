@@ -1,6 +1,6 @@
 import numpy as np
 
-from ._base_solver import BaseSolver
+from ._qconst_solver import BaseSolver
 from ._pressure_distribution import PressureDistribution
 
 class SteadySolver(BaseSolver):

@@ -7,9 +7,7 @@ from prodpy.porsim.prerun import Borehole, Boundary
 
 from prodpy import UnitConversion as uc
 
-from ._pressure_distribution import PressureDistribution
 from ._reservoir_domain import ReservoirDomain
-
 
 class BaseSolver(ReservoirDomain, ABC):
     """
@@ -154,42 +152,6 @@ class BaseSolver(ReservoirDomain, ABC):
             raise ValueError("Exactly one borehole must be assigned before using this solver.")
 
         return self._borehole
-
-    def _require_oil_rate_constraint(self):
-        """
-        Return the sole oil-rate constraint for the assigned borehole.
-
-        ``BaseSolver`` represents constant oil-rate analytical flow. Scheduled
-        or mixed-mode well controls should be handled by a more specific solver.
-        """
-        borehole = self._require_borehole()
-        constraints = borehole.constraints
-
-        if len(constraints) != 1:
-            raise ValueError(
-                "BaseSolver requires exactly one borehole constraint: "
-                "a constant oil-rate constraint with mode='orate'."
-            )
-
-        constraint = constraints[0]
-
-        if constraint.mode != self.REQUIRED_RATE_MODE:
-            raise ValueError(
-                "BaseSolver only supports oil-rate-controlled boreholes; "
-                f"expected mode='orate', got mode={constraint.mode!r}."
-            )
-
-        return constraint
-
-    @property
-    def rate(self) -> float:
-        """Constant oil-rate constraint in STB/day."""
-        return self._require_oil_rate_constraint().limit
-
-    @property
-    def _rate(self) -> float:
-        """Constant oil-rate constraint in m3/s."""
-        return self._require_oil_rate_constraint()._limit
 
     # ------------------------------------------------------------------
     # Boundary management
@@ -371,24 +333,6 @@ class BaseSolver(ReservoirDomain, ABC):
         borehole = self._require_borehole()
         return borehole._area / (phase._rho * constants.g)
 
-    @property
-    def pcons(self):
-        """Pressure-scaling constant in psi for the constant oil-rate solution."""
-        return self._pcons / uc.PSI_TO_PA
-
-    @property
-    def _pcons(self):
-        """Pressure-scaling constant in Pa for the constant oil-rate solution."""
-        _, phase = self._require_mobile_phase()
-
-        return self._rate / (
-            2.0
-            * np.pi
-            * self._radial_permeability
-            * self._height
-            * phase._mobil
-        )
-
     def storage2CD(self, storage: np.typing.ArrayLike):
         """Dimensionless wellbore storage coefficient."""
         borehole = self._require_borehole()
@@ -462,7 +406,6 @@ class BaseSolver(ReservoirDomain, ABC):
         self._require_initial_pressure()
         self._require_total_compressibility()
         self._require_borehole()
-        self._require_oil_rate_constraint()
         self._require_mobile_phase()
 
         return self

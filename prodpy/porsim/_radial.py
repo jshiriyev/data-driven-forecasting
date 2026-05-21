@@ -237,6 +237,3 @@ if __name__ == "__main__":
     # plt.loglog(u,y5)
 
     # plt.show()
-
-
-

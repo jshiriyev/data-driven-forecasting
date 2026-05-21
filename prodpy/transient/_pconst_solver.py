@@ -1,0 +1,3 @@
+class PConstSolver:
+    pass
+    
