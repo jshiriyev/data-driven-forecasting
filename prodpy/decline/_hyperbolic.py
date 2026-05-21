@@ -206,6 +206,17 @@ class Hyperbolic():
 
     def __repr__(self) -> str:
         return f"Hyperbolic(b={self.b:.6g}, di={self.di:.6g}, qi={self.qi:.6g})"
+    
+    @staticmethod
+    def __qDd(b:float, tDd: np.ndarray) -> np.ndarray:
+        """Calculates decline curve dimensionless rate."""
+        return np.exp(-np.log1p(b * tDd) / b)
+
+    @staticmethod
+    def qDd(b:float, tDd: ArrayLike) -> NDArray[np.float64]:
+        """Calculates decline curve dimensionless rate."""
+        tDd = _as_array(tDd)
+        return Hyperbolic.__qDd(b, tDd)
 
 if __name__ == "__main__":
 

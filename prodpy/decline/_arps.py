@@ -69,8 +69,12 @@ class Arps:
         Arps exponent; ignored if `mode` provided
     mode : str, optional
         Model kind (case-insensitive synonyms accepted)
+    
     """
-
+    exp = Exponential
+    hyp = Hyperbolic
+    har = Harmonic
+    
     _MODE_BY_BOUNDS = {0.0: "Exponential", 1.0: "Harmonic"}
     _B_BY_MODE = {
         "exponential": 0.0, "exp": 0.0,

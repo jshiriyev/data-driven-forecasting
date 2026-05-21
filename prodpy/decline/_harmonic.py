@@ -167,3 +167,14 @@ class Harmonic:
 
 	def __repr__(self) -> str:
 		return f"Harmonic(di={self.di:.6g}, qi={self.qi:.6g})"
+	
+	@staticmethod
+	def __qDd(tDd: np.ndarray) -> np.ndarray:
+		"""Calculates decline curve dimensionless rate."""
+		return 1.0 / (1.0 + tDd)
+	
+	@staticmethod
+	def qDd(tDd: ArrayLike) -> NDArray[np.float64]:
+		"""Calculates decline curve dimensionless rate."""
+		tDd = _as_array(tDd)
+		return Harmonic.__qDd(tDd)
