@@ -2,6 +2,7 @@ import numpy as np
 
 from ._base_class import BaseClass
 
+
 class RadialGrids(BaseClass):
     """
     Cylindrical grid geometry with logarithmically spaced radial boundaries.
@@ -33,6 +34,7 @@ class RadialGrids(BaseClass):
         integer and at least the number of radial regions.
 
     """
+
     def __init__(
         self,
         well_radius: float,
@@ -79,7 +81,9 @@ class RadialGrids(BaseClass):
         try:
             array = np.asarray(value, dtype=float)
         except (TypeError, ValueError) as error:
-            raise ValueError("outer_radii must be convertible to a numeric array.") from error
+            raise ValueError(
+                "outer_radii must be convertible to a numeric array."
+            ) from error
 
         if array.ndim == 0:
             array = array.reshape(1)
@@ -94,7 +98,9 @@ class RadialGrids(BaseClass):
         try:
             array = np.asarray(well_radius, dtype=float)
         except (TypeError, ValueError) as error:
-            raise ValueError("well_radius must be convertible to a numeric scalar.") from error
+            raise ValueError(
+                "well_radius must be convertible to a numeric scalar."
+            ) from error
 
         if array.ndim != 0:
             raise ValueError("well_radius must be scalar.")
@@ -241,7 +247,9 @@ class RadialGrids(BaseClass):
         try:
             array = np.asarray(angular_resolution, dtype=float)
         except (TypeError, ValueError) as error:
-            raise ValueError("angular_resolution must be convertible to a numeric scalar.") from error
+            raise ValueError(
+                "angular_resolution must be convertible to a numeric scalar."
+            ) from error
 
         if array.ndim != 0:
             raise ValueError("angular_resolution must be scalar.")
@@ -339,7 +347,9 @@ class RadialGrids(BaseClass):
         try:
             import plotly.graph_objects as go
         except ImportError as error:
-            raise ImportError("3-D grid plotting requires plotly. Install prodpy[plots].") from error
+            raise ImportError(
+                "3-D grid plotting requires plotly. Install prodpy[plots]."
+            ) from error
 
         if vertical_exaggeration <= 0:
             raise ValueError("vertical_exaggeration must be positive.")
@@ -387,7 +397,9 @@ class RadialGrids(BaseClass):
                 )
             )
 
-            theta_shell, depth_shell = np.meshgrid(theta_curve, depth_edges, indexing="ij")
+            theta_shell, depth_shell = np.meshgrid(
+                theta_curve, depth_edges, indexing="ij"
+            )
             shell_depth_colors = depth_shell
 
             for radius, name, showscale in (
@@ -402,7 +414,9 @@ class RadialGrids(BaseClass):
                         surfacecolor=shell_depth_colors,
                         name=name,
                         showscale=showscale,
-                        colorbar={"title": "Depth, ft", "len": 0.72} if showscale else None,
+                        colorbar={"title": "Depth, ft", "len": 0.72}
+                        if showscale
+                        else None,
                         **surface_kwargs,
                     )
                 )
@@ -427,8 +441,12 @@ class RadialGrids(BaseClass):
 
             for theta in theta_boundaries:
                 for radius in radii:
-                    xline.extend([*np.full(depth_edges.size, radius * np.cos(theta)), None])
-                    yline.extend([*np.full(depth_edges.size, radius * np.sin(theta)), None])
+                    xline.extend(
+                        [*np.full(depth_edges.size, radius * np.cos(theta)), None]
+                    )
+                    yline.extend(
+                        [*np.full(depth_edges.size, radius * np.sin(theta)), None]
+                    )
                     zline.extend([*depth_edges, None])
 
             fig.add_trace(

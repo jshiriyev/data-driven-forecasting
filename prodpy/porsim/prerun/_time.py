@@ -1,96 +1,96 @@
 import numpy as np
 
-class Time():
-	"""Time class for the reservoir simulation"""
 
-	def __init__(self,steps:np.ndarray):
-		"""
-		Initializes the time settings for the simulator.
-		
-		Parameters
-		----------
-		steps   : time steps in days.
+class Time:
+    """Time class for the reservoir simulation"""
 
-		"""
-		self.steps = steps
-		self.total = None
-		self.times = None
-		
-	@property
-	def steps(self):
-		"""Getter for time steps"""
-		return self._steps/(24*60*60)
+    def __init__(self, steps: np.ndarray):
+        """
+        Initializes the time settings for the simulator.
 
-	@steps.setter
-	def steps(self,value):
-		"""Setter for times steps"""
-		self._steps = np.asarray(value).flatten().astype(np.float64)*(24*60*60)
+        Parameters
+        ----------
+        steps   : time steps in days.
 
-	@property
-	def nums(self):
-		"""Getter for the number of time steps"""
-		return self._steps.size
+        """
+        self.steps = steps
+        self.total = None
+        self.times = None
 
-	@property
-	def total(self):
-		"""Getter for the total simulation time"""
-		return self._total/(24*60*60)
+    @property
+    def steps(self):
+        """Getter for time steps"""
+        return self._steps / (24 * 60 * 60)
 
-	@total.setter
-	def total(self,value):
-		"""Setter for the total simulation time"""
-		self._total = np.sum(self._steps)
+    @steps.setter
+    def steps(self, value):
+        """Setter for times steps"""
+        self._steps = np.asarray(value).flatten().astype(np.float64) * (24 * 60 * 60)
 
-	def __iter__(self):
-		"""
-		It iterates over the time steps, and yields:
+    @property
+    def nums(self):
+        """Getter for the number of time steps"""
+        return self._steps.size
 
-		curr_time (float) 	: The current time of the iteration
-		step_size (float) 	: The step size of the iteration
-		"""
-		for curr_time,step_size in zip(self._times[:-1],self._steps):
+    @property
+    def total(self):
+        """Getter for the total simulation time"""
+        return self._total / (24 * 60 * 60)
 
-			yield curr_time,step_size
+    @total.setter
+    def total(self, value):
+        """Setter for the total simulation time"""
+        self._total = np.sum(self._steps)
 
-	def __repr__(self):
-		"""Representation of Time class instances"""
-		return (f"Time(steps={self.steps}, total={self.total})")
+    def __iter__(self):
+        """
+        It iterates over the time steps, and yields:
 
-	@property
-	def times(self):
-		"""Getter for times array."""
-		return self._times/(24*60*60)
+        curr_time (float) 	: The current time of the iteration
+        step_size (float) 	: The step size of the iteration
+        """
+        for curr_time, step_size in zip(self._times[:-1], self._steps):
+            yield curr_time, step_size
 
-	@times.setter
-	def times(self,value):
-		"""Setter for times array."""
-		self._times = np.insert(np.cumsum(self._steps),0,0)
+    def __repr__(self):
+        """Representation of Time class instances"""
+        return f"Time(steps={self.steps}, total={self.total})"
 
-	@staticmethod
-	def get(step:float|np.ndarray,*,nums:int=None) -> Time:
-		"""
-		Creates a Time instance with (ir)regularly spaced time steps.
+    @property
+    def times(self):
+        """Getter for times array."""
+        return self._times / (24 * 60 * 60)
 
-		Parameters:
-	        step (float or array-like) : The size of time step for the simulation.
+    @times.setter
+    def times(self, value):
+        """Setter for times array."""
+        self._times = np.insert(np.cumsum(self._steps), 0, 0)
 
-	    Returns:
-	        Time : A Time object with regularly spaced time steps.
+    @staticmethod
+    def get(step: float | np.ndarray, *, nums: int = None) -> "Time":
+        """
+            Creates a Time instance with (ir)regularly spaced time steps.
 
-		"""
-		return Time(np.asarray(step)) if nums is None else Time(np.full(nums,step))
+            Parameters:
+            step (float or array-like) : The size of time step for the simulation.
+
+        Returns:
+            Time : A Time object with regularly spaced time steps.
+
+        """
+        return Time(np.asarray(step)) if nums is None else Time(np.full(nums, step))
+
 
 if __name__ == "__main__":
+    t = Time((1, 1, 1, 1, 1, 1, 1, 1, 1, 1))
 
-	t = Time((1,1,1,1,1,1,1,1,1,1))
+    print(t.times)
+    print(t.steps)
+    print(t.total)
 
-	print(t.times)
-	print(t.steps)
-	print(t.total)
+    print(t.nums)
 
-	print(t.nums)
+    for a in t:
+        print(a[0], a[1] / 86400, a[2] / 86400, t.times[a[0] + 1])
 
-	for a in t:
-		print(a[0],a[1]/86400,a[2]/86400,t.times[a[0]+1])
-
-	print(t.times.size)
+    print(t.times.size)

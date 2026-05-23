@@ -2,7 +2,8 @@ import numpy as np
 
 from prodpy import UnitConversion as uc
 
-class Constraint():
+
+class Constraint:
     """
     Base class for pressure and rate constraints.
 
@@ -22,9 +23,10 @@ class Constraint():
         unsupported control mode is provided, or the time interval is invalid.
 
     """
+
     VALID_MODES = {"press", "lrate", "orate", "wrate", "grate"}
 
-    def __init__(self,*,start:float=0,stop:float|None=None,**kwargs):
+    def __init__(self, *, start: float = 0, stop: float | None = None, **kwargs):
         """
         Parameters
         ----------
@@ -40,14 +42,14 @@ class Constraint():
         - 'orate' : Constant oil rate limit, (bbl/day)
         - 'wrate' : Constant water rate limit, (bbl/day)
         - 'grate' : Constant gas rate limit, (ft3/day)
-        
+
         """
         self._start = 0.0
         self._stop = None
         self._prod = None
 
-        self.start  = start
-        self.stop   = stop
+        self.start = start
+        self.stop = stop
         self.set_limit(**kwargs)
 
     def __repr__(self) -> str:
@@ -64,28 +66,34 @@ class Constraint():
 
     def set_limit(self, **kwargs):
 
-        constraint  = {key:value for key,value in kwargs.items() if value is not None}
+        constraint = {key: value for key, value in kwargs.items() if value is not None}
 
         if len(constraint) == 0:
             raise ValueError(f"No condition is provided.")
         elif len(constraint) == 1:
             mode_key, limit_value = next(iter(constraint.items()))
         elif len(constraint) > 1:
-            raise ValueError(f"Multiple conditions are provided: {list(constraint.keys())}. Assign only one.")
-        
+            raise ValueError(
+                f"Multiple conditions are provided: {list(constraint.keys())}. Assign only one."
+            )
+
         if mode_key not in self.VALID_MODES:
-            raise ValueError(f"Invalid constraint type: {mode_key}. Must be one of {self.VALID_MODES}.")
+            raise ValueError(
+                f"Invalid constraint type: {mode_key}. Must be one of {self.VALID_MODES}."
+            )
 
         try:
             limit_value = float(limit_value)
         except Exception as exc:
-            raise ValueError(f"Limit value must be convertible to float; got {limit_value!r}.") from exc
-        
+            raise ValueError(
+                f"Limit value must be convertible to float; got {limit_value!r}."
+            ) from exc
+
         self._mode = mode_key
 
         if self._mode == "press":
             self._limit = limit_value * uc.PSI_TO_PA
-        elif self._mode in ("lrate","orate","wrate"):
+        elif self._mode in ("lrate", "orate", "wrate"):
             self._limit = limit_value * (uc.FT_TO_M**3 * uc.BBL_TO_FT3) / uc.DAY_TO_SEC
         elif self._mode == "grate":
             self._limit = limit_value * (uc.FT_TO_M**3) / uc.DAY_TO_SEC
@@ -93,7 +101,7 @@ class Constraint():
     @property
     def start(self):
         """Getter for the constraint start time."""
-        return self._start/uc.DAY_TO_SEC
+        return self._start / uc.DAY_TO_SEC
 
     @start.setter
     def start(self, value):
@@ -101,15 +109,17 @@ class Constraint():
         try:
             value = float(value)
         except Exception as exc:
-            raise ValueError(f"start must be convertible to float; got {value!r}.") from exc
-        
+            raise ValueError(
+                f"start must be convertible to float; got {value!r}."
+            ) from exc
+
         if value < 0:
             raise ValueError("start must be non-negative.")
-        
+
         if self.stop is not None and value >= self.stop:
             raise ValueError("start must be less than stop.")
-        
-        self._start = value*uc.DAY_TO_SEC
+
+        self._start = value * uc.DAY_TO_SEC
 
     @property
     def stop(self):
@@ -126,14 +136,16 @@ class Constraint():
         try:
             value = float(value)
         except Exception as exc:
-            raise ValueError(f"stop must be convertible to float; got {value!r}.") from exc
-        
+            raise ValueError(
+                f"stop must be convertible to float; got {value!r}."
+            ) from exc
+
         if value < 0:
-            raise  ValueError("stop must be non-negative.")
+            raise ValueError("stop must be non-negative.")
         elif value <= self.start:
             raise ValueError("stop must be greater than start.")
-        
-        self._stop = value*uc.DAY_TO_SEC
+
+        self._stop = value * uc.DAY_TO_SEC
 
     def is_active(self, time_days):
         """Check whether the constraint is active at a given time: start <= time_days < stop."""
@@ -143,13 +155,13 @@ class Constraint():
     def mode(self):
         """Getter for the constraint type."""
         return self._mode
-    
+
     @property
     def limit(self):
         """Getter for the constraint limit value."""
         if self._mode == "press":
             return self._limit / uc.PSI_TO_PA
-        elif self._mode in ("lrate","orate","wrate"):
+        elif self._mode in ("lrate", "orate", "wrate"):
             return self._limit * uc.DAY_TO_SEC / (uc.FT_TO_M**3 * uc.BBL_TO_FT3)
         elif self._mode == "grate":
             return self._limit * uc.DAY_TO_SEC / (uc.FT_TO_M**3)
@@ -159,11 +171,10 @@ class Constraint():
         """Productivity or boundary transmissibility in ft3/day/psi."""
         if self._prod is None:
             raise ValueError("productivity has not been assigned yet.")
-        
+
         return self._prod * (uc.DAY_TO_SEC * uc.PSI_TO_PA) / (uc.FT_TO_M**3)
 
     @prod.setter
-    def prod(self,value:np.ndarray):
+    def prod(self, value: np.ndarray):
         """Set productivity or boundary transmissibility in ft3/day/psi."""
-        self._prod = value*(uc.FT_TO_M**3) / (uc.DAY_TO_SEC * uc.PSI_TO_PA)
-
+        self._prod = value * (uc.FT_TO_M**3) / (uc.DAY_TO_SEC * uc.PSI_TO_PA)

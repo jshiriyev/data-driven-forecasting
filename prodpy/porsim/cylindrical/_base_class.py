@@ -2,6 +2,7 @@ import numpy as np
 
 from prodpy import UnitConversion as uc
 
+
 class BaseClass:
     """
     Base container for cylindrical-grid geometry.
@@ -37,16 +38,17 @@ class BaseClass:
     scalar inputs are supplied. ``depth`` is stored and returned as a scalar value.
 
     """
+
     def __init__(
         self,
         radii: np.typing.ArrayLike,
         zdelta: np.typing.ArrayLike,
         tdelta: np.typing.ArrayLike | None = None,
-        depth: float = 1000.,
+        depth: float = 1000.0,
     ):
         self.radii = radii
         self.zdelta = zdelta
-        self.tdelta = np.array([2*np.pi]) if tdelta is None else tdelta
+        self.tdelta = np.array([2 * np.pi]) if tdelta is None else tdelta
         self.depth = depth
 
     @staticmethod
@@ -58,7 +60,9 @@ class BaseClass:
         try:
             array = np.asarray(value, dtype=float)
         except (TypeError, ValueError) as error:
-            raise ValueError(f"{name} must be convertible to a numeric array.") from error
+            raise ValueError(
+                f"{name} must be convertible to a numeric array."
+            ) from error
 
         if array.size == 0:
             raise ValueError(f"{name} cannot be empty.")
@@ -70,26 +74,25 @@ class BaseClass:
 
         if not np.all(np.isfinite(array)):
             raise ValueError(f"{name} must contain only finite values.")
-        
+
         if np.any(array <= 0):
             raise ValueError(f"{name} must contain only positive values.")
 
         return array
-    
+
     @staticmethod
-    def _to_scalar_array(
-        value: float,
-        name: str
-    ) -> np.ndarray:
+    def _to_scalar_array(value: float, name: str) -> np.ndarray:
         """Validate a finite scalar numeric input and return it as a NumPy scalar array."""
         try:
-            array = np.asarray(value,dtype=float)
+            array = np.asarray(value, dtype=float)
         except (TypeError, ValueError) as error:
-            raise ValueError(f"{name} must be convertible to a numeric scalar.") from error
+            raise ValueError(
+                f"{name} must be convertible to a numeric scalar."
+            ) from error
 
         if array.size == 0:
             raise ValueError(f"{name} cannot be empty.")
-        
+
         if array.ndim != 0:
             raise ValueError(f"{name} must be scalar.")
 
@@ -97,31 +100,29 @@ class BaseClass:
             raise ValueError(f"{name} must be finite.")
 
         return array
-    
+
     @staticmethod
-    def _to_field_units(
-        array: np.ndarray
-    ) -> np.ndarray:
+    def _to_field_units(array: np.ndarray) -> np.ndarray:
         """Convert an SI array in meters to oilfield units in feet."""
         return array.copy() / uc.FT_TO_M
-    
+
     def _invalidate_spatial_cache(self) -> None:
         """Clear subclass caches derived from spatial arrays."""
         return None
-    
+
     @property
     def radii(self):
         """Returns radii in feet."""
         return self._to_field_units(self._radii)
 
     @radii.setter
-    def radii(self,value):
+    def radii(self, value):
         """Sets radii after converting from feet to meters."""
         array = self._to_positive_array(value, "radii")
-        
+
         if not np.all(np.diff(array) > 0):
             raise ValueError("Radii must be strictly increasing.")
-        
+
         self._radii = array * uc.FT_TO_M
         self._invalidate_spatial_cache()
 
@@ -131,7 +132,7 @@ class BaseClass:
         return self._to_field_units(self._zdelta)
 
     @zdelta.setter
-    def zdelta(self,value):
+    def zdelta(self, value):
         """Sets z-direction grid cell size after converting from feet to meters."""
         self._zdelta = self._to_positive_array(value, "zdelta") * uc.FT_TO_M
         self._invalidate_spatial_cache()
@@ -142,11 +143,11 @@ class BaseClass:
         return self._tdelta.copy()
 
     @tdelta.setter
-    def tdelta(self,value):
+    def tdelta(self, value):
         """Sets theta-direction grid cell angle."""
-        array = self._to_positive_array(value,"tdelta")
+        array = self._to_positive_array(value, "tdelta")
 
-        if not np.isclose(np.sum(array), 2*np.pi):
+        if not np.isclose(np.sum(array), 2 * np.pi):
             raise ValueError("Sum of tdelta values must equal 2*pi radians.")
 
         self._tdelta = array
@@ -158,7 +159,7 @@ class BaseClass:
         return self._to_field_units(self._depth)
 
     @depth.setter
-    def depth(self,value):
+    def depth(self, value):
         """Sets reservoir-domain top-surface depth after converting feet to meters."""
-        self._depth = self._to_scalar_array(value,"depth") * uc.FT_TO_M
+        self._depth = self._to_scalar_array(value, "depth") * uc.FT_TO_M
         self._invalidate_spatial_cache()

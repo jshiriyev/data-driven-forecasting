@@ -3,188 +3,189 @@ from scipy import constants
 
 from prodpy import UnitConversion as uc
 
-class ResInit():
 
-	patm = constants.atm / uc.PSI_TO_PA
+class ResInit:
+    patm = constants.atm / uc.PSI_TO_PA
 
-	def __init__(self,DWOC=None,DGOC=None,gradw=0.433,grado=0.346,gradg=0.043,peow=0,peog=0):
-		"""
-		DWOC 	: Depth of Water-Oil-Contact
-		DGOC 	: Depth of Gas-Oil-Contact
+    def __init__(
+        self,
+        DWOC=None,
+        DGOC=None,
+        gradw=0.433,
+        grado=0.346,
+        gradg=0.043,
+        peow=0,
+        peog=0,
+    ):
+        """
+        DWOC 	: Depth of Water-Oil-Contact
+        DGOC 	: Depth of Gas-Oil-Contact
 
-		gradw 	: water hydrostatic gradient, psi/ft
-		grado 	: oil hydrostatic gradient, psi/ft
-		gradg 	: gas hydrostatic gradient, psi/ft
+        gradw 	: water hydrostatic gradient, psi/ft
+        grado 	: oil hydrostatic gradient, psi/ft
+        gradg 	: gas hydrostatic gradient, psi/ft
 
-		peow 	: capillary entry pressure for oil-water
-		peog 	: capillary entry pressure for oil-gas
-		
-		"""
-		self.DWOC = DWOC
-		self.DGOC = DGOC
+        peow 	: capillary entry pressure for oil-water
+        peog 	: capillary entry pressure for oil-gas
 
-		self.gradw = gradw
-		self.grado = grado
-		self.gradg = gradg
+        """
+        self.DWOC = DWOC
+        self.DGOC = DGOC
 
-		self.peow = peow
-		self.peog = peog
+        self.gradw = gradw
+        self.grado = grado
+        self.gradg = gradg
 
-	def wpress(self,depth):
-		"""pressure of water phase at input depth"""
-		return self.pwwoc+self.gradw*(depth-self.DWOC)
+        self.peow = peow
+        self.peog = peog
 
-	def opress(self,depth):
-		"""pressure of oleic phase at input depth"""
-		return self.pwwoc+self.peow+self.grado*(depth-self.DWOC)
+    def wpress(self, depth):
+        """pressure of water phase at input depth"""
+        return self.pwwoc + self.gradw * (depth - self.DWOC)
 
-	def gpress(self,depth):
-		"""pressure of gas phase at input depth"""
-		return self.pogoc+self.peog+self.gradg*(depth-self.DGOC)
+    def opress(self, depth):
+        """pressure of oleic phase at input depth"""
+        return self.pwwoc + self.peow + self.grado * (depth - self.DWOC)
 
-	@property
-	def pwwoc(self):
-		"""water pressure at water-oil-contact"""
-		return self.patm+self.gradw*self.DWOC
+    def gpress(self, depth):
+        """pressure of gas phase at input depth"""
+        return self.pogoc + self.peog + self.gradg * (depth - self.DGOC)
 
-	@property
-	def pwgoc(self):
-		"""water pressure at gas-oil-contact"""
-		return self.pwwoc+(self.DGOC-self.DWOC)*self.gradw
+    @property
+    def pwwoc(self):
+        """water pressure at water-oil-contact"""
+        return self.patm + self.gradw * self.DWOC
 
-	@property
-	def powoc(self):
-		"""oil pressure at water-oil-contact"""
-		return self.pwwoc+self.peow
-	
-	@property
-	def pogoc(self):
-		"""oil pressure at gas-oil-contact"""
-		return self.opress(self.DGOC)
+    @property
+    def pwgoc(self):
+        """water pressure at gas-oil-contact"""
+        return self.pwwoc + (self.DGOC - self.DWOC) * self.gradw
 
-	@property
-	def pggoc(self):
-		"""gas pressure at gas-oil-contact"""
-		return self.gpress(self.DGOC)
+    @property
+    def powoc(self):
+        """oil pressure at water-oil-contact"""
+        return self.pwwoc + self.peow
 
-	@property
-	def fwl(self):
-		"""free-water-level"""
-		return self.DWOC+self.peow/(self.gradw-self.grado)
+    @property
+    def pogoc(self):
+        """oil pressure at gas-oil-contact"""
+        return self.opress(self.DGOC)
 
-	def saturations(self,depth,pcow,pcog=None,pcgw=None):
-		"""
-		Saturation values are calculated at any depth values
+    @property
+    def pggoc(self):
+        """gas pressure at gas-oil-contact"""
+        return self.gpress(self.DGOC)
 
-		depth 	: depth where to calculate saturation values
-		pcow 	: oil-water drainage capillary pressure model
-		pcog 	: oil-gas drainage capillary pressure model
-		pcgw	: gas-water drainage capillary pressure model
-		
-		returns water, oil and gas saturation values.
+    @property
+    def fwl(self):
+        """free-water-level"""
+        return self.DWOC + self.peow / (self.gradw - self.grado)
 
-		"""
-		depth = np.asarray(depth)
+    def saturations(self, depth, pcow, pcog=None, pcgw=None):
+        """
+        Saturation values are calculated at any depth values
 
-		Sw = np.ones(depth.shape)
-		So = np.zeros(depth.shape)
-		Sg = np.zeros(depth.shape)
+        depth 	: depth where to calculate saturation values
+        pcow 	: oil-water drainage capillary pressure model
+        pcog 	: oil-gas drainage capillary pressure model
+        pcgw	: gas-water drainage capillary pressure model
 
-		zone2 = np.logical_and(depth<self.DWOC,depth>=self.DGOC)
-		zone3 = depth<self.DGOC
+        returns water, oil and gas saturation values.
 
-		Sw2,So2 = self.saturations_water_oil_zone(
-			depth[zone2],pcow
-		)
+        """
+        depth = np.asarray(depth)
 
-		Sw3a,So3a,Sg3a = self.saturations_three_phase_zone(
-			depth[zone3],pcow,pcog
-		)
+        Sw = np.ones(depth.shape)
+        So = np.zeros(depth.shape)
+        Sg = np.zeros(depth.shape)
 
-		Sw3b,Sg3b = self.saturations_water_gas_zone(
-			depth[zone3],pcgw
-		)
+        zone2 = np.logical_and(depth < self.DWOC, depth >= self.DGOC)
+        zone3 = depth < self.DGOC
 
-		Sw3 = np.zeros(Sw3a.shape)
-		So3 = np.zeros(So3a.shape)
-		Sg3 = np.zeros(Sg3b.shape)
+        Sw2, So2 = self.saturations_water_oil_zone(depth[zone2], pcow)
 
-		Sw3[So3a>=0] = Sw3a[So3a>=0]
-		So3[So3a>=0] = So3a[So3a>=0]
-		Sg3[So3a>=0] = Sg3a[So3a>=0]
+        Sw3a, So3a, Sg3a = self.saturations_three_phase_zone(depth[zone3], pcow, pcog)
 
-		Sw3[So3a<0] = Sw3b[So3a<0]
-		So3[So3a<0] = 0
-		Sg3[So3a<0] = Sg3b[So3a<0]
+        Sw3b, Sg3b = self.saturations_water_gas_zone(depth[zone3], pcgw)
 
-		Sw[zone2] = Sw2
-		Sw[zone3] = Sw3
+        Sw3 = np.zeros(Sw3a.shape)
+        So3 = np.zeros(So3a.shape)
+        Sg3 = np.zeros(Sg3b.shape)
 
-		So[zone2] = So2
-		So[zone3] = So3
+        Sw3[So3a >= 0] = Sw3a[So3a >= 0]
+        So3[So3a >= 0] = So3a[So3a >= 0]
+        Sg3[So3a >= 0] = Sg3a[So3a >= 0]
 
-		Sg[zone3] = Sg3
+        Sw3[So3a < 0] = Sw3b[So3a < 0]
+        So3[So3a < 0] = 0
+        Sg3[So3a < 0] = Sg3b[So3a < 0]
 
-		return Sw,So,Sg
+        Sw[zone2] = Sw2
+        Sw[zone3] = Sw3
 
-	def saturations_water_oil_zone(self,depth,pcow):
-		"""Saturation values are calculated assuming that
-		the existing phases are water and oil.
-		
-		depth 	: depth where to calculate saturation values
-		pcow 	: oil-water capillary pressure model
+        So[zone2] = So2
+        So[zone3] = So3
 
-		returns water and oil saturation values
+        Sg[zone3] = Sg3
 
-		"""
-		depth = np.asarray(depth)
+        return Sw, So, Sg
 
-		pw = self.wpress(depth)
-		po = self.opress(depth)
+    def saturations_water_oil_zone(self, depth, pcow):
+        """Saturation values are calculated assuming that
+        the existing phases are water and oil.
 
-		Sw = pcow.idrainage(po-pw)
+        depth 	: depth where to calculate saturation values
+        pcow 	: oil-water capillary pressure model
 
-		return Sw,1-Sw
+        returns water and oil saturation values
 
-	def saturations_three_phase_zone(self,depth,pcow,pcog):
-		"""saturation values are calculated assuming that
-		there are three existing phases: water, oil, and gas.
+        """
+        depth = np.asarray(depth)
 
-		depth 	: depth where to calculate saturation values
-		pcow 	: oil-water capillary pressure model
-		pcog 	: oil-gas capillary pressure model
+        pw = self.wpress(depth)
+        po = self.opress(depth)
 
-		returns water, oil, and gas saturation values.
+        Sw = pcow.idrainage(po - pw)
 
-		"""
-		depth = np.asarray(depth)
+        return Sw, 1 - Sw
 
-		pw = self.wpress(depth)
-		po = self.opress(depth)
-		pg = self.gpress(depth)
+    def saturations_three_phase_zone(self, depth, pcow, pcog):
+        """saturation values are calculated assuming that
+        there are three existing phases: water, oil, and gas.
 
-		Sl = pcog.idrainage(pg-po)
-		Sw = pcow.idrainage(po-pw)
+        depth 	: depth where to calculate saturation values
+        pcow 	: oil-water capillary pressure model
+        pcog 	: oil-gas capillary pressure model
 
-		return Sw,Sl-Sw,1-Sl
+        returns water, oil, and gas saturation values.
 
-	def saturations_water_gas_zone(self,depth,pcgw):
-		"""saturation values are calculated assuming that
-		there are two phases: water and gas.
-		
-		depth 	: depth where to calculate saturation values
-		pcgw	: gas-water capillary pressure model
+        """
+        depth = np.asarray(depth)
 
-		returns water and gas saturation values.
-		
-		"""
-		depth = np.asarray(depth)
+        pw = self.wpress(depth)
+        po = self.opress(depth)
+        pg = self.gpress(depth)
 
-		pw = self.wpress(depth)
-		pg = self.gpress(depth)
+        Sl = pcog.idrainage(pg - po)
+        Sw = pcow.idrainage(po - pw)
 
-		Sw = pcgw.idrainage(pg-pw)
+        return Sw, Sl - Sw, 1 - Sl
 
-		return Sw,1-Sw
+    def saturations_water_gas_zone(self, depth, pcgw):
+        """saturation values are calculated assuming that
+        there are two phases: water and gas.
 
+        depth 	: depth where to calculate saturation values
+        pcgw	: gas-water capillary pressure model
 
+        returns water and gas saturation values.
+
+        """
+        depth = np.asarray(depth)
+
+        pw = self.wpress(depth)
+        pg = self.gpress(depth)
+
+        Sw = pcgw.idrainage(pg - pw)
+
+        return Sw, 1 - Sw

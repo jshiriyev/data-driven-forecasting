@@ -3,12 +3,13 @@ from scipy.sparse import linalg
 
 from ._block import Block
 
+
 class BaseSolver(Block):
     """
     The Base Class initializing reservoir flow in Rectangular Cuboids;
     """
 
-    def __init__(self,grids,rrock,fluid,tcomp=None):
+    def __init__(self, grids, rrock, fluid, tcomp=None):
         """
         Initialization of Base Class Solver.
 
@@ -25,7 +26,7 @@ class BaseSolver(Block):
         tcomp  : total compressibility, 1/psi
 
         """
-        super().__init__(grids,rrock,fluid,tcomp)
+        super().__init__(grids, rrock, fluid, tcomp)
 
     @property
     def iterator(self):
@@ -35,38 +36,48 @@ class BaseSolver(Block):
     def residual(self):
         return Residual
 
+
 class Iterator:
-
     @staticmethod
-    def explicit(mat,Pn):
+    def explicit(mat, Pn):
         """Explicit pressure solution returning P_{n+1}."""
-        RHS = csr.dot(-(mat._T+mat._J),Pn)+mat._Q+mat._G
+        RHS = csr.dot(-(mat._T + mat._J), Pn) + mat._Q + mat._G
 
-        return Pn+linalg.spsolve(mat._A,RHS)
+        return Pn + linalg.spsolve(mat._A, RHS)
 
     @staticmethod
-    def mixed(mat,Pn,theta:float=0.5):
+    def mixed(mat, Pn, theta: float = 0.5):
         """Mixed pressure solution returning P_{n+1}."""
-        LHS = (1-theta)*(mat._T+mat._J)+mat._A
-        RHS = csr.dot(mat._A-theta*(mat._T+mat._J),Pn)+mat._Q+mat._G
+        LHS = (1 - theta) * (mat._T + mat._J) + mat._A
+        RHS = csr.dot(mat._A - theta * (mat._T + mat._J), Pn) + mat._Q + mat._G
 
-        return linalg.spsolve(LHS,RHS)
+        return linalg.spsolve(LHS, RHS)
 
     @staticmethod
-    def implicit(mat,Pn):
+    def implicit(mat, Pn):
         """Implicit pressure solution returning P_{n+1}."""
-        RHS = csr.dot(mat._A,Pn)+mat._Q+mat._G
-        
-        return linalg.spsolve(mat._T+mat._J+mat._A,RHS)
+        RHS = csr.dot(mat._A, Pn) + mat._Q + mat._G
+
+        return linalg.spsolve(mat._T + mat._J + mat._A, RHS)
+
 
 class Residual:
+    @staticmethod
+    def explicit(mat, Pn, P):
+        """Returns residual vector in SI units, (m**3)/(sec)"""
+        return (
+            -csr.dot(mat._A, P)
+            + csr.dot(mat._A - (mat._T + mat._J), Pn)
+            + mat._Q
+            + mat._G
+        )
 
     @staticmethod
-    def explicit(mat,Pn,P):
+    def implicit(mat, Pn, P):
         """Returns residual vector in SI units, (m**3)/(sec)"""
-        return -csr.dot(mat._A,P)+csr.dot(mat._A-(mat._T+mat._J),Pn)+mat._Q+mat._G
-
-    @staticmethod
-    def implicit(mat,Pn,P):
-        """Returns residual vector in SI units, (m**3)/(sec)"""
-        return -csr.dot(mat._T+mat._J+mat._A,P)+csr.dot(mat._A,Pn)+mat._Q+mat._G
+        return (
+            -csr.dot(mat._T + mat._J + mat._A, P)
+            + csr.dot(mat._A, Pn)
+            + mat._Q
+            + mat._G
+        )
