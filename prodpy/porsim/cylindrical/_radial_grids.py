@@ -31,8 +31,8 @@ class RadialGrids(BaseClass):
     num : int, default 50
         Total number of radial cells across all regions. Must be a positive
         integer and at least the number of radial regions.
-    """
 
+    """
     def __init__(
         self,
         well_radius: float,

@@ -1,5 +1,7 @@
 import numpy as np
 
+from prodpy import UnitConversion as uc
+
 class Constraint():
     """
     Base class for pressure and rate constraints.
@@ -21,11 +23,6 @@ class Constraint():
 
     """
     VALID_MODES = {"press", "lrate", "orate", "wrate", "grate"}
-
-    DAY_TO_SEC = 24*60*60
-    FT_TO_METER = 0.3048
-    PSI_TO_PA = 6894.757293168
-    BBL_TO_FT3 = 5.61458
 
     def __init__(self,*,start:float=0,stop:float|None=None,**kwargs):
         """
@@ -87,16 +84,16 @@ class Constraint():
         self._mode = mode_key
 
         if self._mode == "press":
-            self._limit = limit_value*self.PSI_TO_PA
+            self._limit = limit_value * uc.PSI_TO_PA
         elif self._mode in ("lrate","orate","wrate"):
-            self._limit = limit_value*(self.FT_TO_METER**3)/self.DAY_TO_SEC*self.BBL_TO_FT3
+            self._limit = limit_value * (uc.FT_TO_M**3 * uc.BBL_TO_FT3) / uc.DAY_TO_SEC
         elif self._mode == "grate":
-            self._limit = limit_value*(self.FT_TO_METER**3)/self.DAY_TO_SEC
+            self._limit = limit_value * (uc.FT_TO_M**3) / uc.DAY_TO_SEC
 
     @property
     def start(self):
         """Getter for the constraint start time."""
-        return self._start/self.DAY_TO_SEC
+        return self._start/uc.DAY_TO_SEC
 
     @start.setter
     def start(self, value):
@@ -112,12 +109,12 @@ class Constraint():
         if self.stop is not None and value >= self.stop:
             raise ValueError("start must be less than stop.")
         
-        self._start = value*self.DAY_TO_SEC
+        self._start = value*uc.DAY_TO_SEC
 
     @property
     def stop(self):
         """Getter for the constraint end time."""
-        return None if self._stop is None else self._stop/self.DAY_TO_SEC
+        return None if self._stop is None else self._stop / uc.DAY_TO_SEC
 
     @stop.setter
     def stop(self, value):
@@ -136,7 +133,7 @@ class Constraint():
         elif value <= self.start:
             raise ValueError("stop must be greater than start.")
         
-        self._stop = value*self.DAY_TO_SEC
+        self._stop = value*uc.DAY_TO_SEC
 
     def is_active(self, time_days):
         """Check whether the constraint is active at a given time: start <= time_days < stop."""
@@ -151,11 +148,11 @@ class Constraint():
     def limit(self):
         """Getter for the constraint limit value."""
         if self._mode == "press":
-            return self._limit/self.PSI_TO_PA
+            return self._limit / uc.PSI_TO_PA
         elif self._mode in ("lrate","orate","wrate"):
-            return self._limit*self.DAY_TO_SEC/(self.FT_TO_METER**3)/self.BBL_TO_FT3
+            return self._limit * uc.DAY_TO_SEC / (uc.FT_TO_M**3 * uc.BBL_TO_FT3)
         elif self._mode == "grate":
-            return self._limit*self.DAY_TO_SEC/(self.FT_TO_METER**3)
+            return self._limit * uc.DAY_TO_SEC / (uc.FT_TO_M**3)
 
     @property
     def prod(self):
@@ -163,10 +160,10 @@ class Constraint():
         if self._prod is None:
             raise ValueError("productivity has not been assigned yet.")
         
-        return self._prod*(self.DAY_TO_SEC*self.PSI_TO_PA)/(self.FT_TO_METER**3)
+        return self._prod * (uc.DAY_TO_SEC * uc.PSI_TO_PA) / (uc.FT_TO_M**3)
 
     @prod.setter
     def prod(self,value:np.ndarray):
         """Set productivity or boundary transmissibility in ft3/day/psi."""
-        self._prod = value*(self.FT_TO_METER**3)/(self.DAY_TO_SEC*self.PSI_TO_PA)
+        self._prod = value*(uc.FT_TO_M**3) / (uc.DAY_TO_SEC * uc.PSI_TO_PA)
 

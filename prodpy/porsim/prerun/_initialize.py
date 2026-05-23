@@ -1,8 +1,11 @@
 import numpy as np
+from scipy import constants
+
+from prodpy import UnitConversion as uc
 
 class ResInit():
 
-	patm = 14.7
+	patm = constants.atm / uc.PSI_TO_PA
 
 	def __init__(self,DWOC=None,DGOC=None,gradw=0.433,grado=0.346,gradg=0.043,peow=0,peog=0):
 		"""

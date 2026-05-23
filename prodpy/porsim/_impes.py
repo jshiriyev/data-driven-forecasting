@@ -1,10 +1,12 @@
+import numpy as np
+
+from ._solver import BaseSolver
 from respy.solver._time import Time
 
-from respy.solver._block import Block
-from respy.solver._build import Build
-
-from respy.solver._vector import Vector
-from respy.solver._matrix import Matrix
+from ._block import Block
+from ._builder import Builder
+from ._vector import Vector
+from ._matrix import Matrix
 
 class IMPES(BaseSolver):
     """
@@ -17,7 +19,7 @@ class IMPES(BaseSolver):
 
     def set_build(self):
 
-        self.build = Build(self.grid)
+        self.build = Builder(self.grid)
 
     def __call__(self,press=None,tcurr=0,tstep=None):
 
@@ -32,7 +34,7 @@ class IMPES(BaseSolver):
     def solve(self,**kwargs):
         """Solves the linear system of equation"""
 
-        Pn = numpy.copy(self._press[:,0])
+        Pn = np.copy(self._press[:,0])
         
         for index,tcurr,tstep in self.time:
 
@@ -52,9 +54,9 @@ class IMPES(BaseSolver):
 
     def iterate(self,mat:Matrix,jacobian=None,maxiter=100,tol=1e-6):
 
-        Pn = numpy.copy(mat._P)
+        Pn = np.copy(mat._P)
 
-        Pk = numpy.copy(Pn)
+        Pk = np.copy(Pn)
 
         for k in range(maxiter):
 
@@ -90,8 +92,8 @@ class IMPES(BaseSolver):
 
         resid0 = mat.impresid(pprev)
 
-        press1 = numpy.zeros(press.shape)
-        press2 = numpy.zeros(press.shape)
+        press1 = np.zeros(press.shape)
+        press2 = np.zeros(press.shape)
 
         press1[0::2] = press[0::2]+delta
         press2[1::2] = press[1::2]+delta
@@ -102,7 +104,7 @@ class IMPES(BaseSolver):
         resid1 = mat1.impresid(pprev)
         resid2 = mat2.impresid(pprev)
 
-        vector = numpy.zeros(press.shape)
+        vector = np.zeros(press.shape)
 
         vector[0::2] = (resid1-resid0)/delta
         vector[1::2] = (resid2-resid0)/delta

@@ -6,6 +6,7 @@ import pytest
 from prodpy.porsim.cylindrical._base_class import BaseClass
 from prodpy.porsim.cylindrical._radial_grids import RadialGrids
 
+from prodpy import UnitConversion as uc
 
 def test_cylindrical_base_converts_public_lengths_to_internal_si_values():
     grid = BaseClass(
@@ -18,16 +19,16 @@ def test_cylindrical_base_converts_public_lengths_to_internal_si_values():
     np.testing.assert_allclose(grid.radii, [10.0, 20.0])
     np.testing.assert_allclose(
         grid._radii,
-        np.array([10.0, 20.0]) * BaseClass.FEET_TO_METERS,
+        np.array([10.0, 20.0]) * uc.FT_TO_M,
     )
     np.testing.assert_allclose(grid.zdelta, [5.0, 15.0])
     np.testing.assert_allclose(
         grid._zdelta,
-        np.array([5.0, 15.0]) * BaseClass.FEET_TO_METERS,
+        np.array([5.0, 15.0]) * uc.FT_TO_M,
     )
     np.testing.assert_allclose(grid.tdelta, [np.pi, np.pi])
     np.testing.assert_allclose(grid.depth, 1000.0)
-    np.testing.assert_allclose(grid._depth, np.asarray(1000.0) * BaseClass.FEET_TO_METERS)
+    np.testing.assert_allclose(grid._depth, np.asarray(1000.0) * uc.FT_TO_M)
     assert grid.depth.shape == ()
 
 

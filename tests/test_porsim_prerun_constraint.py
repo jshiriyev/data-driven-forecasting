@@ -218,7 +218,7 @@ def test_borehole_schedule_and_change_times():
         "start_days": 0.0,
         "stop_days": 10.0,
         "mode": "orate",
-        "limit": 1000.0,
+        "limit": pytest.approx(1000.0),
         "unit": "bbl/day",
     }
     assert rows[1]["index"] == 1

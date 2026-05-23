@@ -4,12 +4,13 @@ import pytest
 from prodpy.porsim.rectangular._base_class import BaseClass
 from prodpy.porsim.rectangular._rect_grids import RectGrids
 
+from prodpy import UnitConversion as uc
 
 def test_grid_base_converts_public_feet_to_internal_si_arrays():
 	grid = BaseClass([10.0, 20.0], 30.0, [40.0], depth=0.0)
 
 	np.testing.assert_allclose(grid.xdelta, [10.0, 20.0])
-	np.testing.assert_allclose(grid._xdelta, np.array([10.0, 20.0])*BaseClass.FEET_TO_METERS)
+	np.testing.assert_allclose(grid._xdelta, np.array([10.0, 20.0])*uc.FT_TO_M)
 	np.testing.assert_allclose(grid.ydelta, [30.0])
 	np.testing.assert_allclose(grid.zdelta, [40.0])
 	np.testing.assert_allclose(grid.depth, [0.0])
@@ -222,7 +223,7 @@ def test_rect_grids_grids_preserves_public_field_units_and_internal_si_units():
 	grids = RectGrids([10.0, 20.0], [30.0], [5.0], depth=1000.0).grids
 
 	np.testing.assert_allclose(grids.xdelta, [10.0, 20.0])
-	np.testing.assert_allclose(grids._xdelta, np.array([10.0, 20.0])*grids.FEET_TO_METERS)
+	np.testing.assert_allclose(grids._xdelta, np.array([10.0, 20.0])*uc.FT_TO_M)
 	np.testing.assert_allclose(grids.ydelta, [30.0, 30.0])
 	np.testing.assert_allclose(grids.zdelta, [5.0, 5.0])
 	np.testing.assert_allclose(grids.depths, [1000.0, 1000.0])

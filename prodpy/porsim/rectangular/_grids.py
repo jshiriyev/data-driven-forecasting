@@ -1,5 +1,7 @@
 import numpy as np
 
+from prodpy import UnitConversion as uc
+
 class Grids:
 	"""
 	Internal flattened grid container for reservoir simulation.
@@ -8,9 +10,8 @@ class Grids:
 	per-cell arrays in oilfield units plus a precomputed neighbor table. It keeps
 	only lightweight internal shape checks; user-facing validation belongs to
 	`RectGrids`.
-	"""
-	FEET_TO_METERS = 0.3048
 
+	"""
 	def __init__(
 		self,
 		xdelta: np.ndarray,
@@ -44,15 +45,15 @@ class Grids:
 
 		self._check_internal_shapes()
 
-	@classmethod
-	def _to_si_units(cls, array: np.ndarray) -> np.ndarray:
+	@staticmethod
+	def _to_si_units(array: np.ndarray) -> np.ndarray:
 		"""Convert an oilfield unit array in feet to SI units in meters."""
-		return np.asarray(array,dtype=float) * cls.FEET_TO_METERS
+		return np.asarray(array,dtype=float) * uc.FT_TO_M
 	
-	@classmethod
-	def _to_field_units(cls, array: np.ndarray) -> np.ndarray:
+	@staticmethod
+	def _to_field_units(array: np.ndarray) -> np.ndarray:
 		"""Convert an SI array in meters to oilfield units in feet."""
-		return array / cls.FEET_TO_METERS
+		return array / uc.FT_TO_M
 
 	def _check_internal_shapes(self) -> None:
 		"""Check constructor-only invariants for flattened simulation arrays."""
@@ -100,7 +101,7 @@ class Grids:
 
 	@property
 	def xarea(self):
-		return self._xarea / self.FEET_TO_METERS**2
+		return self._xarea / uc.FT_TO_M**2
 
 	@property
 	def _xarea(self):
@@ -108,7 +109,7 @@ class Grids:
 
 	@property
 	def yarea(self):
-		return self._yarea / self.FEET_TO_METERS**2
+		return self._yarea / uc.FT_TO_M**2
 
 	@property
 	def _yarea(self):
@@ -116,7 +117,7 @@ class Grids:
 
 	@property
 	def zarea(self):
-		return self._zarea / self.FEET_TO_METERS**2
+		return self._zarea / uc.FT_TO_M**2
 
 	@property
 	def _zarea(self):
@@ -125,7 +126,7 @@ class Grids:
 	@property
 	def volume(self):
 		"""Returns the volume of grids in field units."""
-		return self._volume / self.FEET_TO_METERS**3
+		return self._volume / uc.FT_TO_M**3
 
 	@property
 	def _volume(self):
