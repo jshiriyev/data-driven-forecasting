@@ -163,9 +163,9 @@ def _pbar_constant_rate_closed(s: np.ndarray, reD: float) -> np.ndarray:
     s = np.asarray(s, dtype=float)
     u = np.sqrt(s)
 
-    pressure_term, rate_term = _constant_pressure_closed_terms(u, reD)
+    pterm, rterm = _constant_pressure_closed_terms(u, reD)
 
-    return pressure_term / (s * u * rate_term)
+    return (pterm / rterm) / (s * u)
 
 
 def _qbar_constant_pressure_infinite(s: np.ndarray) -> np.ndarray:
@@ -187,7 +187,7 @@ def _qbar_constant_pressure_infinite(s: np.ndarray) -> np.ndarray:
     s = np.asarray(s, dtype=float)
     u = np.sqrt(s)
 
-    return (u / s) * k1_over_k0(u)
+    return k1_over_k0(u) / u
 
 
 def _qbar_constant_pressure_closed(s: np.ndarray, reD: float) -> np.ndarray:
@@ -213,9 +213,9 @@ def _qbar_constant_pressure_closed(s: np.ndarray, reD: float) -> np.ndarray:
     s = np.asarray(s, dtype=float)
     u = np.sqrt(s)
 
-    pressure_term, rate_term = _constant_pressure_closed_terms(u, reD)
+    pterm, rterm = _constant_pressure_closed_terms(u, reD)
 
-    return (u / s) * (rate_term / pressure_term)
+    return (rterm / pterm) / u
 
 
 def _constant_pressure_closed_terms(
@@ -233,10 +233,10 @@ def _constant_pressure_closed_terms(
     z = u * reD
     eta_scaled = (kve(1, z) / ive(1, z)) * np.exp(-2.0 * u * (reD - 1.0))
 
-    pressure_term = kve(0, u) + eta_scaled * ive(0, u)
-    rate_term = kve(1, u) - eta_scaled * ive(1, u)
+    pterm = kve(0, u) + eta_scaled * ive(0, u)
+    rterm = kve(1, u) - eta_scaled * ive(1, u)
 
-    return pressure_term, rate_term
+    return pterm, rterm
 
 
 def k0_over_k1(z: np.ndarray) -> np.ndarray:
@@ -261,28 +261,6 @@ def k1_over_k0(z: np.ndarray) -> np.ndarray:
     z = np.asarray(z, dtype=float)
 
     return kve(1, z) / kve(0, z)
-
-
-def k1_over_i1(z: np.ndarray) -> np.ndarray:
-    """
-    Stable evaluation of K1(z) / I1(z).
-
-    For large z, direct scipy.special.kv / iv may underflow or overflow.
-    Scaled Bessel functions are used for stability.
-    """
-    z = np.asarray(z, dtype=float)
-    ratio = np.empty_like(z)
-
-    small = z < 50.0
-    large = ~small
-
-    ratio[small] = kv(1, z[small]) / iv(1, z[small])
-
-    # K1/I1 = [kve(1,z) exp(-z)] / [ive(1,z) exp(z)]
-    #       = [kve(1,z) / ive(1,z)] exp(-2z)
-    ratio[large] = (kve(1, z[large]) / ive(1, z[large])) * np.exp(-2.0 * z[large])
-
-    return ratio
 
 
 def _inverse_laplace_stehfest(func, t: np.typing.ArrayLike, degree: int = 12, **kwargs):
