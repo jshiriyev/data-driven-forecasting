@@ -231,7 +231,24 @@ def _constant_pressure_closed_terms(
     reD = float(reD)
 
     z = u * reD
-    eta_scaled = (kve(1, z) / ive(1, z)) * np.exp(-2.0 * u * (reD - 1.0))
+    # eta_scaled = np.empty_like(z)
+
+    # small = z < 50.0
+
+    # eta_scaled[small] = (
+    #     kv(1, z[small]) / iv(1, z[small])
+    # ) * np.exp(2.0 * u[small])
+
+    # eta_scaled[~small] = (
+    #     kve(1, z[~small]) / ive(1, z[~small])
+    # ) * np.exp(-2.0 * z[~small] + 2.0 * u[~small])
+
+    eta_scaled = (
+        kve(1, z) / ive(1, z)
+    ) * np.exp(-2.0 * z + 2.0 * u)
+
+    # eta[small] = kv(1, z[small]) / iv(1, z[small])
+    # eta[~small] = kve(1, z[~small]) / ive(1, z[~small]) * np.exp(-2.0 * z[~small] * (1 - 1 / reD))
 
     pterm = kve(0, u) + eta_scaled * ive(0, u)
     rterm = kve(1, u) - eta_scaled * ive(1, u)

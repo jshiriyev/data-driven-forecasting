@@ -3,6 +3,7 @@ from .utils import UnitConversion
 from . import decline
 from . import resprops
 from . import transient
+from .transient import type_curves as typex
 from . import mbal
 from . import porsim
 from . import wellflow
@@ -19,6 +20,7 @@ __all__ = [
     "decline",
     "resprops",
     "transient",
+    "typex",
     "mbal",
     "porsim",
     "wellflow",
