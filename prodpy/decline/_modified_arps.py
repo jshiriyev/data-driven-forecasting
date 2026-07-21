@@ -116,3 +116,32 @@ class ModifiedArps:
         np_exp = (q_sw - qf) / self.d_min
 
         return np_hyp + np_exp
+
+def WellProdPlot(df, time, oil_rate, gas_rate=None, water_rate=None):
+    """
+    Simple production plot function.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        The DataFrame containing the production data.
+    time : key for time values in df
+    oil_rate : key for oil production rates in df
+    gas_rate : key for gas production rates in df, optional
+    water_rate : key for water production rates in df, optional
+    """
+    import matplotlib.pyplot as plt
+
+    fig, ax = plt.subplots(figsize=(14,6))
+
+    ax.plot(df[time], df[oil_rate], '-o', label='Daily Oil Rate', color='green')
+    if gas_rate is not None:
+        ax.plot(df[time], df[gas_rate], '-o', label='Daily Gas Rate', color='red')
+    if water_rate is not None:
+        ax.plot(df[time], df[water_rate], '-o', label='Daily Water Rate', color='blue')
+
+    ax.set_ylabel('Production Rates')
+    ax.grid(True, which="both", alpha=0.3)
+    ax.legend()
+    
+    return ax
