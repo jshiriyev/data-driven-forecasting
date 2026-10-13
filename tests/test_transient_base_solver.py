@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from prodpy.porsim.prerun import Borehole, Constraint
-from prodpy.resprops import BlackOil, Fluid
+from resprops import BlackOil, Fluid
 from prodpy.transient._qconst_solver import BaseSolver
 
 

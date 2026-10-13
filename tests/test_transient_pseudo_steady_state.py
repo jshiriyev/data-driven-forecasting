@@ -3,7 +3,7 @@ import pytest
 
 from prodpy import UnitConversion as uc
 from prodpy.porsim.prerun import Borehole, Constraint
-from prodpy.resprops import BlackOil, Fluid
+from resprops import BlackOil, Fluid
 from prodpy.transient import PseudoSteadyState
 
 

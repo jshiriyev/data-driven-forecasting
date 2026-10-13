@@ -1,4 +1,4 @@
-from prodpy.resprops import FluidProps
+from resprops import FluidProps
 import math
 
 def Pgrad(P, T, oil_rate, wtr_rate, Gor, gas_grav, oil_grav, wtr_grav, d, angle):

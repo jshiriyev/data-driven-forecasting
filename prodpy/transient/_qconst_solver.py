@@ -20,7 +20,7 @@ class BaseSolver(ReservoirDomain, ABC):
 
     - one and only one borehole is allowed;
     - the borehole must contain exactly one oil-rate constraint;
-    - the reservoir fluid system is a :class:`prodpy.resprops.BlackOil` object;
+    - the reservoir fluid system is a :class:`resprops.BlackOil` object;
     - exactly one phase in the black-oil system may be mobile;
     - because the well control is oil-rate, the mobile phase must be oil;
     - radial analytical flow is assumed.

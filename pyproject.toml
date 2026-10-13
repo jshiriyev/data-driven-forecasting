@@ -28,6 +28,7 @@ dependencies = [
     "numpy>=1.26.4",
     "openpyxl>=3.1.2",
     "pandas>=2.2.2",
+    "reservoir-properties @ git+https://github.com/jshiriyev/reservoir-properties.git",
     "scipy>=1.13.0"
 ]
 

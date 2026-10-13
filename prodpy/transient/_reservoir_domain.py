@@ -1,6 +1,6 @@
 import numpy as np
 
-from prodpy.resprops import Layer, BlackOil
+from resprops import Layer, BlackOil
 
 from prodpy import UnitConversion as uc
 
