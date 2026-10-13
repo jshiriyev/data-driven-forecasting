@@ -29,6 +29,7 @@ dependencies = [
     "openpyxl>=3.1.2",
     "pandas>=2.2.2",
     "reservoir-properties @ git+https://github.com/jshiriyev/reservoir-properties.git",
+    "wellbore-flow @ git+https://github.com/jshiriyev/wellbore-flow.git",
     "scipy>=1.13.0"
 ]
 
