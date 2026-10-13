@@ -2,7 +2,7 @@ import logging
 
 import numpy as np
 
-from prodpy.resprops import Fluid
+from resprops import Fluid
 
 from prodpy.wellflow._pipe import Pipe
 from prodpy.wellflow.onephase._darcy_weisbach import DarcyWeisbach

@@ -1,7 +1,13 @@
+import sys
+
+import resprops
+
 from .utils import UnitConversion
 
 from . import decline
-from . import resprops
+# resprops now lives in the reservoir-properties package; keep
+# `prodpy.resprops` importable for existing code.
+sys.modules[__name__ + ".resprops"] = resprops
 from . import transient
 from .transient import type_curves as typex
 from . import mbal

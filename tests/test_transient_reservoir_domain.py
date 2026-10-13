@@ -1,6 +1,6 @@
 import numpy as np
 
-from prodpy.resprops import BlackOil, Fluid
+from resprops import BlackOil, Fluid
 from prodpy.transient import ReservoirDomain
 
 

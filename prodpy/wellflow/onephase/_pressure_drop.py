@@ -1,4 +1,4 @@
-from prodpy.resprops import Fluid
+from resprops import Fluid
 from prodpy.wellflow._pipe import Pipe
 
 class PressureDrop():
